@@ -221,6 +221,23 @@ tbody tr{cursor:pointer}
 }
 .startup-btns { display: flex; flex-direction: column; gap: 10px; }
 .startup-btns .btn { justify-content: center; padding: 11px 20px; font-size: 13.5px; }
+
+/* ── Route result mobile fixes ──────────────────────────────────────── */
+.route-stats{display:flex;flex-wrap:wrap}
+.route-stat{flex:1 1 auto;min-width:80px;padding:10px 12px;text-align:center;border-right:1px solid var(--bd)}
+.route-stat:last-child{border-right:none}
+.route-stat-val{font:700 18px var(--fd);color:var(--txt)}
+.route-stat-lbl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.route-fromto{padding:10px 14px;border-bottom:1px solid var(--bd);font-size:13px;color:var(--mut);word-break:break-word}
+.route-fromto strong{color:var(--txt)}
+.route-note{padding:8px 14px;font-size:11px;color:var(--mut);border-top:1px solid var(--bd);font-style:italic}
+.route-card{background:var(--bg);border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-top:12px}
+.route-result{margin-top:10px}
+/* Extra padding so last button clears mobile browser nav bar */
+.route-section{padding-bottom:90px!important}
+/* Result action buttons: full width on mobile */
+.route-actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--bd);flex-wrap:wrap}
+.route-actions .btn{flex:1;justify-content:center;min-width:120px}
 </style>
 </head>
 <body>
@@ -1394,7 +1411,7 @@ function calcRoute() {
       +'<div class="route-stat"><div class="route-stat-val">'+hgvTime+'</div><div class="route-stat-lbl">Tempo HGV</div></div>'
       +'<div class="route-stat"><div class="route-stat-val">'+arrival+'</div><div class="route-stat-lbl">Arrivo stimato</div></div>'
       +'</div>'
-      +'<div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--bd);flex-wrap:wrap">'
+      +'<div class="route-actions">'
       +'<button type="button" class="btn btn-primary btn-xs" onclick="openInGoogleMaps(window.orsCoords,window.orsFromLat,window.orsFromLng,window.orsToLat,window.orsToLng)">&#128506; Apri in Google Maps</button>'
       +'<button type="button" class="btn btn-ghost btn-xs" onclick="exportGPX(window.orsCoords,window.orsFromLab,window.orsToLab)">&#128229; Esporta GPX</button>'
       +'</div>'
