@@ -71,8 +71,8 @@ select.sel-filter{width:auto;min-width:135px;cursor:pointer}
 .btn-xs{padding:4px 9px;font-size:11.5px}
 
 /* Content area */
-.content-area{flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
-.tbl-wrap{max-height:260px;overflow:auto;position:relative;flex-shrink:0}
+.content-area{flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;min-height:0}
+.tbl-wrap{max-height:180px;overflow:auto;position:relative;flex-shrink:0}
 .bg-emblem{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0;overflow:hidden}
 .bg-emblem img{width:min(420px,55vw);height:min(420px,55vw);object-fit:contain;opacity:.055;mix-blend-mode:screen;user-select:none}
 .tbl-inner{padding:0 22px 20px;min-width:680px;position:relative;z-index:1}
@@ -91,7 +91,7 @@ tbody tr:hover td{background:var(--s1)}
 .map-divider-line{flex:1;height:1px;background:var(--bd)}
 
 /* Map */
-.map-area{flex-shrink:0;height:340px;transition:height .25s ease}
+.map-area{flex-shrink:0;height:300px;transition:height .25s ease}
 .map-area.collapsed{height:0;overflow:hidden}
 #map{width:100%;height:100%;background:#e8eaf0}
 
@@ -277,7 +277,7 @@ tbody tr{cursor:pointer}
   </select>
   <div class="toolbar-sep"></div>
   <button type="button" class="btn btn-ghost btn-xs" onclick="locateMe()">&#128205; Posizione</button>
-  <button type="button" class="btn btn-ghost btn-xs" id="btnToggleMap" onclick="toggleMap()">&#128506; Nascondi mappa</button>
+  <button type="button" class="btn btn-ghost btn-xs" id="btnToggleMap" onclick="toggleMap()">&#128506; Mostra mappa</button>
 </div>
 
 <!-- STATS -->
@@ -725,7 +725,7 @@ tbody tr{cursor:pointer}
 'use strict';
 let DB = JSON.parse(localStorage.getItem('distributori_v1') || '[]');
 let editId = null;
-let mapVisible = true;
+let mapVisible = false;
 let MAP = null, stationMarkers = [], userMarker = null, accuracyCircle = null;
 
 function lsSave() { localStorage.setItem('distributori_v1', JSON.stringify(DB)); }
@@ -1743,6 +1743,7 @@ function autoDetectRegion() {
 render();
 FS._ui();
 initMap();
+if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.add("collapsed");}
 </script>
 </div>
 </body>
