@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Diario Autista</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- TEMA SCURO + SFONDO -->
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #121212 url("stemma.jpg") no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+        }
+
+        .overlay {
+            background: rgba(0,0,0,0.75);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            background: #1e1e1e;
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: #2196f3;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        input, select, textarea, button {
+            font-family: inherit;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 10px 0;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: #1e1e1e;
+            color: #fff;
+        }
+
+        textarea {
+            min-height: 60px;
+        }
+
+        button.primary {
+            background: #2196f3;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button.secondary {
+            background: #607d8b;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button.danger {
+            background: #f44336;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #444;
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #1e1e1e;
+        }
+
+        tr:nth-child(even) {
+            background: #181818;
+        }
+
+        tr:nth-child(odd) {
+            background: #202020;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .col {
+            flex: 1 1 300px;
+        }
+
+        #summary-output {
+            margin-top: 15px;
+        }
+
+        canvas {
+            background: #1e1e1e;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="overlay">
+   <h1>Diario Autista</h1>
+
+    <!-- TAB PRINCIPALI -->
+   <div class="tabs">
+        
+     
+    
+     
+        
+        <button class="tab-btn active" data-tab="tab-giornaliero">Giornaliero</button>
+        <button class="tab-btn" data-tab="tab-carichi">Carichi / Scarichi</button>
+        <button class="tab-btn" data-tab="tab-riassunto">Riassunto</button>
+        <button class="tab-btn" data-tab="tab-impexp">Import / Export</button>
+    </div>
+
+    <!-- TAB GIORNALIERO -->
+    <div id="tab-giornaliero" class="tab-content active">
+        <h2>Giornaliero</h2>
+        <form id="form-giornaliero">
+            <div class="row">
+                <div class="col">
+                    <label>Data</label>
+                    <input type="date" id="g_data">
+
+                    <label>Trattore</label>
+                    <input type="text" id="g_trattore">
+
+                    <label>Semirimorchio</label>
+                    <input type="text" id="g_semirimorchio">
+
+                    <label>Km percorsi</label>
+                    <input type="number" id="g_km" step="0.1">
+
+                    <label>Ora apertura</label>
+                    <input type="time" id="g_ora_apertura">
+
+                    <label>Ora chiusura</label>
+                    <input type="time" id="g_ora_chiusura">
+                </div>
+
+                <div class="col">
+                    <label>Ore guida (es. 05:30)</label>
+                    <input type="text" id="g_ore_guida">
+
+                    <label>Luogo sosta</label>
+                    <input type="text" id="g_luogo_sosta">
+
+                    <label>Pausa (ore)</label>
+                    <input type="text" id="g_pausa_ore">
+
+                    <label>Tipo pausa</label>
+                    <input type="text" id="g_pausa_tipo">
+                </div>
+            </div>
+
+            <button type="button" class="primary" id="btn-add-giornaliero">Salva giornata</button>
+            <button type="button" class="secondary" id="btn-reset-giornaliero">Reset</button>
+        </form>
+
+        <h3>Elenco giornaliero</h3>
+        <table id="table-giornaliero">
+            <thead>
+            <tr>
+                <th>Data</th>
+                <th>Trattore</th>
+                <th>Semirimorchio</th>
+                <th>Apertura</th>
+                <th>Chiusura</th>
+                <th>Impegno</th>
+                <th>Km</th>
+                <th>Ore guida</th>
+                <th>Luogo sosta</th>
+                <th>Pausa</th>
+                <th>Azioni</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- TAB CARICHI / SCARICHI -->
+    <div id="tab-carichi" class="tab-content">
+        <h2>Carichi / Scarichi</h2>
+        <form id="form-carichi">
+            <div class="row">
+                <div class="col">
+                    <label>Data</label>
+                    <input type="date" id="c_data">
+
+                    <label>Operazione</label>
+                    <select id="c_operazione">
+                        <option value="CARICO">CARICO</option>
+                        <option value="SCARICO">SCARICO</option>
+                    </select>
+
+                    <label>Luogo</label>
+                    <input type="text" id="c_luogo">
+                </div>
+
+                <div class="col">
+                    <label>Cliente</label>
+                    <input type="text" id="c_cliente">
+
+                    <label>Semirimorchio</label>
+                    <input type="text" id="c_semirimorchio">
+
+                    <label>Peso (kg)</label>
+                    <input type="number" id="c_peso" step="0.1">
+                </div>
+            </div>
+
+            <button type="button" class="primary" id="btn-add-carico">Salva operazione</button>
+            <button type="button" class="secondary" id="btn-reset-carico">Reset</button>
+        </form>
+
+        <h3>Elenco carichi / scarichi</h3>
+        <table id="table-carichi">
+            <thead>
+            <tr>
+                <th>Data</th>
+                <th>Operazione</th>
+                <th>Luogo</th>
+                <th>Cliente</th>
+                <th>Semirimorchio</th>
+                <th>Peso</th>
+                <th>Azioni</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- TAB RIASSUNTO -->
+    <div id="tab-riassunto" class="tab-content">
+        <h2>Riassunto</h2>
+
+        <div class="row">
+            <div class="col">
+                <label>Tipo riassunto</label>
+                <select id="r_tipo">
+                    <option value="giornaliero">Giornaliero</option>
+                    <option value="settimanale">Settimanale</option>
+                    <option value="mensile">Mensile</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Data di riferimento</label>
+                <input type="date" id="r_data">
+            </div>
+        </div>
+
+        <button type="button" class="primary" id="btn-calcola-riassunto">Calcola riassunto</button>
+        <button type="button" class="secondary" id="btn-stampa-riassunto">Stampa</button>
+        <button type="button" class="secondary" id="btn-pdf-riassunto">Esporta PDF (HTML)</button>
+
+        <!-- FILTRO GENERICO -->
+        <input 
+            type="text" 
+            id="search-riassunto" 
+            placeholder="Filtra il riassunto..." 
+            style="width:100%; padding:10px; margin:15px 0; border-radius:6px; background:#1e1e1e; color:#fff; border:1px solid #555;">
+
+        <div id="summary-output"></div>
+
+        <h3>Grafici</h3>
+        <canvas id="graficoKm" height="120"></canvas>
+        <canvas id="graficoOre" height="120"></canvas>
+        <canvas id="graficoPeso" height="120"></canvas>
+    </div>
+
+    <!-- TAB IMPORT / EXPORT -->
+    <div id="tab-impexp" class="tab-content">
+        <h2>Import / Export JSON</h2>
+
+        <button type="button" class="primary" id="btn-export-json">Esporta DIARIO.json</button>
+
+        <div style="margin-top:15px;">
+            <input type="file" id="file-import-json" accept=".json">
+            <button type="button" class="secondary" id="btn-import-json">Importa DIARIO.json</button>
+        </div>
+    </div>
+</div>
+
+<!-- JAVASCRIPT COMPLETO -->
+<script>
+/* UTILITÀ */
+
+function formatDateIT(dateStr) {
+    if (!dateStr) return "";
+    const [yyyy, mm, dd] = dateStr.split("-");
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+function oreToMinuti(str) {
+    if (!str) return 0;
+    const parts = str.split(":");
+    if (parts.length !== 2) return 0;
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return h * 60 + m;
+}
+
+function minutiToOre(min) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+
+function calcolaImpegno(oraApertura, oraChiusura) {
+    if (!oraApertura || !oraChiusura) return "";
+    const [h1, m1] = oraApertura.split(":").map(Number);
+    const [h2, m2] = oraChiusura.split(":").map(Number);
+    let min1 = h1 * 60 + m1;
+    let min2 = h2 * 60 + m2;
+    let diff = min2 - min1;
+    if (diff < 0) diff += 24 * 60;
+    return minutiToOre(diff);
+}
+
+/* STRUTTURA DIARIO + LOCALSTORAGE */
+
+let DIARIO = {
+    giornaliero: [],
+    carichi_scarichi: [],
+    riassunti: []
+};
+
+function saveToLocalStorage() {
+    localStorage.setItem("DIARIO_DATA", JSON.stringify(DIARIO));
+}
+
+function loadFromLocalStorage() {
+    const data = localStorage.getItem("DIARIO_DATA");
+    if (data) {
+        try {
+            const obj = JSON.parse(data);
+            DIARIO.giornaliero = Array.isArray(obj.giornaliero) ? obj.giornaliero : [];
+            DIARIO.carichi_scarichi = Array.isArray(obj.carichi_scarichi) ? obj.carichi_scarichi : [];
+            DIARIO.riassunti = Array.isArray(obj.riassunti) ? obj.riassunti : [];
+        } catch (e) {
+            console.error("Errore nel localStorage:", e);
+        }
+    }
+}
+
+/* TAB SWITCH */
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+    });
+});
+
+/* CRUD GIORNALIERO */
+
+let editingGiornalieroIndex = null;
+
+document.getElementById("btn-add-giornaliero").addEventListener("click", () => {
+    const record = {
+        data: document.getElementById("g_data").value,
+        trattore: document.getElementById("g_trattore").value,
+        semirimorchio: document.getElementById("g_semirimorchio").value,
+        ora_apertura: document.getElementById("g_ora_apertura").value,
+        ora_chiusura: document.getElementById("g_ora_chiusura").value,
+        impegno: calcolaImpegno(
+            document.getElementById("g_ora_apertura").value,
+            document.getElementById("g_ora_chiusura").value
+        ),
+        km_percorsi: parseFloat(document.getElementById("g_km").value || "0"),
+        ore_guida: document.getElementById("g_ore_guida").value,
+        luogo_sosta: document.getElementById("g_luogo_sosta").value,
+        pausa: {
+            ore: document.getElementById("g_pausa_ore").value,
+            tipo: document.getElementById("g_pausa_tipo").value
+        }
+    };
+
+    if (!record.data || !record.ora_apertura || !record.ora_chiusura) {
+        alert("Data, ora di apertura e ora di chiusura sono obbligatorie.");
+        return;
+    }
+
+    if (editingGiornalieroIndex !== null) {
+        DIARIO.giornaliero[editingGiornalieroIndex] = record;
+        editingGiornalieroIndex = null;
+    } else {
+        DIARIO.giornaliero.push(record);
+    }
+
+    saveToLocalStorage();
+    renderGiornalieroTable();
+    document.getElementById("form-giornaliero").reset();
+});
+
+document.getElementById("btn-reset-giornaliero").addEventListener("click", () => {
+    editingGiornalieroIndex = null;
+    document.getElementById("form-giornaliero").reset();
+});
+
+function renderGiornalieroTable() {
+    const tbody = document.querySelector("#table-giornaliero tbody");
+    tbody.innerHTML = "";
+
+    DIARIO.giornaliero.forEach((rec, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${formatDateIT(rec.data)}</td>
+            <td>${rec.trattore}</td>
+            <td>${rec.semirimorchio}</td>
+            <td>${rec.ora_apertura}</td>
+            <td>${rec.ora_chiusura}</td>
+            <td>${rec.impegno}</td>
+            <td>${rec.km_percorsi}</td>
+            <td>${rec.ore_guida}</td>
+            <td>${rec.luogo_sosta}</td>
+            <td>${rec.pausa.ore} (${rec.pausa.tipo})</td>
+            <td>
+                <button class="secondary" onclick="editGiornaliero(${index})">Modifica</button>
+                <button class="danger" onclick="deleteGiornaliero(${index})">Cancella</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function editGiornaliero(index) {
+    const rec = DIARIO.giornaliero[index];
+    editingGiornalieroIndex = index;
+
+    document.getElementById("g_data").value = rec.data;
+    document.getElementById("g_trattore").value = rec.trattore;
+    document.getElementById("g_semirimorchio").value = rec.semirimorchio;
+    document.getElementById("g_km").value = rec.km_percorsi;
+    document.getElementById("g_ora_apertura").value = rec.ora_apertura;
+    document.getElementById("g_ora_chiusura").value = rec.ora_chiusura;
+    document.getElementById("g_ore_guida").value = rec.ore_guida;
+    document.getElementById("g_luogo_sosta").value = rec.luogo_sosta;
+    document.getElementById("g_pausa_ore").value = rec.pausa.ore;
+    document.getElementById("g_pausa_tipo").value = rec.pausa.tipo;
+}
+
+function deleteGiornaliero(index) {
+    if (!confirm("Vuoi davvero cancellare questo record?")) return;
+    DIARIO.giornaliero.splice(index, 1);
+    saveToLocalStorage();
+    renderGiornalieroTable();
+}
+
+/* CRUD CARICHI / SCARICHI */
+
+let editingCaricoIndex = null;
+
+document.getElementById("btn-add-carico").addEventListener("click", () => {
+    const record = {
+        data: document.getElementById("c_data").value,
+        operazione: document.getElementById("c_operazione").value,
+        luogo: document.getElementById("c_luogo").value,
+        cliente: document.getElementById("c_cliente").value,
+        semirimorchio: document.getElementById("c_semirimorchio").value,
+        peso: parseFloat(document.getElementById("c_peso").value || "0")
+    };
+
+    if (!record.data) {
+        alert("La data è obbligatoria.");
+        return;
+    }
+
+    if (editingCaricoIndex !== null) {
+        DIARIO.carichi_scarichi[editingCaricoIndex] = record;
+        editingCaricoIndex = null;
+    } else {
+        DIARIO.carichi_scarichi.push(record);
+    }
+
+    saveToLocalStorage();
+    renderCarichiTable();
+    document.getElementById("form-carichi").reset();
+});
+
+document.getElementById("btn-reset-carico").addEventListener("click", () => {
+    editingCaricoIndex = null;
+    document.getElementById("form-carichi").reset();
+});
+
+function renderCarichiTable() {
+    const tbody = document.querySelector("#table-carichi tbody");
+    tbody.innerHTML = "";
+
+    DIARIO.carichi_scarichi.forEach((rec, index) => {
+        const colore = rec.operazione === "CARICO" ? "#4caf50" : "#f44336";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${formatDateIT(rec.data)}</td>
+            <td style="color:${colore}; font-weight:bold;">${rec.operazione}</td>
+            <td>${rec.luogo}</td>
+            <td>${rec.cliente}</td>
+            <td>${rec.semirimorchio}</td>
+            <td>${rec.peso}</td>
+            <td>
+                <button class="secondary" onclick="editCarico(${index})">Modifica</button>
+                <button class="danger" onclick="deleteCarico(${index})">Cancella</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function editCarico(index) {
+    const rec = DIARIO.carichi_scarichi[index];
+    editingCaricoIndex = index;
+
+    document.getElementById("c_data").value = rec.data;
+    document.getElementById("c_operazione").value = rec.operazione;
+    document.getElementById("c_luogo").value = rec.luogo;
+    document.getElementById("c_cliente").value = rec.cliente;
+    document.getElementById("c_semirimorchio").value = rec.semirimorchio;
+    document.getElementById("c_peso").value = rec.peso;
+}
+
+function deleteCarico(index) {
+    if (!confirm("Vuoi davvero cancellare questa operazione?")) return;
+    DIARIO.carichi_scarichi.splice(index, 1);
+    saveToLocalStorage();
+    renderCarichiTable();
+}
+
+/* RIASSUNTO + GRAFICI */
+
+document.getElementById("btn-calcola-riassunto").addEventListener("click", () => {
+    const tipo = document.getElementById("r_tipo").value;
+    const dataRef = document.getElementById("r_data").value;
+
+    if (!dataRef) {
+        alert("Seleziona una data di riferimento.");
+        return;
+    }
+
+    const d = new Date(dataRef);
+    let giorni = [];
+
+    if (tipo === "giornaliero") {
+        giorni = [dataRef];
+    }
+
+    if (tipo === "settimanale") {
+        const start = new Date(d);
+        const day = start.getDay();
+        const diffToMonday = (day === 0 ? -6 : 1 - day);
+        start.setDate(start.getDate() + diffToMonday);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        const current = new Date(start);
+        while (current <= end) {
+            giorni.push(current.toISOString().slice(0,10));
+            current.setDate(current.getDate() + 1);
+        }
+    }
+
+    if (tipo === "mensile") {
+        const year = d.getFullYear();
+        const month = d.getMonth();
+        const current = new Date(year, month, 1);
+        while (current.getMonth() === month) {
+            giorni.push(current.toISOString().slice(0,10));
+            current.setDate(current.getDate() + 1);
+        }
+    }
+
+    giorni.sort().reverse(); // data più recente per prima
+
+    let html = "";
+    let totKm = 0;
+    let totOreGuida = 0;
+    let totPausa = 0;
+    let totPeso = 0;
+
+    let graficoKm = [];
+    let graficoOre = [];
+    let graficoPeso = [];
+    let graficoDate = [];
+
+    giorni.forEach(dataGiorno => {
+        const giornalieri = DIARIO.giornaliero.filter(r => r.data === dataGiorno);
+        const operazioni = DIARIO.carichi_scarichi.filter(r => r.data === dataGiorno);
+
+        if (giornalieri.length === 0 && operazioni.length === 0) return;
+
+        html += `<h2 style="margin-top:25px; color:#fff;">${formatDateIT(dataGiorno)}</h2>`;
+
+        giornalieri.forEach(g => {
+            totKm += g.km_percorsi;
+            totOreGuida += oreToMinuti(g.ore_guida);
+            totPausa += oreToMinuti(g.pausa.ore);
+
+            graficoKm.push(g.km_percorsi);
+            graficoOre.push(oreToMinuti(g.ore_guida));
+            graficoDate.push(dataGiorno);
+
+            html += `
+                <div style="padding:10px; background:#1e1e1e; color:#fff; border-radius:6px; margin-bottom:12px;">
+                    <strong>Giornata:</strong><br>
+                    Trattore: ${g.trattore}<br>
+                    Semirimorchio: ${g.semirimorchio}<br>
+                    Apertura: ${g.ora_apertura}<br>
+                    Chiusura: ${g.ora_chiusura}<br>
+                    Impegno: ${g.impegno}<br>
+                    Km percorsi: ${g.km_percorsi}<br>
+                    Ore guidate: ${g.ore_guida}<br>
+                    Luogo sosta: ${g.luogo_sosta}<br>
+                    Pausa: ${g.pausa.ore} (${g.pausa.tipo})
+                </div>
+            `;
+        });
+
+        if (operazioni.length > 0) {
+            html += `<h4 style="color:#fff;">Operazioni:</h4>`;
+        }
+
+        operazioni.forEach(op => {
+            const colore = op.operazione === "CARICO" ? "#4caf50" : "#f44336";
+            totPeso += op.peso;
+            graficoPeso.push(op.peso);
+
+            html += `
+                <div style="padding:8px; background:#1e1e1e; color:#fff; border-left:6px solid ${colore}; margin-bottom:8px; border-radius:4px;">
+                    <strong style="color:${colore};">${op.operazione}</strong><br>
+                    Cliente: ${op.cliente}<br>
+                    Luogo: ${op.luogo}<br>
+                    Semirimorchio: ${op.semirimorchio}<br>
+                    Peso: ${op.peso} kg
+                </div>
+            `;
+        });
+
+        html += `<hr style="margin:25px 0; border-color:#fff;">`;
+    });
+
+    html += `
+        <h2 style="color:#fff;">Totali del periodo</h2>
+        <div style="padding:10px; background:#1e1e1e; color:#fff; border-radius:6px; margin-bottom:12px;">
+            Km totali: <strong>${totKm}</strong><br>
+            Ore guida totali: <strong>${minutiToOre(totOreGuida)}</strong><br>
+            Ore pausa totali: <strong>${minutiToOre(totPausa)}</strong><br>
+            Peso totale movimentato: <strong>${totPeso} kg</strong>
+        </div>
+    `;
+
+    if (html.trim() === "") {
+        html = "<strong style='color:#fff;'>Nessun dato disponibile per il periodo selezionato.</strong>";
+    }
+
+    document.getElementById("summary-output").innerHTML = html;
+
+    window.RIASSUNTO_GRAFICI = {
+        date: graficoDate,
+        km: graficoKm,
+        ore: graficoOre,
+        peso: graficoPeso
+    };
+
+    setTimeout(generaGrafici, 200);
+});
+
+/* ============================================================
+   FILTRO AVANZATO RIASSUNTO — MOSTRA I GIORNI INTERI
+============================================================ */
+
+document.getElementById("search-riassunto").addEventListener("input", () => {
+
+    const query = document.getElementById("search-riassunto").value.toLowerCase();
+    const container = document.getElementById("summary-output");
+
+    // ogni giorno è separato da <h2> ... </h2> + blocchi
+    const children = Array.from(container.children);
+
+    let currentDayBlock = [];
+    let currentDayTitle = null;
+
+    children.forEach(el => {
+
+        // se è un titolo di giorno (H2)
+        if (el.tagName === "H2") {
+
+            // se c'è un blocco precedente → valutalo
+            if (currentDayTitle !== null) {
+                filtraGiorno(currentDayTitle, currentDayBlock, query);
+            }
+
+            // reset blocco
+            currentDayTitle = el;
+            currentDayBlock = [el];
+        } else {
+            // aggiungi elemento al blocco del giorno
+            currentDayBlock.push(el);
+        }
+    });
+
+    // valuta l’ultimo blocco
+    if (currentDayTitle !== null) {
+        filtraGiorno(currentDayTitle, currentDayBlock, query);
+    }
+});
+
+/* Funzione che mostra/nasconde un intero giorno */
+function filtraGiorno(titleEl, blockEls, query) {
+
+    if (!query.trim()) {
+        // mostra tutto se la ricerca è vuota
+        blockEls.forEach(el => el.style.display = "");
+        return;
+    }
+
+    // testo completo del giorno
+    let testo = "";
+    blockEls.forEach(el => testo += el.innerText.toLowerCase() + "\n");
+
+    const match = testo.includes(query);
+
+    blockEls.forEach(el => {
+        el.style.display = match ? "" : "none";
+    });
+}
+/* GRAFICI */
+
+function creaGrafico(idCanvas, label, labels, data, colore) {
+    const canvas = document.getElementById(idCanvas);
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    if (window[idCanvas + "_chart"]) {
+        window[idCanvas + "_chart"].destroy();
+    }
+
+    window[idCanvas + "_chart"] = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                borderColor: colore,
+                backgroundColor: colore + "33",
+                borderWidth: 2,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: colore
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: { color: "#fff" }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "#444" }
+                },
+                y: {
+                    ticks: { color: "#fff" },
+                    grid: { color: "#444" }
+                }
+            }
+        }
+    });
+}
+
+function generaGrafici() {
+    if (!window.RIASSUNTO_GRAFICI) return;
+    const g = window.RIASSUNTO_GRAFICI;
+
+    creaGrafico(
+        "graficoKm",
+        "Km percorsi",
+        g.date.map(formatDateIT),
+        g.km,
+        "#2196f3"
+    );
+
+    const oreDecimali = g.ore.map(min => (min / 60).toFixed(2));
+    creaGrafico(
+        "graficoOre",
+        "Ore di guida",
+        g.date.map(formatDateIT),
+        oreDecimali,
+        "#ff9800"
+    );
+
+    creaGrafico(
+        "graficoPeso",
+        "Peso movimentato (kg)",
+        g.date.map(formatDateIT),
+        g.peso,
+        "#4caf50"
+    );
+}
+
+/* STAMPA + PDF */
+
+document.getElementById("btn-stampa-riassunto").addEventListener("click", () => {
+    const contenuto = document.getElementById("summary-output").innerHTML;
+    const win = window.open("", "PRINT", "height=800,width=1000");
+    win.document.write(`
+        <html>
+        <head>
+            <title>Riassunto</title>
+            <style>
+                body {
+                    font-family: Arial;
+                    padding: 20px;
+                    background: #fff;
+                    color: #000;
+                }
+                h2 {
+                    margin-top: 25px;
+                }
+                div {
+                    margin-bottom: 12px;
+                }
+                hr {
+                    margin: 25px 0;
+                }
+            </style>
+        </head>
+        <body>
+            ${contenuto}
+        </body>
+        </html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
+});
+
+document.getElementById("btn-pdf-riassunto").addEventListener("click", () => {
+    const contenuto = document.getElementById("summary-output").innerHTML;
+    const blob = new Blob(
+        [
+            `
+            <html>
+            <head>
+                <title>Riassunto PDF</title>
+                <style>
+                    body {
+                        font-family: Arial;
+                        padding: 20px;
+                        background: #fff;
+                        color: #000;
+                    }
+                    h2 {
+                        margin-top: 25px;
+                    }
+                    div {
+                        margin-bottom: 12px;
+                    }
+                    hr {
+                        margin: 25px 0;
+                    }
+                </style>
+            </head>
+            <body>
+                ${contenuto}
+            </body>
+            </html>
+            `
+        ],
+        { type: "text/html" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "riassunto.html";
+    a.click();
+    URL.revokeObjectURL(url);
+    alert("File HTML generato. Aprilo e usa 'Stampa → Salva come PDF'.");
+});
+
+/* IMPORT / EXPORT JSON */
+
+document.getElementById("btn-export-json").addEventListener("click", () => {
+    const dataStr = JSON.stringify(DIARIO, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "DIARIO.json";
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+document.getElementById("btn-import-json").addEventListener("click", () => {
+    const fileInput = document.getElementById("file-import-json");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Seleziona un file DIARIO.json da importare.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const obj = JSON.parse(e.target.result);
+            if (
+                typeof obj === "object" &&
+                obj.giornaliero &&
+                obj.carichi_scarichi &&
+                obj.riassunti
+            ) {
+                DIARIO = obj;
+                saveToLocalStorage();
+                renderGiornalieroTable();
+                renderCarichiTable();
+                alert("DIARIO importato correttamente.");
+            } else {
+                alert("Struttura DIARIO non valida.");
+            }
+        } catch (err) {
+            alert("Errore nel file JSON.");
+        }
+    };
+    reader.readAsText(file);
+});
+
+/* INIZIALIZZAZIONE */
+
+function initApp() {
+    loadFromLocalStorage();
+    renderGiornalieroTable();
+    renderCarichiTable();
+}
+
+initApp();
+</script>
+
+<!-- CHART.JS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>
