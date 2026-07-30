@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Navigatore Camion - Versione A51 Fix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, sans-serif;
+    background: #000;
+    color: #fff;
+  }
+
+  .controls {
+    padding: 12px;
+    background: #222;
+    font-size: 18px;
+  }
+
+  .controls input {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: none;
+  }
+
+  .controls button {
+    padding: 16px;
+    font-size: 20px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: none;
+    background: #1976d2;
+    color: #fff;
+    font-weight: bold;
+    width: 100%;
+  }
+
+  #map {
+    width: 100%;
+    height: 420px;
+  }
+
+  #turnByTurn {
+    background: #111;
+    padding: 12px;
+    font-size: 18px;
+    height: 160px;
+    overflow-y: auto;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+  <div style="font-weight:bold; margin-bottom:10px; font-size:22px;">Navigatore Camion</div>
+
+  <input id="origineInput" placeholder="Origine (indirizzo o clic mappa)">
+  <button id="origineFromMap">Usa click mappa</button>
+
+  <input id="destinazioneInput" placeholder="Destinazione (indirizzo o clic mappa)">
+  <button id="destinazioneFromMap">Usa click mappa</button>
+
+  <div style="margin-top:10px; font-size:20px;">Dimensioni camion</div>
+  <input id="pesoCamion" type="number" placeholder="Peso (kg)" value="40000">
+  <input id="altezzaCamion" type="number" placeholder="Altezza (m)" value="4">
+  <input id="larghezzaCamion" type="number" placeholder="Larghezza (m)" value="2.5">
+  <input id="lunghezzaCamion" type="number" placeholder="Lunghezza (m)" value="16.5">
+  <input id="assiCamion" type="number" placeholder="Carico per asse (kg)" value="10000">
+
+  <button id="calcolaPercorsoCamion">CALCOLA PERCORSO CAMION</button>
+  <button id="startNavigation">NAVIGA</button>
+  <button id="apriGoogleMaps">APRI IN GOOGLE MAPS</button>
+
+  <div style="font-size:20px;">
+    Distanza: <span id="distanza"></span><br>
+    Tempo: <span id="tempo"></span>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<div id="turnByTurn"></div>
+
+<script>
+let map;
+let origine = null;
+let destinazione = null;
+let lastMapClick = null;
+let routePolyline = null;
+let gpsMarker = null;
+let gpsWatchId = null;
+
+/* ⭐ FIX SAMSUNG A51:
+   Inizializziamo la mappa SENZA callback.
+   Aspettiamo che google.maps sia pronto.
+*/
+function waitForGoogleMaps() {
+  if (window.google && google.maps && google.maps.Map) {
+    initMap(); // ora funziona anche su A51
+  } else {
+    setTimeout(waitForGoogleMaps, 100);
+  }
+}
+
+waitForGoogleMaps();
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 45.0, lng: 7.0 },
+    zoom: 6,
+    gestureHandling: "greedy"
+  });
+
+  map.addListener("click", e => {
+    lastMapClick = { lat: e.latLng.lat(), lon: e.latLng.lng() };
+  });
+
+  const o = new google.maps.places.Autocomplete(document.getElementById("origineInput"));
+  const d = new google.maps.places.Autocomplete(document.getElementById("destinazioneInput"));
+
+  o.addListener("place_changed", () => {
+    const p = o.getPlace();
+    if (!p.geometry) return;
+    origine = { lat: p.geometry.location.lat(), lon: p.geometry.location.lng() };
+  });
+
+  d.addListener("place_changed", () => {
+    const p = d.getPlace();
+    if (!p.geometry) return;
+    destinazione = { lat: p.geometry.location.lat(), lon: p.geometry.location.lng() };
+  });
+
+  document.getElementById("origineFromMap").onclick = () => {
+    if (!lastMapClick) return alert("Clicca sulla mappa");
+    origine = lastMapClick;
+  };
+
+  document.getElementById("destinazioneFromMap").onclick = () => {
+    if (!lastMapClick) return alert("Clicca sulla mappa");
+    destinazione = lastMapClick;
+  };
+
+  document.getElementById("calcolaPercorsoCamion").onclick = calcolaPercorsoCamion;
+  document.getElementById("startNavigation").onclick = startNavigation;
+  document.getElementById("apriGoogleMaps").onclick = apriGoogleMaps;
+}
+
+function formatHHMM(seconds) {
+  const totalMinutes = Math.round(seconds / 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+}
+
+async function calcolaPercorsoCamion() {
+  if (!origine || !destinazione) {
+    alert("Imposta origine e destinazione");
+    return;
+  }
+
+  const body = {
+    locations: [
+      { lat: origine.lat, lon: origine.lon },
+      { lat: destinazione.lat, lon: destinazione.lon }
+    ],
+    costing: "truck",
+    costing_options: {
+      truck: {
+        height: parseFloat(document.getElementById("altezzaCamion").value),
+        width: parseFloat(document.getElementById("larghezzaCamion").value),
+        length: parseFloat(document.getElementById("lunghezzaCamion").value),
+        weight: parseFloat(document.getElementById("pesoCamion").value),
+        axle_load: parseFloat(document.getElementById("assiCamion").value),
+        hazmat: false
+      }
+    },
+    directions_options: { units: "km" }
+  };
+
+  const res = await fetch("https://valhalla1.openstreetmap.de/route", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+
+  if (!data.trip) {
+    alert("Nessun percorso camion disponibile");
+    return;
+  }
+
+  document.getElementById("distanza").textContent = data.trip.summary.length + " km";
+  document.getElementById("tempo").textContent = formatHHMM(data.trip.summary.time);
+
+  mostraIstruzioni(data.trip.legs[0].maneuvers);
+
+  const shape = decodeValhalla(data.trip.legs[0].shape);
+
+  if (routePolyline) routePolyline.setMap(null);
+
+  routePolyline = new google.maps.Polyline({
+    path: shape,
+    strokeColor: "#00e5ff",
+    strokeWeight: 6,
+    map: map
+  });
+
+  const bounds = new google.maps.LatLngBounds();
+  shape.forEach(p => bounds.extend(p));
+  map.fitBounds(bounds);
+}
+
+function decodeValhalla(encoded) {
+  let coords = [];
+  let index = 0, lat = 0, lon = 0;
+
+  while (index < encoded.length) {
+    let shift = 0, result = 0;
+    let byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    let dlon = ((result & 1) ? ~(result >> 1) : (result >> 1));
+    lon += dlon;
+
+    coords.push({ lat: lat / 1e6, lng: lon / 1e6 });
+  }
+  return coords;
+}
+
+function mostraIstruzioni(maneuvers) {
+  const box = document.getElementById("turnByTurn");
+  box.innerHTML = "";
+  maneuvers.forEach(m => {
+    const div = document.createElement("div");
+    div.textContent = m.instruction;
+    box.appendChild(div);
+  });
+}
+
+function startNavigation() {
+  if (!navigator.geolocation) {
+    alert("GPS non disponibile");
+    return;
+  }
+
+  if (!routePolyline) {
+    alert("Calcola prima il percorso");
+    return;
+  }
+
+  if (gpsWatchId) {
+    navigator.geolocation.clearWatch(gpsWatchId);
+  }
+
+  gpsWatchId = navigator.geolocation.watchPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    const current = { lat, lng: lon };
+
+    if (!gpsMarker) {
+      gpsMarker = new google.maps.Marker({
+        map,
+        icon: {
+          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 8,
+          fillColor: "#00e5ff",
+          fillOpacity: 1,
+          strokeWeight: 1
+        }
+      });
+    }
+
+    gpsMarker.setPosition(current);
+    map.panTo(current);
+
+  }, err => {
+    alert("Errore GPS: " + err.message);
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 1000,
+    timeout: 10000
+  });
+}
+
+function apriGoogleMaps() {
+  if (!origine || !destinazione) {
+    alert("Imposta origine e destinazione");
+    return;
+  }
+  const url = `https://www.google.com/maps/dir/${origine.lat},${origine.lon}/${destinazione.lat},${destinazione.lon}/`;
+  window.open(url, "_blank");
+}
+</script>
+
+<!-- ⭐ FIX A51: NIENTE CALLBACK -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HEREAIzaSyDsEvVPNkoDHn7Aql00k5tlaNceujCUNW4&libraries=places"></script>
+
+</body>
+</html>
