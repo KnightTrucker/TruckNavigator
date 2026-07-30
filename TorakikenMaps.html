@@ -111,6 +111,16 @@ html,body{height:100%;overflow:hidden;font-family:var(--ff);background:var(--bg)
 
 ::-webkit-scrollbar{width:4px}.:-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+/* ── POI Search ────────────────────────────────────────────────────────── */
+.poi-bar{flex-shrink:0;background:var(--s1);border-bottom:1px solid var(--bd);padding:8px 12px;display:flex;gap:8px;align-items:center;z-index:20}
+.poi-wrap{flex:1;position:relative}
+.poi-input{width:100%;background:var(--bg);border:1.5px solid var(--bd);border-radius:var(--r);color:var(--txt);font:13px var(--ff);padding:8px 36px 8px 11px;transition:border-color .15s}
+.poi-input:focus{outline:none;border-color:var(--acc)}
+.poi-input::placeholder{color:var(--mut)}
+.poi-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mut);cursor:pointer;font-size:14px;padding:0;line-height:1;display:none}
+.poi-clear.show{display:block}
+.poi-results-count{font-size:11px;color:var(--mut);white-space:nowrap;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -124,6 +134,19 @@ html,body{height:100%;overflow:hidden;font-family:var(--ff);background:var(--bg)
   </div>
   <button type="button" class="btn btn-ghost btn-icon" onclick="locateMe()" title="La mia posizione">&#128205;</button>
 </header>
+
+<!-- POI SEARCH -->
+<div class="poi-bar">
+  <div class="poi-wrap">
+    <input type="text" id="poiInput" class="poi-input"
+      placeholder="Es: Distributore ENI, Milano"
+      onkeydown="if(event.key==='Enter')searchPOI()"
+      oninput="document.getElementById('poiClear').classList.toggle('show',this.value.length>0)">
+    <button id="poiClear" class="poi-clear" onclick="clearPOI()" title="Cancella">&#10005;</button>
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm" onclick="searchPOI()">&#128269;</button>
+  <span id="poiCount" class="poi-results-count"></span>
+</div>
 
 <!-- MAP -->
 <div id="map" style="flex:1;min-height:0"></div>
@@ -474,6 +497,74 @@ document.addEventListener('click', function(e){
       el.style.display='none';
   });
 });
+
+/* ── POI Search ─────────────────────────────────────────────────────────── */
+var poiMarkers = [];
+var poiIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:26px;height:26px;background:#f59e0b;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px #f59e0b55,0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:12px">&#9733;</div>',
+  iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-16]
+});
+
+function clearPOI() {
+  document.getElementById('poiInput').value = '';
+  document.getElementById('poiClear').classList.remove('show');
+  document.getElementById('poiCount').textContent = '';
+  poiMarkers.forEach(function(m){ MAP.removeLayer(m); });
+  poiMarkers = [];
+}
+
+function searchPOI() {
+  var q = document.getElementById('poiInput').value.trim();
+  if (!q) return;
+
+  document.getElementById('poiCount').textContent = 'Ricerca...';
+  poiMarkers.forEach(function(m){ MAP.removeLayer(m); });
+  poiMarkers = [];
+
+  fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=20&accept-language=it&addressdetails=1')
+    .then(function(r){ return r.json(); })
+    .then(function(results) {
+      if (!results.length) {
+        document.getElementById('poiCount').textContent = 'Nessun risultato';
+        toast('Nessun risultato trovato per: '+q);
+        return;
+      }
+
+      results.forEach(function(r) {
+        var lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+        var name = r.display_name.split(',')[0].trim();
+        var city = r.address ? (r.address.city||r.address.town||r.address.village||r.address.municipality||'') : '';
+        var idx = poiMarkers.length;
+        window['_poi_'+idx] = {lat:lat, lng:lng, name:name};
+        var popupHtml = '<b style="color:var(--txt)">'+name+'</b>'
+          + (city ? '<br><span style="color:var(--mut);font-size:11px">'+city+'</span>' : '')
+          + '<br><span style="font-size:11px;color:var(--acc)">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</span>'
+          + '<br><div style="display:flex;gap:6px;margin-top:6px">'
+          + '<button onclick="var p=window[&quot;_poi_'+idx+'&quot;];setCoords(&quot;from&quot;,p.lat,p.lng);document.getElementById(&quot;fromInput&quot;).value=p.name" style="font-size:11px;padding:3px 8px;background:var(--grn);border:none;border-radius:4px;color:#fff;cursor:pointer">&#128681; Partenza</button>'
+          + '<button onclick="var p=window[&quot;_poi_'+idx+'&quot;];setCoords(&quot;to&quot;,p.lat,p.lng);document.getElementById(&quot;toInput&quot;).value=p.name" style="font-size:11px;padding:3px 8px;background:var(--acc);border:none;border-radius:4px;color:#fff;cursor:pointer">&#127937; Arrivo</button>'
+          + '</div>';
+        var m = L.marker([lat,lng],{icon:poiIcon}).addTo(MAP).bindPopup(popupHtml);
+        poiMarkers.push(m);
+      });
+
+      document.getElementById('poiCount').textContent = results.length === 1 ? '1 risultato' : results.length + ' risultati';
+
+      if (results.length === 1) {
+        /* Singolo: zoom su di lui e apri popup */
+        MAP.setView([parseFloat(results[0].lat), parseFloat(results[0].lon)], 15);
+        poiMarkers[0].openPopup();
+      } else {
+        /* Multipli: adatta la mappa per mostrarli tutti */
+        var group = L.featureGroup(poiMarkers);
+        MAP.fitBounds(group.getBounds().pad(0.15));
+      }
+    })
+    .catch(function() {
+      document.getElementById('poiCount').textContent = '';
+      toast('Errore di rete nella ricerca POI.');
+    });
+}
 
 initMap();
 loadVehicle();
