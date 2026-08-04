@@ -5,13 +5,12 @@
     <title>Diario Autista</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- TEMA SCURO + SFONDO -->
+    <!-- TEMA SCURO + SFONDO (per GitHub puoi usare URL assoluto) -->
     <style>
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: #121212 url("stemma.jpg") no-repeat center center fixed;
-            background-size: cover;
+            background: #121212;
             color: #fff;
         }
 
@@ -23,6 +22,19 @@
 
         h1, h2, h3 {
             margin: 0 0 10px 0;
+        }
+
+        .header-bar {
+            display:flex;
+            align-items:center;
+            gap:20px;
+            margin-bottom:20px;
+        }
+
+        .header-bar img {
+            height:60px;
+            width:auto;
+            border-radius:6px;
         }
 
         .tabs {
@@ -146,15 +158,15 @@
 </head>
 <body>
 <div class="overlay">
-   <h1>Diario Autista</h1>
+    <!-- LOGO + TITOLO -->
+    <div class="header-bar">
+        <!-- Per GitHub: usa URL assoluto, es: src="https://raw.githubusercontent.com/utente/repo/main/stemma.png" -->
+        <img src="stemma.jpg" alt="Logo">
+        <h1 style="margin:0;">Diario Autista</h1>
+    </div>
 
     <!-- TAB PRINCIPALI -->
-   <div class="tabs">
-        
-     
-    
-     
-        
+    <div class="tabs">
         <button class="tab-btn active" data-tab="tab-giornaliero">Giornaliero</button>
         <button class="tab-btn" data-tab="tab-carichi">Carichi / Scarichi</button>
         <button class="tab-btn" data-tab="tab-riassunto">Riassunto</button>
@@ -187,14 +199,20 @@
                 </div>
 
                 <div class="col">
-                    <label>Ore guida (es. 05:30)</label>
-                    <input type="text" id="g_ore_guida">
+                    <label>Inizio guida</label>
+                    <input type="time" id="g_guida_start">
+
+                    <label>Fine guida</label>
+                    <input type="time" id="g_guida_end">
 
                     <label>Luogo sosta</label>
                     <input type="text" id="g_luogo_sosta">
 
-                    <label>Pausa (ore)</label>
-                    <input type="text" id="g_pausa_ore">
+                    <label>Inizio pausa</label>
+                    <input type="time" id="g_pausa_start">
+
+                    <label>Fine pausa</label>
+                    <input type="time" id="g_pausa_end">
 
                     <label>Tipo pausa</label>
                     <input type="text" id="g_pausa_tipo">
@@ -301,7 +319,6 @@
         <button type="button" class="secondary" id="btn-stampa-riassunto">Stampa</button>
         <button type="button" class="secondary" id="btn-pdf-riassunto">Esporta PDF (HTML)</button>
 
-        <!-- FILTRO GENERICO -->
         <input 
             type="text" 
             id="search-riassunto" 
@@ -329,7 +346,6 @@
     </div>
 </div>
 
-<!-- JAVASCRIPT COMPLETO -->
 <script>
 /* UTILITÀ */
 
@@ -354,15 +370,19 @@ function minutiToOre(min) {
     return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 
-function calcolaImpegno(oraApertura, oraChiusura) {
-    if (!oraApertura || !oraChiusura) return "";
-    const [h1, m1] = oraApertura.split(":").map(Number);
-    const [h2, m2] = oraChiusura.split(":").map(Number);
+function calcolaIntervallo(start, end) {
+    if (!start || !end) return "";
+    const [h1, m1] = start.split(":").map(Number);
+    const [h2, m2] = end.split(":").map(Number);
     let min1 = h1 * 60 + m1;
     let min2 = h2 * 60 + m2;
     let diff = min2 - min1;
     if (diff < 0) diff += 24 * 60;
     return minutiToOre(diff);
+}
+
+function calcolaImpegno(oraApertura, oraChiusura) {
+    return calcolaIntervallo(oraApertura, oraChiusura);
 }
 
 /* STRUTTURA DIARIO + LOCALSTORAGE */
@@ -418,10 +438,16 @@ document.getElementById("btn-add-giornaliero").addEventListener("click", () => {
             document.getElementById("g_ora_chiusura").value
         ),
         km_percorsi: parseFloat(document.getElementById("g_km").value || "0"),
-        ore_guida: document.getElementById("g_ore_guida").value,
+        ore_guida: calcolaIntervallo(
+            document.getElementById("g_guida_start").value,
+            document.getElementById("g_guida_end").value
+        ),
         luogo_sosta: document.getElementById("g_luogo_sosta").value,
         pausa: {
-            ore: document.getElementById("g_pausa_ore").value,
+            ore: calcolaIntervallo(
+                document.getElementById("g_pausa_start").value,
+                document.getElementById("g_pausa_end").value
+            ),
             tipo: document.getElementById("g_pausa_tipo").value
         }
     };
@@ -451,6 +477,8 @@ document.getElementById("btn-reset-giornaliero").addEventListener("click", () =>
 function renderGiornalieroTable() {
     const tbody = document.querySelector("#table-giornaliero tbody");
     tbody.innerHTML = "";
+
+    DIARIO.giornaliero.sort((a,b) => b.data.localeCompare(a.data));
 
     DIARIO.giornaliero.forEach((rec, index) => {
         const tr = document.createElement("tr");
@@ -484,9 +512,13 @@ function editGiornaliero(index) {
     document.getElementById("g_km").value = rec.km_percorsi;
     document.getElementById("g_ora_apertura").value = rec.ora_apertura;
     document.getElementById("g_ora_chiusura").value = rec.ora_chiusura;
-    document.getElementById("g_ore_guida").value = rec.ore_guida;
+
+    // non possiamo ricavare start/end da durata, quindi lasciamo vuoti
+    document.getElementById("g_guida_start").value = "";
+    document.getElementById("g_guida_end").value = "";
     document.getElementById("g_luogo_sosta").value = rec.luogo_sosta;
-    document.getElementById("g_pausa_ore").value = rec.pausa.ore;
+    document.getElementById("g_pausa_start").value = "";
+    document.getElementById("g_pausa_end").value = "";
     document.getElementById("g_pausa_tipo").value = rec.pausa.tipo;
 }
 
@@ -536,6 +568,8 @@ document.getElementById("btn-reset-carico").addEventListener("click", () => {
 function renderCarichiTable() {
     const tbody = document.querySelector("#table-carichi tbody");
     tbody.innerHTML = "";
+
+    DIARIO.carichi_scarichi.sort((a,b) => b.data.localeCompare(a.data));
 
     DIARIO.carichi_scarichi.forEach((rec, index) => {
         const colore = rec.operazione === "CARICO" ? "#4caf50" : "#f44336";
@@ -617,7 +651,10 @@ document.getElementById("btn-calcola-riassunto").addEventListener("click", () =>
         }
     }
 
-    giorni.sort().reverse(); // data più recente per prima
+    giorni.sort().reverse();
+
+    DIARIO.giornaliero.sort((a,b) => b.data.localeCompare(a.data));
+    DIARIO.carichi_scarichi.sort((a,b) => b.data.localeCompare(a.data));
 
     let html = "";
     let totKm = 0;
@@ -712,56 +749,39 @@ document.getElementById("btn-calcola-riassunto").addEventListener("click", () =>
     setTimeout(generaGrafici, 200);
 });
 
-/* ============================================================
-   FILTRO AVANZATO RIASSUNTO — MOSTRA I GIORNI INTERI
-============================================================ */
+/* FILTRO AVANZATO RIASSUNTO — MOSTRA GIORNI INTERI */
 
 document.getElementById("search-riassunto").addEventListener("input", () => {
-
     const query = document.getElementById("search-riassunto").value.toLowerCase();
     const container = document.getElementById("summary-output");
-
-    // ogni giorno è separato da <h2> ... </h2> + blocchi
     const children = Array.from(container.children);
 
     let currentDayBlock = [];
     let currentDayTitle = null;
 
     children.forEach(el => {
-
-        // se è un titolo di giorno (H2)
         if (el.tagName === "H2") {
-
-            // se c'è un blocco precedente → valutalo
             if (currentDayTitle !== null) {
                 filtraGiorno(currentDayTitle, currentDayBlock, query);
             }
-
-            // reset blocco
             currentDayTitle = el;
             currentDayBlock = [el];
         } else {
-            // aggiungi elemento al blocco del giorno
             currentDayBlock.push(el);
         }
     });
 
-    // valuta l’ultimo blocco
     if (currentDayTitle !== null) {
         filtraGiorno(currentDayTitle, currentDayBlock, query);
     }
 });
 
-/* Funzione che mostra/nasconde un intero giorno */
 function filtraGiorno(titleEl, blockEls, query) {
-
     if (!query.trim()) {
-        // mostra tutto se la ricerca è vuota
         blockEls.forEach(el => el.style.display = "");
         return;
     }
 
-    // testo completo del giorno
     let testo = "";
     blockEls.forEach(el => testo += el.innerText.toLowerCase() + "\n");
 
@@ -771,6 +791,7 @@ function filtraGiorno(titleEl, blockEls, query) {
         el.style.display = match ? "" : "none";
     });
 }
+
 /* GRAFICI */
 
 function creaGrafico(idCanvas, label, labels, data, colore) {
@@ -987,8 +1008,6 @@ function initApp() {
 initApp();
 </script>
 
-<!-- CHART.JS CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 </body>
 </html>
