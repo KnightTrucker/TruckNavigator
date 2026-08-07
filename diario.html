@@ -31,6 +31,18 @@ tr:nth-child(odd) { background:#202020; }
 .col { flex:1 1 300px; }
 canvas { background:#1e1e1e; border-radius:6px; margin-top:15px; }
 </style>
+<style>
+.graph-fullscreen {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #000;
+    z-index: 99999;
+}
+</style>
+
 </head>
 
 <body>
@@ -204,6 +216,7 @@ canvas { background:#1e1e1e; border-radius:6px; margin-top:15px; }
     <canvas id="graficoKm" height="120"></canvas>
     <canvas id="graficoOre" height="120"></canvas>
     <canvas id="graficoPeso" height="120"></canvas>
+   <canvas id="graficoImpegno" height="120"></canvas>
 </div>
 
 <!-- TAB IMPORT / EXPORT -->
@@ -541,10 +554,11 @@ const summary_output = document.getElementById("summary-output");
 const graficoKm = document.getElementById("graficoKm");
 const graficoOre = document.getElementById("graficoOre");
 const graficoPeso = document.getElementById("graficoPeso");
-
+const graficoImpegno = document.getElementById("graficoImpegno");  // <— QUI
 let chartKm = null;
 let chartOre = null;
 let chartPeso = null;
+let chartImpegno = null;  // <— QUI
 
 /* ============================================================
    RIASSUNTO — CALCOLO
@@ -588,21 +602,30 @@ document.getElementById("btn-calcola-riassunto").addEventListener("click", () =>
     let totOreGuida = 0;
     let totImpegno = 0;
 
-  lista.forEach(r => {
-    const kmVal = Number(r.km) > 0 ? Number(r.km) : 0;
-    const oreGuidaVal = oreToMinuti(r.ore_guida && r.ore_guida.includes(":") ? r.ore_guida : "00:00");
-    const impegnoVal = oreToMinuti(r.impegno && r.impegno.includes(":") ? r.impegno : "00:00");
+let totKg = 0;
+
+lista.forEach(r => {
+    const kmVal = Number(r.km) || 0;
+    const oreGuidaVal = r.ore_guida && r.ore_guida.includes(":") ? oreToMinuti(r.ore_guida) : 0;
+    const impegnoVal = r.impegno && r.impegno.includes(":") ? oreToMinuti(r.impegno) : 0;
+
+    // SOMMA KG DEI CARICHI
+    const kgVal = DIARIO.carichi_scarichi
+        .filter(c => c.data === r.data && c.operazione === "CARICO")
+        .reduce((sum, c) => sum + (Number(c.peso) || 0), 0);
 
     totKm += kmVal;
     totOreGuida += oreGuidaVal;
     totImpegno += impegnoVal;
+    totKg += kgVal;
 });
 
     summary_output.innerHTML = `
-        <p><b>Totale Km:</b> ${totKm}</p>
-        <p><b>Totale ore guida:</b> ${minutiToOre(totOreGuida)}</p>
-        <p><b>Totale impegno:</b> ${minutiToOre(totImpegno)}</p>
-    `;
+    <p><b>Totale Km:</b> ${totKm}</p>
+    <p><b>Totale ore guida:</b> ${minutiToOre(totOreGuida)}</p>
+    <p><b>Totale impegno:</b> ${minutiToOre(totImpegno)}</p>
+    <p><b>Totale Kg caricati:</b> ${totKg}</p>
+`;
 
     renderGrafici(lista);
 });
@@ -623,7 +646,9 @@ function renderGrafici(lista) {
     if (chartKm) chartKm.destroy();
     if (chartOre) chartOre.destroy();
     if (chartPeso) chartPeso.destroy();
+    if (chartImpegno) chartImpegno.destroy();   // <— AGGIUNTO
 
+    // --- Grafico KM ---
     chartKm = new Chart(graficoKm, {
         type: "bar",
         data: {
@@ -636,6 +661,7 @@ function renderGrafici(lista) {
         }
     });
 
+    // --- Grafico ORE GUIDA ---
     chartOre = new Chart(graficoOre, {
         type: "line",
         data: {
@@ -648,6 +674,7 @@ function renderGrafici(lista) {
         }
     });
 
+    // --- Grafico PESO ---
     chartPeso = new Chart(graficoPeso, {
         type: "bar",
         data: {
@@ -659,8 +686,24 @@ function renderGrafici(lista) {
             }]
         }
     });
-}
 
+    // --- Grafico IMPEGNO (MINUTI) ---
+    const impegnoMin = lista.map(r =>
+        r.impegno && r.impegno.includes(":") ? oreToMinuti(r.impegno) : 0
+    );
+
+    chartImpegno = new Chart(graficoImpegno, {
+        type: "line",
+        data: {
+            labels: labelsGiorni,
+            datasets: [{
+                label: "Impegno (minuti)",
+                data: impegnoMin,
+                borderColor: "#ff9800"
+            }]
+        }
+    });
+}
 /* ============================================================
    VIAGGI — RENDER TABELLA
    ============================================================ */
@@ -853,6 +896,26 @@ function initApp() {
 }
 
 initApp();
+
+function enableFullscreenGraph(canvas) {
+    let isFull = false;
+
+    canvas.addEventListener("dblclick", () => {
+        if (!isFull) {
+            canvas.classList.add("graph-fullscreen");
+            isFull = true;
+        } else {
+            canvas.classList.remove("graph-fullscreen");
+            isFull = false;
+        }
+    });
+}
+
+enableFullscreenGraph(graficoKm);
+enableFullscreenGraph(graficoOre);
+enableFullscreenGraph(graficoPeso);
+enableFullscreenGraph(graficoImpegno);
+
 </script>
 
 </div> <!-- fine overlay -->
