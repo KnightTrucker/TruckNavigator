@@ -121,6 +121,29 @@ canvas{background:linear-gradient(180deg,#0b1924,#07121c)!important;border:1px s
 .money-lock-hint{margin-top:7px;font-size:12px;color:#8fb8d8}
 .money-card.unlocked .money-lock-hint{display:none}
 
+
+/* === V7: intestazioni tabelle fisse + evidenziazioni === */
+table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    background: #102335 !important;
+    box-shadow: 0 2px 0 rgba(255,255,255,.08);
+}
+.value-alert {
+    color: #ff5252 !important;
+    font-weight: 800 !important;
+}
+.summary-alert {
+    border-color: #ff5252 !important;
+    box-shadow: 0 0 0 1px rgba(255,82,82,.35), 0 8px 22px rgba(0,0,0,.22) !important;
+}
+.summary-alert .summary-value,
+.summary-alert .summary-label,
+.summary-alert .summary-unit {
+    color: #ff5252 !important;
+}
+
 </style>
 
 </head>
@@ -248,12 +271,14 @@ canvas{background:linear-gradient(180deg,#0b1924,#07121c)!important;border:1px s
                 </select>
 
                 <label>Luogo</label>
-                <input type="text" id="c_luogo">
+                <input type="text" id="c_luogo" list="lista-luoghi-carichi" autocomplete="off">
+                <datalist id="lista-luoghi-carichi"></datalist>
             </div>
 
             <div class="col">
                 <label>Cliente</label>
-                <input type="text" id="c_cliente">
+                <input type="text" id="c_cliente" list="lista-clienti-carichi" autocomplete="off">
+                <datalist id="lista-clienti-carichi"></datalist>
 
                 <label>Semirimorchio</label>
                 <input type="text" id="c_semirimorchio">
@@ -532,6 +557,12 @@ function loadFromLocalStorage() {
     if (!DIARIO.carichi_scarichi) DIARIO.carichi_scarichi = [];
     if (!DIARIO.viaggi) DIARIO.viaggi = [];
     if (!DIARIO.stipendi) DIARIO.stipendi = [];
+
+    DIARIO.giornaliero.forEach(r => {
+        if (r && r.pausa) {
+            r.note = mergeWeeklyRestNote(r.note || "", r.pausa.ore, r.pausa.tipo);
+        }
+    });
 }
 
 function escapeHtml(value) {
@@ -584,6 +615,57 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     });
 });
 
+
+/* ============================================================
+   V7 — REGOLE TEMPI DI GUIDA / IMPEGNO / RIPOSO
+   ============================================================ */
+function isGuidaOverLimit(v) {
+    const m = oreToMinuti(v);
+    return m > 9 * 60;
+}
+
+function isImpegnoOverLimit(v) {
+    const m = oreToMinuti(v);
+    return m > 13 * 60;
+}
+
+function isPausaGiornalieraUnderLimit(rec) {
+    if (!rec || !rec.pausa) return false;
+    if ((rec.pausa.tipo || "").toUpperCase() !== "GIORNALIERA") return false;
+    const m = oreToMinuti(rec.pausa.ore);
+    return m > 0 && m < 11 * 60;
+}
+
+function weeklyRestNote(pausaOre, tipoPausa) {
+    if ((tipoPausa || "").toUpperCase() !== "SETTIMANALE") return "";
+    const minuti = oreToMinuti(pausaOre);
+    if (minuti <= 0) return "";
+
+    const standard = 45 * 60;
+    if (minuti < standard) {
+        return `Recuperare ${minutiToOre(standard - minuti)} ore`;
+    }
+    if (minuti > standard) {
+        return `${minutiToOre(minuti - standard)} ore compensate`;
+    }
+    return "";
+}
+
+function mergeWeeklyRestNote(noteEsistenti, pausaOre, tipoPausa) {
+    const auto = weeklyRestNote(pausaOre, tipoPausa);
+    let note = (noteEsistenti || "").trim();
+
+    // Rimuove eventuale vecchia nota automatica già generata
+    note = note
+        .replace(/(?:^|\s*\|\s*)Recuperare\s+\d{1,3}:\d{2}\s+ore/gi, "")
+        .replace(/(?:^|\s*\|\s*)\d{1,3}:\d{2}\s+ore compensate/gi, "")
+        .replace(/^\s*\|\s*|\s*\|\s*$/g, "")
+        .trim();
+
+    if (!auto) return note;
+    return note ? `${note} | ${auto}` : auto;
+}
+
 /* ============================================================
    GIORNALIERO — RENDER TABELLA
    ============================================================ */
@@ -602,11 +684,11 @@ function renderGiornalieroTable() {
             <td>${rec.semirimorchio}</td>
             <td>${rec.ora_apertura}</td>
             <td>${rec.ora_chiusura}</td>
-            <td>${rec.impegno}</td>
+            <td class="${isImpegnoOverLimit(rec.impegno) ? 'value-alert' : ''}">${rec.impegno}</td>
             <td>${rec.km}</td>
-            <td>${rec.ore_guida}</td>
+            <td class="${isGuidaOverLimit(rec.ore_guida) ? 'value-alert' : ''}">${rec.ore_guida}</td>
             <td>${rec.luogo_sosta}</td>
-            <td>${rec.pausa.ore} (${rec.pausa.tipo})</td>
+            <td class="${isPausaGiornalieraUnderLimit(rec) ? 'value-alert' : ''}">${rec.pausa.ore} (${rec.pausa.tipo})</td>
             <td class="note-cell">${escapeHtml(rec.note || "")}</td>
             <td>
                 <button class="secondary" onclick="editG(${index})">Modifica</button>
@@ -639,6 +721,8 @@ document.getElementById("btn-add-giornaliero").addEventListener("click", () => {
             tipo: g_pausa_tipo.value
         }
     };
+
+    rec.note = mergeWeeklyRestNote(rec.note || "", rec.pausa.ore, rec.pausa.tipo);
 
     DIARIO.giornaliero.push(rec);
     saveToLocalStorage();
@@ -681,6 +765,36 @@ function delG(i) {
     saveToLocalStorage();
     renderGiornalieroTable();
     aggiornaSuggerimentiGiornaliero();
+}
+
+
+/* ============================================================
+   CARICHI / SCARICHI — MEMORIA CLIENTI E LUOGHI
+   ============================================================ */
+function aggiornaSuggerimentiCarichi() {
+    const listaClienti = document.getElementById("lista-clienti-carichi");
+    const listaLuoghi = document.getElementById("lista-luoghi-carichi");
+    if (!listaClienti || !listaLuoghi) return;
+
+    const clienti = [...new Set(
+        (DIARIO.carichi_scarichi || [])
+            .map(r => (r.cliente || "").trim())
+            .filter(Boolean)
+    )].sort((a,b) => a.localeCompare(b, "it", {sensitivity:"base"}));
+
+    const luoghi = [...new Set(
+        (DIARIO.carichi_scarichi || [])
+            .map(r => (r.luogo || "").trim())
+            .filter(Boolean)
+    )].sort((a,b) => a.localeCompare(b, "it", {sensitivity:"base"}));
+
+    listaClienti.innerHTML = clienti
+        .map(v => `<option value="${escapeHtml(v)}"></option>`)
+        .join("");
+
+    listaLuoghi.innerHTML = luoghi
+        .map(v => `<option value="${escapeHtml(v)}"></option>`)
+        .join("");
 }
 
 /* ============================================================
@@ -748,6 +862,7 @@ document.getElementById("btn-add-carico").addEventListener("click", () => {
     saveToLocalStorage();
     renderCarichiTable();
     renderViaggiTable();
+    aggiornaSuggerimentiCarichi();
     form_carichi.reset();
 });
 
@@ -768,6 +883,7 @@ function editC(i) {
     DIARIO.carichi_scarichi.splice(i,1);
     saveToLocalStorage();
     renderCarichiTable();
+    aggiornaSuggerimentiCarichi();
 }
 
 /* ============================================================
@@ -778,6 +894,7 @@ function delC(i) {
     DIARIO.carichi_scarichi.splice(i,1);
     saveToLocalStorage();
     renderCarichiTable();
+    aggiornaSuggerimentiCarichi();
 }
 
 /* ============================================================
@@ -861,7 +978,11 @@ document.getElementById("btn-calcola-riassunto").addEventListener("click", () =>
     const mediaOreGuida = giorniLavorati ? Math.round(totOreGuida / giorniLavorati) : 0;
     const mediaImpegno = giorniLavorati ? Math.round(totImpegno / giorniLavorati) : 0;
 
-    summary_output.innerHTML = `
+    
+    const alertGuida = lista.some(r => isGuidaOverLimit(r.ore_guida));
+    const alertImpegno = lista.some(r => isImpegnoOverLimit(r.impegno));
+    const alertPausa = lista.some(r => isPausaGiornalieraUnderLimit(r));
+summary_output.innerHTML = `
     <div class="summary-card"><div class="summary-icon">📅</div><div><div class="summary-label">Giorni lavorati</div><div class="summary-value">${giorniLavorati}</div><div class="summary-unit">giorni</div></div></div>
     <div class="summary-card"><div class="summary-icon">🛣️</div><div><div class="summary-label">Totale Km</div><div class="summary-value">${totKm}</div><div class="summary-unit">km</div></div></div>
     <div class="summary-card"><div class="summary-icon">◴</div><div><div class="summary-label">Media Km/giorno</div><div class="summary-value">${mediaKm}</div><div class="summary-unit">km</div></div></div>
@@ -1288,6 +1409,14 @@ document.getElementById("btn-import-json").addEventListener("click", () => {
             if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.giornaliero) || !Array.isArray(parsed.carichi_scarichi)) throw new Error("Struttura non valida");
             if (!confirm("Il backup è valido. Importarlo e sostituire i dati attuali?")) return;
             DIARIO = parsed;
+            if (Array.isArray(DIARIO.giornaliero)) {
+                DIARIO.giornaliero.forEach(r => {
+                    if (r && r.pausa) {
+                        r.note = mergeWeeklyRestNote(r.note || "", r.pausa.ore, r.pausa.tipo);
+                    }
+                });
+            }
+
             if (!DIARIO.security || typeof DIARIO.security !== "object") {
                 DIARIO.security = { pinSalt: "", pinHash: "" };
             }
@@ -1298,6 +1427,7 @@ document.getElementById("btn-import-json").addEventListener("click", () => {
             renderCarichiTable();
             renderViaggiTable();
             renderStipendiTable();
+            aggiornaSuggerimentiCarichi();
             alert("Importazione completata.");
             aggiornaSuggerimentiGiornaliero();
         } catch {
@@ -1325,11 +1455,11 @@ function card(label,value,unit=''){return `<div class="dash-card"><div class="da
 
 function renderDashboard(){
  const el=document.getElementById('dash-month'); let ym=el.value; if(!ym){const d=new Date();ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;el.value=ym;}
- const g=DIARIO.giornaliero.filter(r=>(r.data||'').startsWith(ym)); const days=new Set(g.map(r=>r.data)).size;
+ const g=DIARIO.giornaliero.filter(r=>(r.data||'').startsWith(ym)); const days=new Set(g.filter(r=>(Number(r.km)||0)>0).map(r=>r.data)).size;
  const km=g.reduce((s,r)=>s+(Number(r.km)||0),0), guida=g.reduce((s,r)=>s+oreToMinuti(r.ore_guida),0), imp=g.reduce((s,r)=>s+oreToMinuti(r.impegno),0);
  const kg=DIARIO.carichi_scarichi.filter(r=>(r.data||'').startsWith(ym)&&r.operazione==='CARICO').reduce((s,r)=>s+(Number(r.peso)||0),0);
  const sal=(DIARIO.stipendi||[]).filter(r=>((r.mese_riferimento||r.data||'').startsWith(ym))).reduce((s,r)=>s+(Number(r.importo)||0),0);
- document.getElementById('dashboard-output').innerHTML=[card('Giorni lavorati',days,'giorni'),card('Km del mese',km.toLocaleString('it-IT'),'km'),card('Ore guida',minutiToOre(guida),'ore'),card('Impegno',minutiToOre(imp),'ore'),card('Kg trasportati',kg.toLocaleString('it-IT'),'kg'),moneyCard('Competenze mese',formatEuro(sal),'')].join('');
+ document.getElementById('dashboard-output').innerHTML=[card('Giorni guidati',days,'giorni'),card('Km del mese',km.toLocaleString('it-IT'),'km'),card('Ore guida',minutiToOre(guida),'ore'),card('Impegno',minutiToOre(imp),'ore'),card('Kg trasportati',kg.toLocaleString('it-IT'),'kg'),moneyCard('Competenze mese',formatEuro(sal),'')].join('');
 }
 
 function filterStipendi(){
@@ -1631,6 +1761,7 @@ function initApp() {
     renderDashboard();
     aggiornaSuggerimentiGiornaliero();
     preparaGraficaTabelle();
+    aggiornaSuggerimentiCarichi();
 }
 
 initApp();
