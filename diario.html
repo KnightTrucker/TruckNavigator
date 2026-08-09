@@ -281,7 +281,8 @@ table thead th {
                 <datalist id="lista-clienti-carichi"></datalist>
 
                 <label>Semirimorchio</label>
-                <input type="text" id="c_semirimorchio">
+                <input type="text" id="c_semirimorchio" list="lista-semirimorchi-carichi" autocomplete="off">
+                <datalist id="lista-semirimorchi-carichi"></datalist>
 
                 <label>Peso (kg)</label>
                 <input type="number" id="c_peso">
@@ -774,7 +775,8 @@ function delG(i) {
 function aggiornaSuggerimentiCarichi() {
     const listaClienti = document.getElementById("lista-clienti-carichi");
     const listaLuoghi = document.getElementById("lista-luoghi-carichi");
-    if (!listaClienti || !listaLuoghi) return;
+    const listaSemirimorchi = document.getElementById("lista-semirimorchi-carichi");
+    if (!listaClienti || !listaLuoghi || !listaSemirimorchi) return;
 
     const clienti = [...new Set(
         (DIARIO.carichi_scarichi || [])
@@ -788,11 +790,21 @@ function aggiornaSuggerimentiCarichi() {
             .filter(Boolean)
     )].sort((a,b) => a.localeCompare(b, "it", {sensitivity:"base"}));
 
+    const semirimorchi = [...new Set(
+        (DIARIO.carichi_scarichi || [])
+            .map(r => (r.semirimorchio || "").trim())
+            .filter(Boolean)
+    )].sort((a,b) => a.localeCompare(b, "it", {sensitivity:"base"}));
+
     listaClienti.innerHTML = clienti
         .map(v => `<option value="${escapeHtml(v)}"></option>`)
         .join("");
 
     listaLuoghi.innerHTML = luoghi
+        .map(v => `<option value="${escapeHtml(v)}"></option>`)
+        .join("");
+
+    listaSemirimorchi.innerHTML = semirimorchi
         .map(v => `<option value="${escapeHtml(v)}"></option>`)
         .join("");
 }
