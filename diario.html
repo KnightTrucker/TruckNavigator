@@ -407,6 +407,7 @@ table thead th {
                     <option value="TREDICESIMA">TREDICESIMA</option>
                     <option value="QUATTORDICESIMA">QUATTORDICESIMA</option>
                     <option value="RIMBORSI">RIMBORSI</option>
+                    <option value="ACCONTI">ACCONTI</option>
                 </select>
             </div>
         </div>
@@ -417,9 +418,10 @@ table thead th {
     <table id="table-stipendi">
         <thead>
             <tr>
-                <th>Data</th>
-                <th>Causale</th>
+                <th>Mese riferimento</th>
+                <th>Data ricezione</th>
                 <th>Importo</th>
+                <th>Causale</th>
                 <th>Azioni</th>
             </tr>
         </thead>
@@ -567,7 +569,8 @@ function loadFromLocalStorage() {
     if (!DIARIO.giornaliero) DIARIO.giornaliero = [];
     if (!DIARIO.carichi_scarichi) DIARIO.carichi_scarichi = [];
     if (!DIARIO.viaggi) DIARIO.viaggi = [];
-    if (!DIARIO.stipendi) DIARIO.stipendi = [];
+    if (!Array.isArray(DIARIO.stipendi)) DIARIO.stipendi = [];
+    if (!DIARIO.security || typeof DIARIO.security !== "object") DIARIO.security = { pinSalt:"", pinHash:"" };
 
     DIARIO.giornaliero.forEach(r => {
         if (r && r.pausa) {
@@ -1268,6 +1271,8 @@ function renderStipendiTable() {
     });
 }
 
+let stipendioEditIndex = null;
+
 document.getElementById("btn-add-stipendio").addEventListener("click", () => {
     const mese = document.getElementById("s_mese_riferimento").value;
     const dataRicezione = document.getElementById("s_data_ricezione").value;
@@ -1303,19 +1308,41 @@ document.getElementById("btn-add-stipendio").addEventListener("click", () => {
 
 function editStipendio(i) {
     const r = DIARIO.stipendi[i];
-    s_data.value = r.data || "";
-    s_importo.value = r.importo ?? "";
-    s_causale.value = r.causale || "";
-    DIARIO.stipendi.splice(i,1);
-    saveToLocalStorage();
-    renderStipendiTable();
+    if (!r) return;
+
+    document.getElementById("s_mese_riferimento").value =
+        r.mese_riferimento || (r.data ? r.data.slice(0,7) : "");
+    document.getElementById("s_data_ricezione").value =
+        r.data_ricezione || r.data || "";
+    document.getElementById("s_importo").value = r.importo ?? "";
+    document.getElementById("s_causale").value =
+        (r.causale || "STIPENDIO").toUpperCase();
+
+    stipendioEditIndex = i;
+    document.getElementById("btn-add-stipendio").textContent = "Salva modifiche";
+
+    document.getElementById("s_mese_riferimento").scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
 }
 
 function delStipendio(i) {
     if (!confirm("Cancellare questa voce stipendio?")) return;
     DIARIO.stipendi.splice(i,1);
+
+    if (stipendioEditIndex === i) {
+        stipendioEditIndex = null;
+        document.getElementById("form-stipendi").reset();
+        document.getElementById("btn-add-stipendio").textContent = "Salva voce";
+    } else if (stipendioEditIndex !== null && i < stipendioEditIndex) {
+        stipendioEditIndex--;
+    }
+
     saveToLocalStorage();
     renderStipendiTable();
+    renderSalaryStats();
+    renderDashboard();
 }
 
 /* ============================================================
@@ -1524,7 +1551,8 @@ function renderSalaryStats(){
    card('Tredicesima',formatEuro(sum(r=>norm(r.causale)==='TREDICESIMA'))),
    card('Quattordicesima',formatEuro(sum(r=>norm(r.causale)==='QUATTORDICESIMA'))),
    card('Stipendi',formatEuro(sum(r=>norm(r.causale)==='STIPENDIO'))),
-   card('Rimborsi',formatEuro(sum(r=>norm(r.causale)==='RIMBORSI')))
+   card('Rimborsi',formatEuro(sum(r=>norm(r.causale)==='RIMBORSI'))),
+   card('Acconti',formatEuro(sum(r=>norm(r.causale)==='ACCONTI')))
  ].join('');
 }
 function renderClientStats(){
