@@ -1274,7 +1274,7 @@ body.ktn28-clean.ktn28-hide-trust .ktn23-offline-trust{display:none!important}
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="application-name" content="KnightTruckerNavy">
-<link rel="manifest" href="./manifest.webmanifest">
+<link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 
@@ -1332,6 +1332,34 @@ body.ktn28-clean.ktn28-hide-trust .ktn23-offline-trust{display:none!important}
   padding:9px 11px;color:#9aa8ba;font:700 9px/1.3 var(--ff,Arial,sans-serif)
 }
 .ktn474-status.err{color:#fca5a5}
+</style>
+
+
+<style>
+/* === BETA 1.0.1 QUICK PREVIEW STACK FIX === */
+#b10RoutePreview{
+  z-index:2147483000 !important;
+  isolation:isolate;
+}
+#b10RoutePreview.open{
+  display:flex !important;
+}
+#b10RoutePreviewMap{
+  position:relative;
+  z-index:1;
+}
+#b10RoutePreviewBottom{
+  position:relative;
+  z-index:2;
+}
+body.b101-preview-open{
+  overflow:hidden !important;
+}
+body.b101-preview-open #ktn53QuickOverlay,
+body.b101-preview-open .ktn53-quick-overlay,
+body.b101-preview-open .ktn53-qoverlay{
+  pointer-events:none !important;
+}
 </style>
 
 </head>
@@ -7546,6 +7574,75 @@ function ktn55CancelSearchChoice(){
     }
     return oldQuickNavigate.apply(this,arguments);
   };
+})();
+</script>
+
+
+<script>
+/* === BETA 1.0.1 QUICK PREVIEW STACK FIX OWNER === */
+(function(){
+  var previewWasQuick=false;
+
+  function quickIsOpen(){
+    var q=document.getElementById('ktn53QuickOverlay');
+    if(q){
+      return q.classList.contains('open') ||
+             q.getAttribute('aria-hidden')==='false' ||
+             getComputedStyle(q).display!=='none';
+    }
+    var alt=document.querySelector('.ktn53-quick-overlay.open,.ktn53-qoverlay.open');
+    return !!alt;
+  }
+
+  function forceTop(){
+    var p=document.getElementById('b10RoutePreview');
+    if(!p)return;
+    p.style.zIndex='2147483000';
+    p.style.position='fixed';
+    p.style.inset='0';
+    p.style.pointerEvents='auto';
+  }
+
+  var basePreview=window.b10PreviewInitialRoute;
+  if(typeof basePreview==='function'){
+    window.b10PreviewInitialRoute=function(i){
+      previewWasQuick=quickIsOpen();
+      document.body.classList.add('b101-preview-open');
+      var r=basePreview.apply(this,arguments);
+      forceTop();
+      requestAnimationFrame(forceTop);
+      setTimeout(forceTop,50);
+      setTimeout(forceTop,250);
+      return r;
+    };
+  }
+
+  var baseClose=window.b10CloseInitialPreview;
+  if(typeof baseClose==='function'){
+    window.b10CloseInitialPreview=function(){
+      var r=baseClose.apply(this,arguments);
+      document.body.classList.remove('b101-preview-open');
+
+      /* Quick Navigation remains exactly where it was.
+         We do not close/rebuild the popup, so selected destination/routes stay intact. */
+      if(previewWasQuick){
+        var q=document.getElementById('ktn53QuickOverlay');
+        if(q){
+          q.style.zIndex='';
+          q.style.pointerEvents='';
+        }
+      }
+      previewWasQuick=false;
+      return r;
+    };
+  }
+
+  /* If the preview is opened by another code path, still enforce top stacking. */
+  var obs=new MutationObserver(function(){
+    var p=document.getElementById('b10RoutePreview');
+    if(p&&p.classList.contains('open'))forceTop();
+  });
+  obs.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});
 })();
 </script>
 
