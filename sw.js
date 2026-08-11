@@ -1,5 +1,5 @@
-/* KnightTruckerNavy v46.1 */
-const CACHE='ktn-v46-1-shell';
+/* KnightTruckerNavy v47.0 */
+const CACHE='ktn-v47-0-shell';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
