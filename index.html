@@ -1045,192 +1045,6 @@ body.ktn28-clean.ktn28-hide-trust .ktn23-offline-trust{display:none!important}
 .route-stop-row .route-stop-input{grid-column:2/3;width:100%;min-width:0}
 .route-stop-row .route-stop-x{grid-column:3;grid-row:1/3}
 
-/* ===== KnightTruckerNavy v32 · COCKPIT TRUCK (TomTom/Garmin hybrid) ===== */
-.ktn3d-overlay{
-  --k32-top:118px;
-  --k32-acc:#4F9EF8;
-  --k32-amb:#f5b23c;
-  --k32-pan:rgba(10,14,21,.93);
-  --k32-bd:#2a3242;
-}
-
-/* --- zone --- */
-#ktn32Banner{position:absolute;z-index:26;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));pointer-events:none}
-#ktn32Rail{
-  position:absolute;z-index:16;left:8px;top:var(--k32-top);width:150px;bottom:196px;
-  display:flex;flex-direction:column;gap:6px;overflow-y:auto;overflow-x:hidden;
-  pointer-events:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch
-}
-#ktn32Rail::-webkit-scrollbar{display:none}
-body.ktn32-rail-off #ktn32Rail{display:none}
-#ktn32Rail>*{
-  position:static!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
-  width:100%!important;max-width:none!important;transform:none!important;
-  display:grid!important;grid-template-columns:1fr!important;gap:5px!important;flex:0 0 auto
-}
-#ktn32Pills{
-  position:absolute;z-index:27;right:8px;top:var(--k32-top);
-  display:flex;flex-direction:column;align-items:flex-end;gap:5px;pointer-events:auto
-}
-#ktn32Pills>*{position:static!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important}
-#ktn32Bottom{
-  position:absolute;z-index:25;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));
-  display:flex;flex-direction:column;gap:6px;pointer-events:none
-}
-#ktn32Bottom>*{pointer-events:auto}
-#ktn32RailBtn{
-  position:absolute;z-index:27;left:8px;bottom:calc(150px + env(safe-area-inset-bottom,0px));
-  border:1px solid var(--k32-bd);border-radius:20px;background:rgba(16,21,31,.96);
-  color:#cbd5e1;padding:6px 11px;font:800 9px var(--ff);letter-spacing:.6px;
-  box-shadow:0 6px 18px rgba(0,0,0,.4)
-}
-body.ktn32-rail-off #ktn32RailBtn{color:#8892AA}
-
-/* --- banner svolta (TomTom-like) --- */
-.ktn3d-overlay .ktn21-turn{
-  position:static!important;pointer-events:auto;
-  background:linear-gradient(180deg,#151d2b 0%,#0b1119 100%)!important;
-  border:1px solid var(--k32-bd)!important;border-radius:18px!important;
-  padding:12px 14px!important;gap:14px!important;
-  box-shadow:0 14px 34px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.04)!important
-}
-.ktn3d-overlay .ktn21-arrow{
-  width:64px!important;height:64px!important;border-radius:16px!important;
-  background:radial-gradient(120% 120% at 30% 20%,#2b6fd0,#173a6b)!important;
-  border:1px solid #4b7fc4!important;font-size:38px!important;line-height:1;
-  box-shadow:0 0 0 3px rgba(79,158,248,.14),0 8px 18px rgba(0,0,0,.45)!important
-}
-.ktn3d-overlay .ktn21-main strong{font-size:20px!important;letter-spacing:.2px}
-.ktn3d-overlay .ktn21-main span{color:#8ea0bd!important;font-size:10px!important;text-transform:uppercase;letter-spacing:.6px}
-.ktn3d-overlay .ktn21-dist{
-  color:var(--k32-amb)!important;font-size:30px!important;line-height:1;text-align:right
-}
-
-/* --- corsie + avvisi sotto il banner --- */
-.ktn3d-overlay .ktn23-lane{
-  left:50%!important;right:auto!important;top:var(--k32-top)!important;transform:translateX(-50%);
-  border-radius:12px!important;background:rgba(10,14,21,.95)!important;border-color:var(--k32-bd)!important
-}
-.ktn3d-overlay .ktn23-warning,
-.ktn3d-overlay .ktn25-alert,
-.ktn3d-overlay .ktn20-recovery,
-.ktn3d-overlay .ktn30-recovery{top:calc(var(--k32-top) + 58px)!important}
-
-/* --- data bar inferiore (Garmin-like) --- */
-.ktn3d-overlay .ktn22-drivebar{
-  position:static!important;display:flex!important;flex-wrap:nowrap!important;
-  gap:5px!important;overflow-x:auto;padding-bottom:2px;scrollbar-width:none
-}
-.ktn3d-overlay .ktn22-drivebar::-webkit-scrollbar{display:none}
-.ktn3d-overlay .ktn22-pill{flex:0 0 auto;white-space:nowrap}
-.ktn3d-overlay .ktn21-progress{
-  position:static!important;height:7px!important;background:#1b2230!important;border-radius:20px!important
-}
-.ktn3d-overlay .ktn21-progress>div{background:linear-gradient(90deg,#4F9EF8,#7fd0ff)!important}
-.ktn3d-overlay .ktn21-trip{
-  position:static!important;display:flex!important;align-items:center;gap:10px;
-  padding:10px 12px!important;border-radius:16px!important;
-  background:linear-gradient(180deg,#131a26,#0a0f17)!important;border:1px solid var(--k32-bd)!important;
-  box-shadow:0 14px 34px rgba(0,0,0,.5)!important
-}
-.ktn3d-overlay .ktn21-trip>div{flex:1 1 0;min-width:0}
-.ktn3d-overlay .ktn21-trip>div:nth-child(4){
-  order:-1;flex:0 0 96px;border-right:1px solid var(--k32-bd);padding-right:10px
-}
-.ktn3d-overlay .ktn21-trip>div:nth-child(4) .v{font-size:38px!important;line-height:1}
-.ktn3d-overlay .ktn21-trip>div:nth-child(4) .l{color:var(--k32-amb)!important;font-size:9px!important}
-.ktn3d-overlay .ktn21-trip>div:nth-child(2) .v{color:var(--k32-amb)!important}
-.ktn3d-overlay .ktn21-trip .v{font-size:20px!important}
-
-/* --- rail: densita dati Garmin --- */
-.ktn3d-overlay #ktn32Rail .ktn18-badge,
-.ktn3d-overlay #ktn32Rail .ktn23-safety,
-.ktn3d-overlay #ktn32Rail .ktn24-card,
-.ktn3d-overlay #ktn32Rail .ktn25-card{
-  background:rgba(10,14,21,.9)!important;border-color:var(--k32-bd)!important;border-radius:11px!important;
-  text-align:left!important
-}
-.ktn3d-overlay #ktn32Rail .ktn23-safety .v,
-.ktn3d-overlay #ktn32Rail .ktn24-card strong,
-.ktn3d-overlay #ktn32Rail .ktn25-card strong{font-size:13px!important;text-align:left}
-.ktn3d-overlay #ktn32Rail .ktn23-safety .l,
-.ktn3d-overlay #ktn32Rail .ktn24-card span,
-.ktn3d-overlay #ktn32Rail .ktn25-card span{text-align:left;letter-spacing:.4px}
-.ktn3d-overlay #ktn32Rail .ktn3d-status{
-  background:rgba(10,14,21,.9)!important;border:1px solid var(--k32-bd)!important;border-radius:11px!important;
-  padding:7px 8px!important;line-height:1.35
-}
-
-/* --- pillole di stato --- */
-.ktn3d-overlay #ktn32Pills .ktn30-net,
-.ktn3d-overlay #ktn32Pills .ktn30-gps,
-.ktn3d-overlay #ktn32Pills .ktn28-mode,
-.ktn3d-overlay #ktn32Pills .ktn30-diag-btn,
-.ktn3d-overlay #ktn32Pills .ktn28-gear,
-.ktn3d-overlay #ktn32Pills .ktn27-pill,
-.ktn3d-overlay #ktn32Pills .ktn19-offline-pill,
-.ktn3d-overlay #ktn32Pills .ktn3d-close{
-  border-radius:20px!important;background:rgba(16,21,31,.95)!important;border-color:var(--k32-bd)!important;
-  padding:6px 10px!important;font:800 9px var(--ff)!important;letter-spacing:.5px
-}
-.ktn3d-overlay .ktn3d-top{display:none!important}
-
-/* --- comandi mappa e voce --- */
-.ktn3d-overlay .ktn3d-controls{bottom:calc(150px + env(safe-area-inset-bottom,0px))!important;right:8px!important}
-.ktn3d-overlay .ktn3d-controls button{border-radius:12px!important;background:rgba(16,21,31,.96)!important;border-color:var(--k32-bd)!important}
-.ktn3d-overlay .ktn29-mic{
-  left:auto!important;right:8px!important;bottom:calc(212px + env(safe-area-inset-bottom,0px))!important;
-  transform:none!important;width:50px;height:50px;animation:none!important
-}
-.ktn3d-overlay .ktn29-mic.listening{animation:ktn32pulse 1s infinite!important}
-@keyframes ktn32pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
-.ktn3d-overlay .ktn29-state{display:none!important}
-.ktn3d-overlay .ktn27-icon-note{display:none!important}
-
-/* --- pannelli: ancorati sopra la data bar --- */
-.ktn3d-overlay .ktn29-panel,
-.ktn3d-overlay .ktn27-audio,
-.ktn3d-overlay .ktn25-driverpanel,
-.ktn3d-overlay .ktn20-panel,
-.ktn3d-overlay .ktn19-downloadbox{bottom:calc(150px + env(safe-area-inset-bottom,0px))!important;top:auto!important}
-.ktn3d-overlay .ktn23-services,
-.ktn3d-overlay .ktn23-audio-panel{
-  top:auto!important;bottom:calc(150px + env(safe-area-inset-bottom,0px))!important;max-height:46vh;overflow:auto
-}
-.ktn3d-overlay .ktn26-vault,
-.ktn3d-overlay .ktn28-settings,
-.ktn3d-overlay .ktn30-diag{
-  top:var(--k32-top)!important;bottom:calc(150px + env(safe-area-inset-bottom,0px))!important;
-  left:8px!important;right:8px!important
-}
-
-/* --- v32 refinement --- */
-.ktn3d-overlay #ktn32Rail .ktn23-control-stack{gap:5px!important}
-.ktn3d-overlay #ktn32Rail .ktn23-control-stack button{
-  background:rgba(10,14,21,.9)!important;border:1px solid var(--k32-bd)!important;border-radius:11px!important;
-  text-align:left;padding:8px 9px!important;font-size:9px!important
-}
-.ktn3d-overlay .ktn3d-controls{
-  display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;justify-content:flex-end;
-  width:150px;gap:5px!important;bottom:calc(150px + env(safe-area-inset-bottom,0px))!important
-}
-.ktn3d-overlay .ktn3d-controls button{flex:0 0 auto;padding:7px 9px!important;font-size:9px!important}
-.ktn3d-overlay .ktn29-mic{
-  left:8px!important;right:auto!important;bottom:calc(150px + env(safe-area-inset-bottom,0px))!important;
-  width:46px;height:46px;font-size:20px
-}
-#ktn32RailBtn{left:62px!important;bottom:calc(158px + env(safe-area-inset-bottom,0px))!important}
-
-@media(max-width:620px){
-  .ktn3d-overlay .ktn21-arrow{width:54px!important;height:54px!important;font-size:32px!important}
-  .ktn3d-overlay .ktn21-main strong{font-size:17px!important}
-  .ktn3d-overlay .ktn21-dist{font-size:25px!important}
-  .ktn3d-overlay .ktn21-trip>div:nth-child(4){flex:0 0 78px}
-  .ktn3d-overlay .ktn21-trip>div:nth-child(4) .v{font-size:32px!important}
-  .ktn3d-overlay .ktn21-trip .v{font-size:16px!important}
-  #ktn32Rail{width:132px}
-}
-
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
@@ -1546,6 +1360,72 @@ body.b101-preview-open .ktn53-quick-overlay,
 body.b101-preview-open .ktn53-qoverlay{
   pointer-events:none !important;
 }
+</style>
+
+
+<style id="ktn32-cockpit-style">
+/* === COCKPIT v32 · Hybrid TomTom / Garmin === */
+#ktn3dOverlay{--c32-panel:rgba(7,13,23,.94);--c32-line:#334155;--c32-green:#2dd47a;--c32-blue:#4f9ef8;--c32-text:#f8fafc;--c32-muted:#a8b4c7}
+#ktn3dOverlay.open .ktn3d-title{display:none!important}
+#ktn3dOverlay.open .ktn3d-top{left:auto;right:12px;top:12px;width:auto}
+#ktn3dOverlay.open .ktn3d-close{height:42px;padding:0 15px;border-color:var(--c32-line);border-radius:8px;background:var(--c32-panel);text-transform:uppercase}
+#ktn3dOverlay.open .ktn21-turn{top:12px;left:12px;right:100px;min-height:116px;padding:0;background:var(--c32-panel);border:2px solid var(--c32-green);border-radius:8px;grid-template-columns:128px 1fr;gap:0;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,.5)}
+#ktn3dOverlay.open .ktn21-arrow{grid-column:1;grid-row:1/3;width:100%;height:100%;min-height:112px;border:0;border-right:2px solid var(--c32-green);border-radius:0;background:transparent;font-size:52px;color:var(--c32-text)}
+#ktn3dOverlay.open .ktn21-main{grid-column:2;grid-row:1;padding:21px 18px 6px}
+#ktn3dOverlay.open .ktn21-main strong{font:800 clamp(20px,3.7vw,34px) var(--fd);color:var(--c32-text);letter-spacing:0}
+#ktn3dOverlay.open .ktn21-main span{font-size:13px;color:var(--c32-muted);margin-top:5px}
+#ktn3dOverlay.open .ktn21-dist{position:absolute;left:15px;top:9px;width:98px;text-align:center;font:800 29px var(--fd);color:var(--c32-text);letter-spacing:0}
+#ktn3dOverlay.open .ktn21-progress{left:12px;right:12px;bottom:84px;height:6px;background:#172033;z-index:15}
+#ktn3dOverlay.open .ktn21-progress>div{background:var(--c32-green)}
+#ktn3dOverlay.open .ktn21-trip{left:12px;right:12px;bottom:10px;height:68px;padding:7px 0;background:var(--c32-panel);border-color:var(--c32-line);border-radius:8px;z-index:14}
+#ktn3dOverlay.open .ktn21-trip>div{display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--c32-line)}
+#ktn3dOverlay.open .ktn21-trip>div:last-child{border-right:0}
+#ktn3dOverlay.open .ktn21-trip .v{font-size:24px;line-height:1}
+#ktn3dOverlay.open .ktn21-trip .l{font-size:9px;margin-top:5px;color:var(--c32-muted);letter-spacing:0}
+#ktn3dOverlay.open .ktn21-trip>div:last-child .v{font-size:30px}
+#ktn3dOverlay.open .ktn18-badgebar{left:auto;right:12px;top:140px;width:154px;display:grid;gap:6px}
+#ktn3dOverlay.open .ktn18-badge{padding:7px 9px;background:var(--c32-panel);border-radius:7px;text-align:center}
+#ktn3dOverlay.open .ktn23-safetybar{left:12px;right:auto;top:150px;width:104px;display:grid;grid-template-columns:1fr;gap:4px;transition:transform .22s ease,opacity .22s ease}
+#ktn3dOverlay.open .ktn23-safety{padding:7px 5px;background:var(--c32-panel);border-radius:7px}
+#ktn3dOverlay.open .ktn23-safety .v{font-size:14px}
+#ktn3dOverlay.open.ktn32-data-hidden .ktn23-safetybar{transform:translateX(-122px);opacity:0;pointer-events:none}
+.ktn32-data-toggle{position:absolute;z-index:19;left:12px;top:126px;border:1px solid var(--c32-line);border-radius:7px;padding:6px 9px;background:var(--c32-panel);color:var(--c32-text);font:800 9px var(--ff);box-shadow:0 5px 15px rgba(0,0,0,.35)}
+.ktn32-version{position:absolute;z-index:18;left:50%;top:137px;transform:translateX(-50%);padding:5px 9px;border:1px solid rgba(45,212,122,.55);border-radius:20px;background:rgba(7,13,23,.86);color:#70efa8;font:800 9px var(--ff);letter-spacing:0}
+#ktn3dOverlay.open .ktn3d-controls{right:12px;bottom:92px;gap:6px}
+#ktn3dOverlay.open .ktn3d-controls button{min-width:72px;padding:9px 8px;border-radius:8px;background:var(--c32-panel);font-size:9px}
+#ktn3dOverlay.open .ktn22-drivebar{left:auto;right:92px;top:140px;max-width:260px;justify-content:flex-end}
+#ktn3dOverlay.open .ktn22-pill{background:var(--c32-panel);border-radius:7px}
+#ktn3dOverlay.open .ktn23-lane{top:220px;right:174px;background:var(--c32-panel);border-radius:8px}
+#ktn3dOverlay.open .ktn23-offline-trust{bottom:88px!important}
+#ktn3dOverlay.open .ktn3d-status{left:auto;right:92px;bottom:92px;background:var(--c32-panel);border-radius:7px}
+#ktn3dOverlay.open .ktn18-routeinfo{left:124px;bottom:92px;background:var(--c32-panel);border-radius:7px}
+#ktn3dOverlay.open .ktn29-mic{right:12px!important;bottom:322px!important}
+#ktn3dOverlay.open .ktn25-assist,#ktn3dOverlay.open .ktn24-nextsvc{transform:scale(.86);transform-origin:right center}
+@media(max-width:620px){
+ #ktn3dOverlay.open .ktn21-turn{left:7px;right:82px;top:7px;min-height:96px;grid-template-columns:92px 1fr}
+ #ktn3dOverlay.open .ktn21-arrow{min-height:92px;font-size:38px}
+ #ktn3dOverlay.open .ktn21-dist{left:7px;top:6px;width:78px;font-size:23px}
+ #ktn3dOverlay.open .ktn21-main{padding:16px 10px 4px}
+ #ktn3dOverlay.open .ktn21-main strong{font-size:18px}
+ #ktn3dOverlay.open .ktn21-main span{font-size:10px}
+ #ktn3dOverlay.open .ktn3d-top{right:7px;top:7px}
+ #ktn3dOverlay.open .ktn3d-close{height:38px;padding:0 10px;font-size:9px}
+ .ktn32-version{top:110px}
+ .ktn32-data-toggle{left:7px;top:110px}
+ #ktn3dOverlay.open .ktn23-safetybar{left:7px;top:142px;width:88px}
+ #ktn3dOverlay.open .ktn18-badgebar{right:7px;top:112px;width:126px}
+ #ktn3dOverlay.open .ktn22-drivebar{display:none}
+ #ktn3dOverlay.open .ktn23-lane{right:7px;top:225px}
+ #ktn3dOverlay.open .ktn3d-controls{right:7px;bottom:88px}
+ #ktn3dOverlay.open .ktn3d-controls button{min-width:58px;padding:8px 5px}
+ #ktn3dOverlay.open .ktn21-trip{left:7px;right:7px;bottom:7px;height:64px}
+ #ktn3dOverlay.open .ktn21-progress{left:7px;right:7px;bottom:76px}
+ #ktn3dOverlay.open .ktn21-trip .v{font-size:18px}
+ #ktn3dOverlay.open .ktn21-trip>div:last-child .v{font-size:25px}
+ #ktn3dOverlay.open .ktn18-routeinfo{display:none}
+ #ktn3dOverlay.open .ktn3d-status{right:72px;bottom:80px;max-width:190px}
+}
+@media(prefers-reduced-motion:reduce){#ktn3dOverlay *{transition:none!important}}
 </style>
 
 </head>
@@ -4808,7 +4688,7 @@ function ktn18CreateMap(){
     ktn3dMap=new maplibregl.Map({
       container:'ktn3dMap',
       style:ktn18Hybrid?ktn18HybridStyle():ktn18StandardStyle(),
-      center:[9.1900,45.4642],zoom:16.6,pitch:64,bearing:0,antialias:true
+      center:[9.1900,45.4642],zoom:16.2,pitch:62,bearing:0,antialias:true
     });
     ktn3dMap.addControl(new maplibregl.NavigationControl({showCompass:true}),'top-right');
     ktn3dMap.on('load',function(){
@@ -4930,15 +4810,15 @@ function ktn3dStartGPS(){
     try{ktn3dMarker.setRotation(ktn18LastBearing)}catch(e){}
 
     if(ktn3dFollow && ktn3dMap){
-      var cam=ktn32Camera(speed,window.__ktn32Turn);
+      var ktn32Cam=window.ktn32CameraProfile?window.ktn32CameraProfile(speed):{pitch:62,zoom:16.2,offset:150};
       ktn3dMap.easeTo({
         center:[pos.lng,pos.lat],
-        zoom:cam.zoom,
-        pitch:cam.pitch,
+        zoom:ktn32Cam.zoom,
+        pitch:ktn3dPitch?ktn32Cam.pitch:0,
         bearing:ktn18LastBearing,
-        duration:cam.duration,
+        duration:900,
         essential:true,
-        offset:cam.offset
+        offset:[0,ktn32Cam.offset]
       });
     }
 
@@ -4989,11 +4869,11 @@ function ktn18SmoothBearing(cur,target,k){
 
 function ktn3dTogglePitch(){
   ktn3dPitch=!ktn3dPitch;
-  if(ktn3dMap)ktn3dMap.easeTo({pitch:ktn32Camera(0,null).pitch,duration:500});
+  if(ktn3dMap)ktn3dMap.easeTo({pitch:ktn3dPitch?62:0,duration:500});
 }
 function ktn3dRecenter(){
   ktn3dFollow=true;
-  if(ktn3dLast&&ktn3dMap)ktn3dMap.easeTo({center:[ktn3dLast.lng,ktn3dLast.lat],pitch:ktn32Camera(0,null).pitch,duration:400,offset:ktn32Camera(0,null).offset});
+  if(ktn3dLast&&ktn3dMap)ktn3dMap.easeTo({center:[ktn3dLast.lng,ktn3dLast.lat],pitch:ktn3dPitch?62:0,duration:400});
 }
 function ktn3dBearing(a,b){
   function r(x){return x*Math.PI/180} function d(x){return x*180/Math.PI}
@@ -5380,7 +5260,7 @@ function ktn21UpdateGuidance(snap,speed){
   var pct=ktn21RouteTotal?Math.max(0,Math.min(100,done/ktn21RouteTotal*100)):0;
 
   var next=ktn21FindNextTurn(idx);
-  try{window.__ktn32Turn=next&&isFinite(next.ahead)?next.ahead:null}catch(_e){}
+  window.ktn32NextTurnMeters=next&&isFinite(next.ahead)?next.ahead:remain;
   var inst='Prosegui sulla rotta',ico='↑',dist='--',sub='Percorso HGV';
   if(next){
     var t=ktn21TurnFromAngle(next.angle);
@@ -6057,8 +5937,8 @@ function ktn26RenderVault(){
       '<strong>'+x(r.name)+'</strong>'+
       '<span>'+new Date(r.savedAt).toLocaleString()+(km?' · '+km:'')+(vehicle?' · '+vehicle:'')+'</span>'+
       '<span>Restrizioni salvate: '+((r.restrictions||[]).length)+' · Servizi: '+((r.services||[]).length)+'</span>'+
-      '<div class="row"><button class="btn btn-primary btn-xs" onclick="ktn26LoadRoute(&#39;'+r.id+'&#39;)">Apri</button>'+
-      '<button class="btn btn-ghost btn-xs" onclick="ktn26DeleteRoute(&#39;'+r.id+'&#39;)">Elimina</button></div></div>';
+      '<div class="row"><button class="btn btn-primary btn-xs" onclick="ktn26LoadRoute(&quot;'+r.id+'&quot;)">Apri</button>'+
+      '<button class="btn btn-ghost btn-xs" onclick="ktn26DeleteRoute(&quot;'+r.id+'&quot;)">Elimina</button></div></div>';
   }).join('');
 }
 function ktn26ExportVault(){
@@ -6396,7 +6276,7 @@ function ktn29HandleCommand(raw){
     ktn29Result(msg);ktn29Say(msg);return;
   }
   if(/vista 3d|tre d|3 d|modalita 3d/.test(s)){
-    ktn3dPitch=true;if(ktn3dMap)ktn3dMap.easeTo({pitch:ktn32Camera(0,null).pitch,duration:500});
+    ktn3dPitch=true;if(ktn3dMap)ktn3dMap.easeTo({pitch:62,duration:500});
     ktn29Result('Vista 3D attivata.');ktn29Say('Vista tre D attivata.');return;
   }
   if(/vista 2d|due d|2 d|modalita 2d/.test(s)){
@@ -7834,97 +7714,32 @@ function ktn55CancelSearchChoice(){
 })();
 </script>
 
-<script>
-/* ===== KnightTruckerNavy v32 · Cockpit layout + telecamera adattiva ===== */
-function ktn32Camera(speed,turnAhead){
-  var s=Math.max(0,speed||0);
-  var near=(turnAhead!=null&&isFinite(turnAhead))?turnAhead:null;
-  var pitch,zoom,dur=900;
-  if(typeof ktn3dPitch!=='undefined' && !ktn3dPitch){
-    pitch=0; zoom=s>90?14.8:s>60?15.5:16.3;
-    return {pitch:pitch,zoom:zoom,duration:dur,offset:[0,Math.round(Math.min(180,window.innerHeight*0.12))]};
-  }
-  if(near!=null && near<160){ pitch=50; zoom=17.6; dur=650; }
-  else if(near!=null && near<400){ pitch=58; zoom=17.1; dur=750; }
-  else if(s>=85){ pitch=73; zoom=15.3; }
-  else if(s>=55){ pitch=70; zoom=15.9; }
-  else if(s>=25){ pitch=66; zoom=16.5; }
-  else { pitch=60; zoom=17.1; }
-  var off=Math.round(Math.min(260,window.innerHeight*(pitch>=66?0.24:0.18)));
-  return {pitch:pitch,zoom:zoom,duration:dur,offset:[0,off]};
-}
 
+<script id="ktn32-cockpit-script">
+/* === COCKPIT v32 runtime === */
 (function(){
-  function q(sel){var ov=document.getElementById('ktn3dOverlay');return ov?ov.querySelector(sel):null}
-  function zone(id,parent){
-    var d=document.getElementById(id);
-    if(!d){d=document.createElement('div');d.id=id;parent.appendChild(d)}
-    return d;
-  }
-  function move(sel,target){var n=q(sel);if(n&&target&&n.parentNode!==target)target.appendChild(n)}
-
-  function sizeTop(){
-    var ov=document.getElementById('ktn3dOverlay'),b=document.getElementById('ktn32Banner');
-    if(!ov||!b)return;
-    var h=b.getBoundingClientRect().height;
-    if(!h)h=92;
-    ov.style.setProperty('--k32-top',Math.round(h+18)+'px');
-  }
-
+  window.ktn32NextTurnMeters=Infinity;
+  window.ktn32CameraProfile=function(speed){
+    var turn=Number(window.ktn32NextTurnMeters),s=Number(speed)||0;
+    if(isFinite(turn)&&turn<160)return {pitch:50,zoom:17.25,offset:118};
+    if(isFinite(turn)&&turn<450)return {pitch:58,zoom:16.85,offset:132};
+    if(s>80)return {pitch:73,zoom:15.45,offset:175};
+    if(s>50)return {pitch:68,zoom:15.95,offset:160};
+    return {pitch:64,zoom:16.55,offset:145};
+  };
   function build(){
-    var ov=document.getElementById('ktn3dOverlay');
-    if(!ov||ov.getAttribute('data-ktn32')==='1')return;
-    ov.setAttribute('data-ktn32','1');
-
-    var banner=zone('ktn32Banner',ov),rail=zone('ktn32Rail',ov),
-        pills=zone('ktn32Pills',ov),bottom=zone('ktn32Bottom',ov);
-
-    move('.ktn21-turn',banner);
-
-    ['.ktn18-badgebar','.ktn23-safetybar','.ktn24-nextsvc','.ktn25-assist',
-     '.ktn23-offline-trust','.ktn18-routeinfo','.ktn3d-status','.ktn23-control-stack']
-      .forEach(function(s){move(s,rail)});
-
-    ['.ktn3d-close','.ktn30-net','.ktn30-gps','.ktn28-mode','.ktn30-diag-btn',
-     '.ktn28-gear','.ktn27-pill','.ktn19-offline-pill']
-      .forEach(function(s){move(s,pills)});
-
-    ['.ktn22-drivebar','.ktn21-progress','.ktn21-trip'].forEach(function(s){move(s,bottom)});
-
-    if(!document.getElementById('ktn32RailBtn')){
-      var b=document.createElement('button');
-      b.id='ktn32RailBtn';b.type='button';b.textContent='DATI';
-      b.addEventListener('click',function(){
-        document.body.classList.toggle('ktn32-rail-off');
-        b.textContent=document.body.classList.contains('ktn32-rail-off')?'DATI OFF':'DATI';
-      });
-      ov.appendChild(b);
+    var overlay=document.getElementById('ktn3dOverlay');if(!overlay)return;
+    if(!document.getElementById('ktn32DataToggle')){
+      var b=document.createElement('button');b.type='button';b.id='ktn32DataToggle';b.className='ktn32-data-toggle';b.textContent='DATI';
+      b.onclick=function(){overlay.classList.toggle('ktn32-data-hidden');b.textContent=overlay.classList.contains('ktn32-data-hidden')?'DATI +':'DATI';};
+      overlay.appendChild(b);
     }
-    sizeTop();
-    if(window.MutationObserver){
-      try{
-        new MutationObserver(sizeTop).observe(banner,{subtree:true,childList:true,characterData:true});
-      }catch(e){}
+    if(!document.getElementById('ktn32Version')){
+      var v=document.createElement('div');v.id='ktn32Version';v.className='ktn32-version';v.textContent='COCKPIT 32 · VISTA ADATTIVA';overlay.appendChild(v);
     }
   }
-
-  function boot(){
-    build();
-    var open=window.open3DNavigator;
-    if(typeof open==='function' && !open.__ktn32){
-      window.open3DNavigator=function(){
-        var r=open.apply(this,arguments);
-        build();setTimeout(sizeTop,120);setTimeout(sizeTop,600);
-        return r;
-      };
-      window.open3DNavigator.__ktn32=true;
-    }
-  }
-
-  window.addEventListener('resize',sizeTop);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
-  else boot();
-  window.addEventListener('load',boot);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
+  new MutationObserver(build).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
 
