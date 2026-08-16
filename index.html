@@ -2981,6 +2981,9 @@ function _geocodeRouteAddress(q) {
     });
 }
 
+window._parseManualCoords=_parseManualCoords;
+window._geocodeRouteAddress=_geocodeRouteAddress;
+
 function resolveRouteEndpoint(which) {
   var manual = document.getElementById(which==='from'?'routeFromManual':'routeToManual').value.trim();
   if (manual) {
@@ -3100,8 +3103,8 @@ function addRouteStop(value){
   var initial=String(value||'').trim();
   row.innerHTML=
     '<span style="color:var(--ylw);grid-row:1/3">&#9679;</span>'+
-    '<select class="route-stop-saved" title="Posizione salvata">'+_routeSavedOptions(initial)+'</select>'+
-    '<input type="text" class="route-stop-input" placeholder="Oppure indirizzo o coordinate sosta" value="'+initial.replace(/"/g,'&quot;')+'">'+
+    '<select class="route-stop-saved" title="Cliente / posizione salvata">'+_routeSavedOptions(initial)+'</select>'+
+    '<input type="text" class="route-stop-input" placeholder="Indirizzo, coordinate o POI: es. Shell Binzen, farmacia Turate" value="'+initial.replace(/"/g,'&quot;')+'">'+
     '<button type="button" class="route-stop-x" title="Rimuovi sosta">&#10005;</button>';
 
   var sel=row.querySelector('.route-stop-saved');
@@ -3160,11 +3163,15 @@ function restoreLastTrip(){
 
 function calcRoute() {
   document.getElementById('routeResult').innerHTML = '<div class="route-loading">Risoluzione partenza, arrivo e soste...</div>';
-  var stopVals=getRouteStopValues();
+  var stopInputs=Array.prototype.slice.call(document.querySelectorAll('.route-stop-input'))
+    .filter(function(i){return String(i.value||'').trim();});
   Promise.all([
     resolveRouteEndpoint('from'),
     resolveRouteEndpoint('to'),
-    Promise.all(stopVals.map(resolveRouteStopValue))
+    Promise.all(stopInputs.map(function(inp){
+      if(typeof window.ktn474ResolveStopInput==='function')return window.ktn474ResolveStopInput(inp);
+      return resolveRouteStopValue(String(inp.value||'').trim());
+    }))
   ])
     .then(function(points){
       var from=points[0], to=points[1], stops=points[2]||[];
@@ -7273,6 +7280,12 @@ function ktn55CancelSearchChoice(){
       if(hint2)hint2.textContent='Ricerca libera TomTom con suggerimenti mentre scrivi.';
       bindInput(quick);
     }
+
+    /* Tappe intermedie: stessa filosofia delle altre ricerche. */
+    document.querySelectorAll('.route-stop-input').forEach(function(stopInp){
+      stopInp.placeholder='Indirizzo, coordinate o POI: es. Shell Binzen, Sogefi Douai';
+      bindInput(stopInp);
+    });
   }
 
   document.addEventListener('click',function(e){
@@ -7310,6 +7323,35 @@ function ktn55CancelSearchChoice(){
       return baseResolve.apply(this,arguments);
     };
   }
+
+  /* Intermediate stops use the same TomTom engine as main and quick search. */
+  window.ktn474ResolveStopInput=function(inp){
+    if(!inp)return Promise.reject(new Error('Tappa non valida.'));
+    var q=String(inp.value||'').trim();
+    if(!q)return Promise.reject(new Error('Inserisci la tappa.'));
+
+    var c=(typeof window._parseManualCoords==='function')?window._parseManualCoords(q):null;
+    if(c)return Promise.resolve(c);
+
+    var sel=selectedPlace(inp);
+    if(sel)return Promise.resolve(sel);
+
+    if(key()){
+      return search(q,false,7).then(function(rows){
+        if(!rows.length)throw new Error('Tappa non trovata: '+q);
+        var p=resultToPlace(rows[0],q);
+        if(!p)throw new Error('Risultato TomTom senza coordinate.');
+        setSelected(inp,p);
+        return p;
+      }).catch(function(err){
+        if(typeof window._geocodeRouteAddress==='function')return window._geocodeRouteAddress(q);
+        throw err;
+      });
+    }
+
+    if(typeof window._geocodeRouteAddress==='function')return window._geocodeRouteAddress(q);
+    return Promise.reject(new Error('Impossibile risolvere la tappa: '+q));
+  };
 
   /* Quick navigation POI mode uses exactly the same search/selection engine. */
   var baseQuick=window.ktn53ResolveQuickDestination;
