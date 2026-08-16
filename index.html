@@ -1362,6 +1362,53 @@ body.b101-preview-open .ktn53-qoverlay{
 }
 </style>
 
+
+<style>
+/* === BETA 1.0 MAP POINT PICKER + STOP ORDER === */
+.ktn61-map-choice .leaflet-popup-content-wrapper{
+  background:#0d1520;color:#fff;border:1px solid #334155;border-radius:11px;
+  box-shadow:0 10px 28px rgba(0,0,0,.48)
+}
+.ktn61-map-choice .leaflet-popup-tip{background:#0d1520}
+.ktn61-map-choice .leaflet-popup-content{margin:10px 11px;min-width:210px}
+.ktn61-choice-title{margin-bottom:4px;color:#fff;font:900 11px/1.2 var(--ff,Arial,sans-serif)}
+.ktn61-choice-coord{margin-bottom:8px;color:#91a0b5;font:700 8px/1.2 var(--ff,Arial,sans-serif)}
+.ktn61-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ktn61-choice-grid button{
+  min-height:34px;border:1px solid #3b4b62;border-radius:8px;
+  background:#182333;color:#fff;font:850 9px var(--ff,Arial,sans-serif);cursor:pointer
+}
+.ktn61-choice-grid button.primary{border-color:#22c55e;background:#12351f}
+.ktn61-choice-grid button.stop{border-color:#f59e0b;background:#362508}
+.ktn61-choice-grid button.cancel{grid-column:1/3;color:#aeb9c9}
+
+.route-stop-row{
+  grid-template-columns:34px minmax(0,1fr) 98px !important;
+  position:relative;
+}
+.route-stop-order{
+  grid-column:1;grid-row:1/3;width:30px;min-height:66px;
+  border:1px solid #3a465b;border-radius:7px;background:#111927;color:#fbbf24;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:grab;touch-action:none;user-select:none;
+}
+.route-stop-order:active{cursor:grabbing}
+.route-stop-order .num{font:900 14px/1 var(--fd,Arial,sans-serif)}
+.route-stop-order .grip{font:900 12px/1 Arial,sans-serif;color:#8492a6;letter-spacing:-1px}
+.route-stop-controls{
+  grid-column:3;grid-row:1/3;display:grid;grid-template-columns:1fr 1fr;
+  gap:4px;align-self:stretch
+}
+.route-stop-controls button{
+  min-width:0;border:1px solid #354258;border-radius:6px;
+  background:#172131;color:#dce5f2;font:900 12px/1 Arial,sans-serif;cursor:pointer
+}
+.route-stop-controls button:disabled{opacity:.30;cursor:default}
+.route-stop-controls .route-stop-x{width:auto;height:auto;grid-column:1/3;color:#f87171}
+.route-stop-row.ktn61-dragging{opacity:.48}
+.route-stop-row.ktn61-drag-over{outline:2px solid #22c55e;outline-offset:2px}
+</style>
+
 </head>
 <body>
 <!-- ═══ STARTUP MODAL ══════════════════════════════════════════════ -->
@@ -2015,6 +2062,45 @@ const userIcon = L.divIcon({
 });
 
 /* ── Map ────────────────────────────────────────────────────────────── */
+
+var ktn61MapPickPopup=null;
+function ktn61CoordText(lat,lng){
+  return Number(lat).toFixed(6)+', '+Number(lng).toFixed(6);
+}
+function ktn61UseMapPoint(kind,lat,lng){
+  var value=ktn61CoordText(lat,lng);
+  if(kind==='from'){
+    var sel=document.getElementById('routeFrom'),inp=document.getElementById('routeFromManual');
+    if(sel)sel.value='';
+    if(inp){inp.value=value;inp.dispatchEvent(new Event('input',{bubbles:true}))}
+    toast('Punto impostato come partenza.');
+  }else if(kind==='to'){
+    var sel2=document.getElementById('routeTo'),inp2=document.getElementById('routeToManual');
+    if(sel2)sel2.value='';
+    if(inp2){inp2.value=value;inp2.dispatchEvent(new Event('input',{bubbles:true}))}
+    toast('Punto impostato come arrivo.');
+  }else if(kind==='stop'){
+    addRouteStop(value);
+    toast('Punto aggiunto come tappa '+document.querySelectorAll('#routeStops .route-stop-row').length+'.');
+  }
+  if(MAP)MAP.closePopup();
+}
+function ktn61OfferMapPoint(latlng){
+  if(!MAP||!latlng)return;
+  var lat=+latlng.lat,lng=+latlng.lng;
+  var coord=ktn61CoordText(lat,lng);
+  var html=`<div class="ktn61-choice-title">USA QUESTO PUNTO COME…</div>
+    <div class="ktn61-choice-coord">${coord}</div>
+    <div class="ktn61-choice-grid">
+      <button type="button" class="primary" onclick="ktn61UseMapPoint('from',${lat},${lng})">PARTENZA</button>
+      <button type="button" class="primary" onclick="ktn61UseMapPoint('to',${lat},${lng})">ARRIVO</button>
+      <button type="button" class="stop" onclick="ktn61UseMapPoint('stop',${lat},${lng})">TAPPA</button>
+      <button type="button" class="cancel" onclick="MAP.closePopup()">NULLA / CHIUDI</button>
+    </div>`;
+  ktn61MapPickPopup=L.popup({className:'ktn61-map-choice',closeButton:true,autoPan:true})
+    .setLatLng(latlng).setContent(html).openOn(MAP);
+}
+
 function initMap() {
   MAP = L.map('map',{zoomControl:true,attributionControl:true,center:[46.5,10.5],zoom:5});
   var gmRoad=L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:'0123',attribution:'&copy; Google Maps'});
@@ -2022,6 +2108,9 @@ function initMap() {
   var gmHybrid=L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:'0123',attribution:'&copy; Google Maps'});
   gmRoad.addTo(MAP);
   L.control.layers({'Stradale':gmRoad,'Satellite':gmSat,'Ibrida':gmHybrid},{},{position:'topright',collapsed:false}).addTo(MAP);
+  MAP.on('click',function(e){
+    if(e&&e.latlng)ktn61OfferMapPoint(e.latlng);
+  });
   updateMapMarkers();
 }
 
@@ -3094,21 +3183,48 @@ function _routeSavedOptions(selectedValue){
   });
   return h;
 }
+function updateRouteStopOrderUI(){
+  var rows=Array.prototype.slice.call(document.querySelectorAll('#routeStops .route-stop-row'));
+  rows.forEach(function(row,i){
+    row.dataset.stopOrder=String(i);
+    var n=row.querySelector('.route-stop-order .num');if(n)n.textContent=String(i+1);
+    var up=row.querySelector('.route-stop-up'),down=row.querySelector('.route-stop-down');
+    if(up)up.disabled=(i===0);
+    if(down)down.disabled=(i===rows.length-1);
+  });
+}
+function moveRouteStop(row,delta){
+  var box=document.getElementById('routeStops');if(!box||!row)return;
+  var rows=Array.prototype.slice.call(box.querySelectorAll('.route-stop-row'));
+  var i=rows.indexOf(row),j=i+delta;
+  if(i<0||j<0||j>=rows.length)return;
+  if(delta<0)box.insertBefore(row,rows[j]);
+  else box.insertBefore(rows[j],row);
+  updateRouteStopOrderUI();
+}
+var ktn61DraggedStop=null,ktn61PointerStop=null;
+
 function addRouteStop(value){
   routeStopSeq++;
   var row=document.createElement('div');
   row.className='route-stop-row';
   row.dataset.stopId=String(routeStopSeq);
+  row.draggable=true;
 
   var initial=String(value||'').trim();
   row.innerHTML=
-    '<span style="color:var(--ylw);grid-row:1/3">&#9679;</span>'+
+    '<div class="route-stop-order" title="Trascina per riordinare"><span class="num">1</span><span class="grip">⋮⋮</span></div>'+
     '<select class="route-stop-saved" title="Cliente / posizione salvata">'+_routeSavedOptions(initial)+'</select>'+
     '<input type="text" class="route-stop-input" placeholder="Indirizzo, coordinate o POI: es. Shell Binzen, farmacia Turate" value="'+initial.replace(/"/g,'&quot;')+'">'+
-    '<button type="button" class="route-stop-x" title="Rimuovi sosta">&#10005;</button>';
+    '<div class="route-stop-controls">'+
+      '<button type="button" class="route-stop-up" title="Sposta prima">↑</button>'+
+      '<button type="button" class="route-stop-down" title="Sposta dopo">↓</button>'+
+      '<button type="button" class="route-stop-x" title="Rimuovi tappa">✕</button>'+
+    '</div>';
 
   var sel=row.querySelector('.route-stop-saved');
   var inp=row.querySelector('.route-stop-input');
+
   sel.onchange=function(){
     if(this.value){
       inp.value=this.value;
@@ -3118,8 +3234,59 @@ function addRouteStop(value){
   inp.oninput=function(){
     if(sel.value && sel.value!==this.value)sel.value='';
   };
-  row.querySelector('.route-stop-x').onclick=function(){row.remove();};
+  row.querySelector('.route-stop-up').onclick=function(){moveRouteStop(row,-1)};
+  row.querySelector('.route-stop-down').onclick=function(){moveRouteStop(row,1)};
+  row.querySelector('.route-stop-x').onclick=function(){row.remove();updateRouteStopOrderUI()};
+
+  row.addEventListener('dragstart',function(e){
+    ktn61DraggedStop=row;row.classList.add('ktn61-dragging');
+    try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',row.dataset.stopId)}catch(_){}
+  });
+  row.addEventListener('dragend',function(){
+    row.classList.remove('ktn61-dragging');
+    document.querySelectorAll('.route-stop-row').forEach(function(r){r.classList.remove('ktn61-drag-over')});
+    ktn61DraggedStop=null;updateRouteStopOrderUI();
+  });
+  row.addEventListener('dragover',function(e){
+    if(!ktn61DraggedStop||ktn61DraggedStop===row)return;
+    e.preventDefault();row.classList.add('ktn61-drag-over');
+  });
+  row.addEventListener('dragleave',function(){row.classList.remove('ktn61-drag-over')});
+  row.addEventListener('drop',function(e){
+    e.preventDefault();row.classList.remove('ktn61-drag-over');
+    if(!ktn61DraggedStop||ktn61DraggedStop===row)return;
+    var box=document.getElementById('routeStops'),r=row.getBoundingClientRect();
+    box.insertBefore(ktn61DraggedStop,e.clientY>r.top+r.height/2?row.nextSibling:row);
+    updateRouteStopOrderUI();
+  });
+
+  var handle=row.querySelector('.route-stop-order');
+  handle.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='mouse')return;
+    ktn61PointerStop=row;row.classList.add('ktn61-dragging');
+    try{handle.setPointerCapture(e.pointerId)}catch(_){}
+    e.preventDefault();
+  });
+  handle.addEventListener('pointermove',function(e){
+    if(!ktn61PointerStop)return;
+    var el=document.elementFromPoint(e.clientX,e.clientY);
+    var target=el&&el.closest&&el.closest('.route-stop-row');
+    if(!target||target===ktn61PointerStop)return;
+    var box=document.getElementById('routeStops'),r=target.getBoundingClientRect();
+    box.insertBefore(ktn61PointerStop,e.clientY>r.top+r.height/2?target.nextSibling:target);
+    updateRouteStopOrderUI();
+    e.preventDefault();
+  });
+  function endPointer(){
+    if(!ktn61PointerStop)return;
+    ktn61PointerStop.classList.remove('ktn61-dragging');
+    ktn61PointerStop=null;updateRouteStopOrderUI();
+  }
+  handle.addEventListener('pointerup',endPointer);
+  handle.addEventListener('pointercancel',endPointer);
+
   document.getElementById('routeStops').appendChild(row);
+  updateRouteStopOrderUI();
 }
 function getRouteStopValues(){
   return Array.prototype.map.call(document.querySelectorAll('.route-stop-input'),function(i){return i.value.trim();}).filter(Boolean);
@@ -3332,12 +3499,16 @@ function ktn44CurrentGpsStart(){
 }
 
 function ktn44ResolveNavigationInputs(){
-  var stopVals=(typeof getRouteStopValues==='function')?getRouteStopValues():[];
+  var stopInputs=Array.prototype.slice.call(document.querySelectorAll('.route-stop-input'))
+    .filter(function(i){return String(i.value||'').trim();});
 
   return Promise.all([
     ktn44CurrentGpsStart(),
     resolveRouteEndpoint('to'),
-    Promise.all(stopVals.map(resolveRouteStopValue))
+    Promise.all(stopInputs.map(function(inp){
+      if(typeof window.ktn474ResolveStopInput==='function')return window.ktn474ResolveStopInput(inp);
+      return resolveRouteStopValue(String(inp.value||'').trim());
+    }))
   ]).then(function(points){
     return {
       from:points[0],
