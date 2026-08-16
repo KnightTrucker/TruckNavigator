@@ -1409,6 +1409,32 @@ body.b101-preview-open .ktn53-qoverlay{
 .route-stop-row.ktn61-drag-over{outline:2px solid #22c55e;outline-offset:2px}
 </style>
 
+
+<style>
+/* === BETA 1.0 GPS COORDINATE SAFETY + LOCALITY LABELS === */
+.route-point-locality,
+.route-stop-locality{
+  min-height:14px;
+  margin-top:3px;
+  color:#8fa2bb;
+  font:700 8px/1.25 var(--ff,Arial,sans-serif);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.route-point-locality.on,
+.route-stop-locality.on{color:#a9bad0}
+.route-point-locality.loading,
+.route-stop-locality.loading{color:#6f7e94}
+.route-stop-locality{
+  grid-column:2/3;
+  grid-row:3;
+  margin:0 2px 1px;
+}
+.route-stop-order{grid-row:1/4!important}
+.route-stop-controls{grid-row:1/4!important}
+</style>
+
 </head>
 <body>
 <!-- ═══ STARTUP MODAL ══════════════════════════════════════════════ -->
@@ -1551,6 +1577,7 @@ body.b101-preview-open .ktn53-qoverlay{
           <option value="">&#128681; Partenza &mdash; posto salvato / GPS</option>
         </select>
         <input type="text" id="routeFromManual" class="route-manual" placeholder="Oppure indirizzo o coordinate: 45.4642, 9.1900">
+        <div class="route-point-locality" id="routeFromLocality"></div>
         <div class="route-endpoint-hint">Se compili questo campo, ha priorità sul posto salvato.</div>
       </div>
       <div class="route-arrow">&#8594;</div>
@@ -1559,6 +1586,7 @@ body.b101-preview-open .ktn53-qoverlay{
           <option value="">&#127937; Arrivo &mdash; posto salvato / GPS</option>
         </select>
         <input type="text" id="routeToManual" class="route-manual" placeholder="Indirizzo o POI: Shell vicino a Novara, AS24 Novara">
+        <div class="route-point-locality" id="routeToLocality"></div>
         <div class="route-endpoint-hint">Accetta indirizzo, POI/attività (es. Shell vicino a Novara, AS24 Novara) oppure coordinate.</div>
       </div>
       <div class="route-stops-box" style="grid-column:1/-1">
@@ -2072,16 +2100,32 @@ function ktn61UseMapPoint(kind,lat,lng){
   if(kind==='from'){
     var sel=document.getElementById('routeFrom'),inp=document.getElementById('routeFromManual');
     if(sel)sel.value='';
-    if(inp){inp.value=value;inp.dispatchEvent(new Event('input',{bubbles:true}))}
+    if(inp){
+      inp.value=value;
+      inp.dataset.fixedGpsLat=String(lat);inp.dataset.fixedGpsLng=String(lng);inp.dataset.fixedGpsText=value;
+      ktn62UpdateLocalityForInput(inp);
+    }
     toast('Punto impostato come partenza.');
   }else if(kind==='to'){
     var sel2=document.getElementById('routeTo'),inp2=document.getElementById('routeToManual');
     if(sel2)sel2.value='';
-    if(inp2){inp2.value=value;inp2.dispatchEvent(new Event('input',{bubbles:true}))}
+    if(inp2){
+      inp2.value=value;
+      inp2.dataset.fixedGpsLat=String(lat);inp2.dataset.fixedGpsLng=String(lng);inp2.dataset.fixedGpsText=value;
+      ktn62UpdateLocalityForInput(inp2);
+    }
     toast('Punto impostato come arrivo.');
   }else if(kind==='stop'){
     addRouteStop(value);
-    toast('Punto aggiunto come tappa '+document.querySelectorAll('#routeStops .route-stop-row').length+'.');
+    var rows=document.querySelectorAll('#routeStops .route-stop-row');
+    var row=rows[rows.length-1],sinp=row&&row.querySelector('.route-stop-input');
+    if(sinp){
+      sinp.dataset.fixedGpsLat=String(lat);
+      sinp.dataset.fixedGpsLng=String(lng);
+      sinp.dataset.fixedGpsText=value;
+      ktn62UpdateLocalityForInput(sinp);
+    }
+    toast('Punto aggiunto come tappa '+rows.length+'.');
   }
   if(MAP)MAP.closePopup();
 }
@@ -3007,6 +3051,102 @@ function _parseManualCoords(s) {
   return {lat:lat,lng:lng,label:lat.toFixed(6)+', '+lng.toFixed(6),nazione:''};
 }
 
+
+var ktn62ReverseCache={};
+function ktn62LocalityTextFromAddress(a,fallback){
+  a=a||{};
+  var parts=[
+    a.municipality||a.localName||a.municipalitySubdivision||'',
+    a.countrySecondarySubdivision||a.countrySubdivision||'',
+    a.countryCode||a.country||''
+  ].filter(Boolean);
+  return parts.filter(function(v,i,x){return x.indexOf(v)===i}).join(' · ') || fallback || '';
+}
+function ktn62ReverseLocality(lat,lng){
+  lat=Number(lat);lng=Number(lng);
+  if(!isFinite(lat)||!isFinite(lng))return Promise.resolve('');
+  var ck=lat.toFixed(5)+','+lng.toFixed(5);
+  if(ktn62ReverseCache[ck])return Promise.resolve(ktn62ReverseCache[ck]);
+
+  var tt='';
+  try{tt=String(localStorage.getItem('ktn57_tomtom_api_key')||'').trim()}catch(_){}
+
+  function nominatim(){
+    var u='https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=it&zoom=14&lat='+
+      encodeURIComponent(lat)+'&lon='+encodeURIComponent(lng);
+    return fetch(u,{cache:'no-store'}).then(function(r){
+      if(!r.ok)throw new Error('Reverse geocode '+r.status);
+      return r.json();
+    }).then(function(j){
+      var a=j&&j.address||{};
+      var s=[
+        a.city||a.town||a.village||a.municipality||a.hamlet||'',
+        a.county||a.state||'',
+        a.country_code?String(a.country_code).toUpperCase():''
+      ].filter(Boolean).filter(function(v,i,x){return x.indexOf(v)===i}).join(' · ');
+      s=s||String(j&&j.display_name||'').split(',').slice(0,3).join(', ');
+      if(s)ktn62ReverseCache[ck]=s;
+      return s;
+    });
+  }
+
+  if(!tt)return nominatim().catch(function(){return''});
+
+  var url='https://api.tomtom.com/search/2/reverseGeocode/'+
+    encodeURIComponent(lat+','+lng)+'.json?key='+encodeURIComponent(tt)+'&language=it-IT';
+  return fetch(url,{cache:'no-store'}).then(function(r){
+    if(!r.ok)throw new Error('TomTom reverse '+r.status);
+    return r.json();
+  }).then(function(j){
+    var row=j&&j.addresses&&j.addresses[0];
+    var a=row&&row.address||{};
+    var s=ktn62LocalityTextFromAddress(a,a.freeformAddress||'');
+    if(s)ktn62ReverseCache[ck]=s;
+    return s;
+  }).catch(function(){
+    return nominatim().catch(function(){return''});
+  });
+}
+function ktn62SetLocality(el,text,loading){
+  if(!el)return;
+  el.textContent=text||'';
+  el.classList.toggle('on',!!text&&!loading);
+  el.classList.toggle('loading',!!loading);
+}
+function ktn62UpdateLocalityForInput(inp,knownText){
+  if(!inp)return;
+  var host=inp.closest('.route-stop-row');
+  var out=host?host.querySelector('.route-stop-locality'):
+    (inp.id==='routeFromManual'?document.getElementById('routeFromLocality'):
+     inp.id==='routeToManual'?document.getElementById('routeToLocality'):null);
+  if(!out)return;
+
+  var q=String(inp.value||'').trim();
+  var c=_parseManualCoords(q);
+  if(!c){
+    ktn62SetLocality(out,knownText||'',false);
+    return;
+  }
+
+  /* The coordinate itself is authoritative. Reverse geocoding is DISPLAY ONLY. */
+  inp.dataset.fixedGpsLat=String(c.lat);
+  inp.dataset.fixedGpsLng=String(c.lng);
+  inp.dataset.fixedGpsText=q;
+
+  if(knownText){
+    ktn62SetLocality(out,knownText,false);
+    return;
+  }
+  var serial=String(Date.now())+Math.random();
+  out.dataset.lookup=serial;
+  ktn62SetLocality(out,'Ricerca località…',true);
+  ktn62ReverseLocality(c.lat,c.lng).then(function(s){
+    if(out.dataset.lookup!==serial)return;
+    ktn62SetLocality(out,s?('📍 '+s):'📍 Coordinate GPS',false);
+  });
+}
+window.ktn62UpdateLocalityForInput=ktn62UpdateLocalityForInput;
+
 function _geocodeRouteAddress(q) {
   q=String(q||'').trim();
   if(!q)return Promise.reject(new Error('Inserisci una destinazione.'));
@@ -3216,6 +3356,7 @@ function addRouteStop(value){
     '<div class="route-stop-order" title="Trascina per riordinare"><span class="num">1</span><span class="grip">⋮⋮</span></div>'+
     '<select class="route-stop-saved" title="Cliente / posizione salvata">'+_routeSavedOptions(initial)+'</select>'+
     '<input type="text" class="route-stop-input" placeholder="Indirizzo, coordinate o POI: es. Shell Binzen, farmacia Turate" value="'+initial.replace(/"/g,'&quot;')+'">'+
+    '<div class="route-stop-locality"></div>'+
     '<div class="route-stop-controls">'+
       '<button type="button" class="route-stop-up" title="Sposta prima">↑</button>'+
       '<button type="button" class="route-stop-down" title="Sposta dopo">↓</button>'+
@@ -3228,11 +3369,21 @@ function addRouteStop(value){
   sel.onchange=function(){
     if(this.value){
       inp.value=this.value;
-      inp.dispatchEvent(new Event('input',{bubbles:true}));
+      var label=this.options&&this.selectedIndex>=0?String(this.options[this.selectedIndex].text||'').trim():'';
+      inp.dataset.fixedGpsText=inp.value;
+      var c=_parseManualCoords(inp.value);
+      if(c){inp.dataset.fixedGpsLat=String(c.lat);inp.dataset.fixedGpsLng=String(c.lng)}
+      ktn62UpdateLocalityForInput(inp,label);
+      inp.dispatchEvent(new Event('change',{bubbles:true}));
     }
   };
   inp.oninput=function(){
     if(sel.value && sel.value!==this.value)sel.value='';
+    var c=_parseManualCoords(this.value);
+    if(!c){
+      delete this.dataset.fixedGpsLat;delete this.dataset.fixedGpsLng;delete this.dataset.fixedGpsText;
+    }
+    ktn62UpdateLocalityForInput(this);
   };
   row.querySelector('.route-stop-up').onclick=function(){moveRouteStop(row,-1)};
   row.querySelector('.route-stop-down').onclick=function(){moveRouteStop(row,1)};
@@ -3287,6 +3438,7 @@ function addRouteStop(value){
 
   document.getElementById('routeStops').appendChild(row);
   updateRouteStopOrderUI();
+  if(_parseManualCoords(initial))setTimeout(function(){ktn62UpdateLocalityForInput(inp)},0);
 }
 function getRouteStopValues(){
   return Array.prototype.map.call(document.querySelectorAll('.route-stop-input'),function(i){return i.value.trim();}).filter(Boolean);
@@ -7408,6 +7560,17 @@ function ktn55CancelSearchChoice(){
       var q=String(inp.value||'').trim();
       var box=dropdownFor(inp);
       if(timer)clearTimeout(timer);
+
+      /* CRITICAL: coordinates are already a resolved point.
+         Never submit them to TomTom autocomplete. */
+      var coord=(typeof window._parseManualCoords==='function')?window._parseManualCoords(q):null;
+      if(coord){
+        serial++;
+        if(box){box.innerHTML='';box.classList.remove('on')}
+        if(typeof window.ktn62UpdateLocalityForInput==='function')window.ktn62UpdateLocalityForInput(inp);
+        return;
+      }
+
       if(q.length<2){
         if(box)box.classList.remove('on');
         return;
@@ -7429,7 +7592,12 @@ function ktn55CancelSearchChoice(){
     });
 
     inp.addEventListener('focus',function(){
-      if(String(inp.value||'').trim().length>=2&&!selectedPlace(inp)){
+      var q=String(inp.value||'').trim();
+      if(typeof window._parseManualCoords==='function'&&window._parseManualCoords(q)){
+        if(typeof window.ktn62UpdateLocalityForInput==='function')window.ktn62UpdateLocalityForInput(inp);
+        return;
+      }
+      if(q.length>=2&&!selectedPlace(inp)){
         inp.dispatchEvent(new Event('input',{bubbles:true}));
       }
     });
@@ -7500,6 +7668,21 @@ function ktn55CancelSearchChoice(){
     if(!inp)return Promise.reject(new Error('Tappa non valida.'));
     var q=String(inp.value||'').trim();
     if(!q)return Promise.reject(new Error('Inserisci la tappa.'));
+
+    /* A GPS point selected from map/saved list is authoritative and cannot
+       be replaced by autocomplete/geocoding. */
+    if(inp.dataset.fixedGpsText===q){
+      var flat=Number(inp.dataset.fixedGpsLat),flng=Number(inp.dataset.fixedGpsLng);
+      if(isFinite(flat)&&isFinite(flng)){
+        var loc=inp.closest('.route-stop-row');
+        var locEl=loc&&loc.querySelector('.route-stop-locality');
+        return Promise.resolve({
+          lat:flat,lng:flng,
+          label:locEl&&locEl.textContent?locEl.textContent.replace(/^📍\s*/,''):q,
+          nazione:''
+        });
+      }
+    }
 
     var c=(typeof window._parseManualCoords==='function')?window._parseManualCoords(q):null;
     if(c)return Promise.resolve(c);
@@ -7866,6 +8049,65 @@ function ktn55CancelSearchChoice(){
     if(p&&p.classList.contains('open'))forceTop();
   });
   obs.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});
+})();
+</script>
+
+
+<script>
+/* === BETA 1.0 GPS LOCALITY DISPLAY OWNER === */
+(function(){
+  function id(x){return document.getElementById(x)}
+
+  function syncManual(inp){
+    if(!inp)return;
+    inp.addEventListener('input',function(){
+      if(typeof window.ktn62UpdateLocalityForInput==='function')window.ktn62UpdateLocalityForInput(inp);
+    });
+    inp.addEventListener('change',function(){
+      if(typeof window.ktn62UpdateLocalityForInput==='function')window.ktn62UpdateLocalityForInput(inp);
+    });
+  }
+
+  function syncSelect(selId,inpId){
+    var sel=id(selId),inp=id(inpId);if(!sel||!inp)return;
+    sel.addEventListener('change',function(){
+      if(this.value==='gps'){
+        /* Show human locality for the actual GPS point without replacing it. */
+        if(window.userMarker){
+          var ll=userMarker.getLatLng();
+          var q=Number(ll.lat).toFixed(6)+', '+Number(ll.lng).toFixed(6);
+          inp.value=q;
+          inp.dataset.fixedGpsLat=String(ll.lat);
+          inp.dataset.fixedGpsLng=String(ll.lng);
+          inp.dataset.fixedGpsText=q;
+          if(typeof window.ktn62UpdateLocalityForInput==='function')window.ktn62UpdateLocalityForInput(inp);
+        }else{
+          var out=id(inpId==='routeFromManual'?'routeFromLocality':'routeToLocality');
+          if(out){out.textContent='📍 Posizione GPS: premi “Posizione” per acquisirla';out.classList.add('on')}
+        }
+        return;
+      }
+
+      /* Saved places already have a clear human label; show that below. */
+      if(this.value){
+        var opt=this.options&&this.selectedIndex>=0?this.options[this.selectedIndex]:null;
+        var label=opt?String(opt.text||'').trim():'';
+        var p=(typeof getRouteCoords==='function')?getRouteCoords(this.value):null;
+        if(p&&isFinite(p.lat)&&isFinite(p.lng)){
+          var q2=Number(p.lat).toFixed(6)+', '+Number(p.lng).toFixed(6);
+          inp.value='';
+          delete inp.dataset.fixedGpsLat;delete inp.dataset.fixedGpsLng;delete inp.dataset.fixedGpsText;
+          var out2=id(inpId==='routeFromManual'?'routeFromLocality':'routeToLocality');
+          if(out2){out2.textContent='📍 '+label;out2.classList.add('on')}
+        }
+      }
+    });
+  }
+
+  syncManual(id('routeFromManual'));
+  syncManual(id('routeToManual'));
+  syncSelect('routeFrom','routeFromManual');
+  syncSelect('routeTo','routeToManual');
 })();
 </script>
 
