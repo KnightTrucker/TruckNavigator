@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0f14">
+<title>TruckPesa v19 · Progetto JSON unico stabile</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+:root{
+  --bg:#0b0f14; --bg2:#11161d; --card:#141a22; --card2:#181f28;
+  --ink:#eaf1f7; --muted:#8ea0b3; --line:#243040; --line2:#2e3b4d;
+  --ok:#22c55e; --ok-dim:#0e2818; --warn:#f5a623; --warn-dim:#2a2110; --bad:#ff4d4d; --bad-dim:#2a1414;
+  --accent:#ffb020; --accent2:#2dd4ff; --steel:#3a4756;
+  --shadow:0 14px 34px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.35);
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --head:'Rajdhani',Inter,ui-sans-serif,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{touch-action:manipulation}
+body{
+  margin:0;
+  background:
+    radial-gradient(1100px 600px at 12% -10%, rgba(255,176,32,.06), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(45,212,255,.05), transparent 55%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.012) 0 2px, transparent 2px 26px),
+    linear-gradient(180deg,#080b0f 0,#0b0f14 260px, var(--bg) 100%);
+  font-family:var(--head);
+  font-weight:500;
+  font-size:16px;
+  color:var(--ink);
+  overscroll-behavior-y:contain;
+}
+.app{max-width:1100px;margin:auto;padding:14px 14px 46px}
+
+/* ===== HERO ===== */
+.hero{
+  position:relative;overflow:hidden;
+  background:
+    linear-gradient(160deg, rgba(255,176,32,.10), transparent 45%),
+    linear-gradient(135deg,#12181f,#0a0d12 70%);
+  border:1px solid var(--line2);
+  border-radius:16px;padding:20px 20px 18px;box-shadow:var(--shadow);margin-bottom:14px;
+}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:repeating-linear-gradient(90deg,transparent 0 38px, rgba(255,255,255,.025) 38px 39px);
+  mask-image:linear-gradient(180deg,black,transparent 75%);
+}
+.hero::after{
+  content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,176,32,.14),transparent 65%);pointer-events:none;
+}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:relative;z-index:1}
+.plate{
+  flex:0 0 auto;display:flex;align-items:center;gap:0;border-radius:6px;overflow:hidden;
+  border:2px solid #1a2027;box-shadow:0 2px 8px rgba(0,0,0,.5);font-family:var(--mono);
+}
+.plate .eu{background:#1852c4;color:#fff;font-size:.55rem;font-weight:700;padding:6px 5px;line-height:1.1;text-align:center}
+.plate .eu span{display:block;font-size:.85rem}
+.plate .num{background:#f2f4f6;color:#0b0f14;font-weight:700;font-size:.92rem;letter-spacing:.06em;padding:6px 9px}
+.crest{
+  flex:0 0 auto;width:38px;height:38px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #2a3542, #0d1116 75%);
+  border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;
+  font-family:var(--head);font-weight:700;color:var(--accent);font-size:1.05rem;
+  box-shadow:inset 0 0 0 1px rgba(255,176,32,.18), 0 2px 6px rgba(0,0,0,.4);
+}
+.hero h1{font-family:var(--head);font-weight:700;letter-spacing:.01em;font-size:clamp(1.3rem,4.5vw,1.9rem);margin:12px 0 4px;position:relative;z-index:1}
+.hero p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.5;position:relative;z-index:1;max-width:60ch}
+.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;position:relative;z-index:1}
+.hero-kpi{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:11px 10px;position:relative;overflow:hidden}
+.hero-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--accent),transparent)}
+.hero-kpi b{display:block;font-family:var(--mono);font-weight:600;font-size:1.05rem;letter-spacing:.01em}
+.hero-kpi span{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* ===== CARDS ===== */
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:var(--shadow);margin-bottom:14px}
+.section-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.section-title h2{font-family:var(--head);font-weight:700;font-size:1.02rem;margin:0;letter-spacing:.01em;color:#fff}
+.section-title h2::before{content:"// ";color:var(--accent);font-family:var(--mono);font-weight:600}
+.small{font-size:.76rem;color:var(--muted)}
+details summary{cursor:pointer;font-weight:700;list-style:none;display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:var(--head)}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:'▾';color:var(--accent);margin-left:8px;transition:transform .15s}
+details[open] summary::after{transform:rotate(180deg)}
+.tech-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+.tech-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(0,0,0,.22)}
+.tech-box h3{margin:0 0 8px;font-size:.86rem;color:var(--accent2);font-family:var(--mono);font-weight:600}
+.tech-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:.8rem;font-family:var(--mono)}
+.tech-row:last-child{border:0}
+.tech-row strong{text-align:right;color:#fff;font-weight:600}
+.vfield{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.vfield:last-of-type{border-bottom:0}
+.vfield label{font-size:.72rem;color:var(--muted);line-height:1.3}
+.vfield input{width:98px;flex:0 0 auto;text-align:right;border:1px solid var(--line2);border-radius:7px;padding:7px 8px;font:inherit;font-size:.84rem;color:var(--ink);background:#0c1015;outline:none}
+.vfield input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(45,212,255,.14)}
+.vderived{margin-top:6px;font-size:.74rem;color:var(--muted);font-family:var(--mono)}
+.vderived b{color:var(--accent2);font-weight:600}
+.veh-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.veh-actions .btn{flex:1;min-width:140px}
+
+/* ===== BUTTONS ===== */
+.cargo-head{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:700;font-family:var(--head);letter-spacing:.02em;cursor:pointer;touch-action:manipulation;transition:filter .12s ease,transform .06s ease}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(180deg,#ffc44d,var(--accent));color:#231400;box-shadow:0 3px 10px rgba(255,176,32,.25)}
+.btn-primary:hover{filter:brightness(1.06)}
+.btn-danger{background:var(--bad-dim);color:#ff8a8a;border:1px solid rgba(255,77,77,.3)}
+.btn-ghost{background:rgba(255,255,255,.05);color:#dbe4ee;border:1px solid var(--line2)}
+.btn-ghost:hover{background:rgba(255,255,255,.09)}
+
+/* ===== CARGO EDITOR (compact / legacy rows) ===== */
+.cargo-list{display:grid;gap:10px}
+.cargo-row{border:1px solid var(--line);border-radius:12px;padding:11px;background:rgba(0,0,0,.2)}
+.cargo-row-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cargo-row .desc{grid-column:1/-1}
+.field label{display:block;font-size:.66rem;color:var(--muted);font-weight:700;margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em}
+.field input{width:100%;border:1px solid var(--line2);border-radius:8px;padding:11px 10px;font:inherit;color:var(--ink);background:#0c1015;outline:none}
+.field input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(45,212,255,.14)}
+.row-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;flex-wrap:wrap}
+.remove,.rotate,.duplicate{padding:8px 10px;font-size:.76rem}
+.position-chip{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;align-items:center;background:rgba(45,212,255,.08);border:1px solid rgba(45,212,255,.25);color:var(--accent2);padding:8px 10px;border-radius:9px;font-size:.72rem;font-weight:700;font-family:var(--mono)}
+
+/* ===== DECK (pianale) ===== */
+.deck-card{overflow:hidden}
+.deck-note{font-size:.75rem;line-height:1.5;color:var(--muted);margin:-3px 0 10px}
+.deck-shell{display:flex;justify-content:center;align-items:flex-start;background:#05070a;border:1px solid var(--line);border-radius:14px;padding:14px 8px;overflow:hidden}
+.deck-wrap{position:relative;width:min(100%,430px);padding-left:50px}
+.deck-ruler{position:absolute;left:0;top:0;width:46px;height:100%;font-size:9px;color:var(--muted);pointer-events:none;font-family:var(--mono)}
+.deck-ruler .tick{position:absolute;right:0;width:100%;transform:translateY(-50%);height:1px}
+.deck-ruler .tick::after{content:"";position:absolute;right:0;top:0;height:1px;background:var(--steel)}
+.deck-ruler .tick.quarter::after{width:8px;opacity:.4}
+.deck-ruler .tick.half::after{width:14px;height:1.5px;opacity:.65}
+.deck-ruler .tick.meter::after{width:22px;height:2px;background:var(--accent2);opacity:.85}
+.deck-ruler .tick span{position:absolute;right:25px;top:-6px;white-space:nowrap;color:#9fb3c5}
+.deck-ruler .tick.half span{right:17px;font-size:8px}
+.deck-ruler .tick.quarter span{display:none}
+.deck{
+  position:relative;width:100%;aspect-ratio:2440/13600;
+  background:
+    linear-gradient(180deg, rgba(45,212,255,.04), transparent 30%),
+    linear-gradient(90deg,#0d1319,#0a0f14 55%,#0d1319);
+  border:3px solid var(--steel);border-radius:6px;overflow:hidden;touch-action:none;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04), inset 0 0 30px rgba(0,0,0,.55);
+}
+.deck::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(to bottom,transparent 0,transparent calc(1.838235% - .5px),rgba(255,255,255,.035) calc(1.838235% - .5px),rgba(255,255,255,.035) 1.838235%),
+    repeating-linear-gradient(to bottom,transparent 0,transparent calc(3.67647% - .8px),rgba(255,255,255,.05) calc(3.67647% - .8px),rgba(255,255,255,.05) 3.67647%),
+    repeating-linear-gradient(to bottom,transparent 0,transparent calc(7.35294% - 1px),rgba(45,212,255,.09) calc(7.35294% - 1px),rgba(45,212,255,.09) 7.35294%);
+}
+.deck-front,.deck-rear{position:absolute;z-index:1;left:50%;transform:translateX(-50%);font-size:8.5px;font-weight:700;letter-spacing:.08em;color:#9fb3c5;background:rgba(0,0,0,.55);padding:3px 6px;border-radius:4px;pointer-events:none;font-family:var(--mono);border:1px solid var(--line)}
+.deck-front{top:6px}
+.deck-rear{bottom:6px}
+.cargo-block{position:absolute;z-index:3;border:2px solid rgba(0,0,0,.55);border-radius:5px;background:linear-gradient(135deg,#60a5fa,#2563eb);box-shadow:0 4px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-weight:700;font-family:var(--head);font-size:clamp(8px,2.7vw,12px);line-height:1.1;padding:2px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;transition:box-shadow .12s ease,filter .12s ease}
+.cargo-block.selected{outline:3px solid var(--accent);outline-offset:1px}
+.cargo-block.dragging{box-shadow:0 10px 24px rgba(0,0,0,.6);filter:brightness(1.08);z-index:8}
+.cargo-block.invalid{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+.cargo-block .block-name{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.deck-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--muted);font-size:.78rem;font-weight:700;pointer-events:none;font-family:var(--head)}
+.deck-toolbar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.deck-toolbar button{width:100%}
+.selection-info{margin-top:8px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.74rem;color:#c3d0dc;font-family:var(--mono)}
+.drag-readout{display:none;position:absolute;z-index:30;top:8px;right:8px;left:8px;margin:auto;width:max-content;max-width:calc(100% - 16px);background:rgba(5,7,10,.95);color:#fff;border:1px solid var(--accent);border-radius:9px;padding:7px 10px;text-align:center;font-size:.72rem;font-weight:700;box-shadow:0 8px 20px rgba(0,0,0,.5);pointer-events:none;font-family:var(--mono)}
+.drag-readout.show{display:block}
+.drag-readout strong{font-size:.9rem;color:var(--accent)}
+
+/* ===== SAVE / LOAD ===== */
+.save-grid{display:grid;grid-template-columns:1fr auto;gap:8px}
+.save-grid input,.save-grid select{width:100%;border:1px solid var(--line2);border-radius:9px;padding:10px;font:inherit;background:#0c1015;color:var(--ink);outline:none}
+.save-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.save-actions .btn{flex:1;min-width:120px}
+.saved-meta{margin-top:7px;font-size:.72rem;color:var(--muted)}
+
+/* ===== SUMMARY / METRICS ===== */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{border:1px solid var(--line);background:rgba(0,0,0,.22);border-radius:12px;padding:12px}
+.metric .label{font-size:.7rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.metric .value{font-size:1.16rem;font-weight:600;margin-top:4px;font-family:var(--mono);color:#fff}
+.metric.full{grid-column:1/-1}
+
+/* ===== AXES ===== */
+.axis-card{padding:13px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:rgba(0,0,0,.18)}
+.axis-top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.axis-name{font-weight:700;font-family:var(--head);color:#fff}
+.axis-value{font-size:1.08rem;font-weight:600;font-family:var(--mono);color:var(--accent2)}
+.bar{height:12px;border-radius:999px;background:#0a0d12;overflow:hidden;margin-top:9px;position:relative;border:1px solid var(--line)}
+.bar>span{display:block;height:100%;border-radius:999px;transition:width .2s ease;background:linear-gradient(90deg,#16a34a,#22c55e);box-shadow:0 0 8px rgba(34,197,94,.5)}
+.bar>span.warn{background:linear-gradient(90deg,#d97706,var(--warn));box-shadow:0 0 8px rgba(245,166,35,.5)}
+.bar>span.bad{background:linear-gradient(90deg,#b91c1c,var(--bad));box-shadow:0 0 8px rgba(255,77,77,.55)}
+.axis-sub{margin-top:7px;display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--mono)}
+
+/* ===== LEGAL COMPLIANCE ===== */
+.legal-grid{display:grid;gap:9px}
+.legal-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(0,0,0,.18)}
+.legal-item b{font-size:.88rem;color:#fff;font-family:var(--head)}
+.legal-item .calc{font-size:.74rem;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.badge{font-size:.68rem;font-weight:700;padding:7px 10px;border-radius:999px;white-space:nowrap;font-family:var(--mono);letter-spacing:.04em;border:1px solid transparent}
+.badge.ok{background:var(--ok-dim);color:#5fe3a0;border-color:rgba(34,197,94,.35)}
+.badge.bad{background:var(--bad-dim);color:#ff9494;border-color:rgba(255,77,77,.4)}
+.badge.na{background:rgba(255,255,255,.05);color:var(--muted);border-color:var(--line2)}
+.all-status{text-align:center;border-radius:12px;padding:13px;font-weight:700;margin-top:10px;font-family:var(--head);letter-spacing:.03em;border:1px solid transparent}
+.all-status.ok{background:var(--ok-dim);color:#5fe3a0;border-color:rgba(34,197,94,.35)}
+.all-status.bad{background:var(--bad-dim);color:#ff9494;border-color:rgba(255,77,77,.4)}
+
+.fix-panel{margin-top:12px;border:1px solid rgba(255,176,32,.3);border-radius:12px;padding:12px;background:linear-gradient(160deg,rgba(255,176,32,.06),rgba(0,0,0,.2))}
+.fix-title{font-family:var(--head);font-weight:700;color:var(--accent);font-size:.86rem;margin-bottom:9px}
+.fix-conditions{display:grid;gap:7px;margin-bottom:11px}
+.fix-check{display:flex;align-items:flex-start;gap:8px;font-size:.78rem;color:#c9d4de;line-height:1.4;cursor:pointer}
+.fix-check input{margin-top:2px;accent-color:var(--accent);width:16px;height:16px;flex:0 0 auto}
+.fix-actions{display:flex;gap:8px;flex-wrap:wrap}
+.fix-actions .btn{flex:1;min-width:150px}
+.fix-result{margin-top:10px;font-size:.78rem;line-height:1.55;font-family:var(--mono)}
+.fix-result:empty{margin:0}
+.fix-result.ok{color:#5fe3a0}
+.fix-result.bad{color:#ffb98a}
+.fix-note{font-size:.72rem;color:var(--muted);line-height:1.4;margin-top:-2px;margin-bottom:10px}
+.formula{font-family:var(--mono);font-size:.75rem;background:#05070a;color:var(--accent2);padding:12px;border-radius:10px;overflow:auto;line-height:1.6;border:1px solid var(--line)}
+.notice{font-size:.74rem;line-height:1.5;color:var(--muted);margin-top:10px}
+.empty{text-align:center;padding:18px;color:var(--muted);border:1px dashed var(--line2);border-radius:12px}
+.footer{text-align:center;color:var(--muted);font-size:.72rem;padding:14px 8px 4px;font-family:var(--mono);letter-spacing:.02em}
+.footer .sig{display:block;margin-top:4px;color:#5b6b7c}
+.footer .sig b{color:var(--accent);font-weight:600}
+
+@media(min-width:720px){.app{padding:22px 22px 50px}.tech-grid{grid-template-columns:1fr 1fr}.summary-grid{grid-template-columns:repeat(4,1fr)}.metric.full{grid-column:auto}.cargo-row-grid{grid-template-columns:2fr 1fr 1fr 1fr}.cargo-row .desc{grid-column:auto}.dashboard{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.dashboard>.card{margin-bottom:0}.deck-wrap{width:430px}}
+@media(max-width:400px){.hero-grid{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr}.metric.full{grid-column:auto}}
+@media(max-width:760px){.cargo-row-grid{grid-template-columns:minmax(0,1fr) 1fr 1fr 46px}.cargo-row .desc{grid-column:1/-1}.field.weight-field{grid-column:auto}.row-actions{display:grid;grid-template-columns:1fr 1fr auto}.row-actions .btn{white-space:nowrap}.position-chip{font-size:.66rem}}
+@media(max-width:430px){.cargo-row{padding:8px}.cargo-row-grid{grid-template-columns:1fr 1fr 44px;gap:6px}.cargo-row .desc{grid-column:1/-1}.field.weight-field{grid-column:1}.field.length-field{grid-column:2}.field.width-field{grid-column:1}.field.color-field{grid-column:3;grid-row:3}.field input{font-size:.84rem;padding:7px}.position-chip{grid-column:1/-1}.row-actions{grid-template-columns:1fr 1fr}.row-actions .remove{grid-column:1/-1}.btn{padding:9px 10px}}
+
+/* Tabella colli compatta */
+.cargo-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.2)}
+.cargo-table{width:100%;border-collapse:separate;border-spacing:0;min-width:760px;font-size:.84rem}
+.cargo-table th{position:sticky;top:0;z-index:2;background:#0c1015;color:var(--accent2);text-align:left;padding:9px 7px;border-bottom:1px solid var(--line2);white-space:nowrap;font-size:.68rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+.cargo-table td{padding:6px 5px;border-bottom:1px solid var(--line);vertical-align:middle}
+.cargo-table tr:last-child td{border-bottom:0}
+.cargo-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.cargo-table tbody tr.selected-editor{background:rgba(255,176,32,.07)}
+.cargo-table input[type="text"],.cargo-table input[type="number"]{width:100%;min-width:72px;padding:9px 8px;border-radius:8px;font-size:.88rem;background:#0c1015;border:1px solid var(--line2);color:var(--ink)}
+.cargo-table input:focus{border-color:var(--accent2);outline:none}
+.cargo-table .td-name{min-width:145px}.cargo-table .td-num{width:94px}.cargo-table .td-center{width:92px;white-space:nowrap;font-weight:700;color:var(--accent2);font-family:var(--mono)}
+.cargo-table .td-color{width:54px;text-align:center}.cargo-table input[type="color"]{width:40px;height:36px;padding:3px;border-radius:7px;background:#0c1015;border:1px solid var(--line2)}
+.cargo-table .td-actions{width:170px;white-space:nowrap}
+.cargo-table .mini-btn{padding:8px 9px;min-width:0;font-size:.74rem;border-radius:8px;margin:1px}
+.cargo-table .mini-remove{color:#ff9494;background:var(--bad-dim);border:1px solid rgba(255,77,77,.3)}
+@media(max-width:600px){
+  .cargo-table{min-width:690px}
+  .cargo-table th{padding:8px 5px;font-size:.64rem}
+  .cargo-table td{padding:5px 4px}
+  .cargo-table input[type="text"],.cargo-table input[type="number"]{padding:8px 6px;font-size:.82rem}
+}
+
+/* FIX SCROLL ANDROID v6: nessun blocco globale dei gesti */
+html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
+body{touch-action:auto;overscroll-behavior-y:auto}
+#cargoList{overflow:visible;max-height:none;height:auto;touch-action:auto}
+.cargo-table-wrap{
+  overflow-x:auto;
+  overflow-y:hidden;
+  max-height:none;
+  height:auto;
+  touch-action:auto;
+  overscroll-behavior-x:contain;
+  overscroll-behavior-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.cargo-table,.cargo-table tbody,.cargo-table tr,.cargo-table td{height:auto;overflow:visible;touch-action:auto}
+.cargo-table input,.cargo-table button{touch-action:auto}
+
+
+/* ===== SCELTA TRATTORE DA DATABASE JSON ===== */
+.truck-picker{
+  margin:12px 0 14px;padding:12px;border:1px solid var(--line);
+  border-radius:12px;background:rgba(0,0,0,.22)
+}
+.truck-picker-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.truck-picker label{display:block;font-size:.66rem;color:var(--muted);font-weight:700;
+  margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em}
+.truck-picker select{
+  width:100%;border:1px solid var(--line2);border-radius:9px;padding:10px 9px;
+  font:inherit;color:var(--ink);background:#0c1015;outline:none
+}
+.truck-picker select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(45,212,255,.12)}
+.truck-db-info{
+  margin-top:9px;padding:9px 10px;border:1px solid rgba(45,212,255,.20);
+  background:rgba(45,212,255,.055);border-radius:9px;font-size:.73rem;line-height:1.55;color:#c7d4df
+}
+.truck-db-info b{color:var(--accent2);font-family:var(--mono);font-weight:600}
+.truck-db-badge{display:inline-block;margin:2px 5px 2px 0;padding:3px 6px;border-radius:999px;
+  background:rgba(255,176,32,.10);border:1px solid rgba(255,176,32,.22);color:#ffd47a;
+  font-family:var(--mono);font-size:.65rem}
+@media(min-width:720px){.truck-picker-grid{grid-template-columns:1.5fr 1fr}}
+
+
+/* ===== COMBINAZIONE VEICOLI / PERSONALIZZATI ===== */
+.combo-label{
+  display:block;margin-top:3px;color:var(--accent2);font-size:.68rem;
+  font-family:var(--mono);font-weight:600;line-height:1.35
+}
+.vehicle-picker-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.vehicle-picker-actions .btn{flex:1;min-width:150px}
+.vehicle-db-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.sem-info{margin-top:9px;padding:9px 10px;border:1px solid rgba(255,176,32,.20);
+  background:rgba(255,176,32,.055);border-radius:9px;font-size:.73rem;line-height:1.55;color:#c7d4df}
+.sem-info b{color:var(--accent);font-family:var(--mono);font-weight:600}
+.custom-mark{color:#ffd47a;font-weight:700}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.report-actions .btn{flex:1;min-width:180px}
+
+/* Pianale: portrait normale, landscape realmente orizzontale */
+.deck-wrap.landscape{
+  width:min(100%,980px)!important;
+  padding-left:0!important;
+  padding-top:34px!important;
+}
+.deck-wrap.landscape .deck-ruler{
+  left:0;top:0;width:100%;height:30px;font-size:8px
+}
+.deck-wrap.landscape .deck-ruler .tick{
+  top:auto!important;bottom:0;width:1px;height:100%;transform:translateX(-50%)
+}
+.deck-wrap.landscape .deck-ruler .tick::after{
+  right:auto;left:0;top:auto;bottom:0;width:1px!important
+}
+.deck-wrap.landscape .deck-ruler .tick.quarter::after{height:8px}
+.deck-wrap.landscape .deck-ruler .tick.half::after{height:14px}
+.deck-wrap.landscape .deck-ruler .tick.meter::after{height:22px;background:var(--accent2)}
+.deck-wrap.landscape .deck-ruler .tick span{
+  right:auto;left:4px;top:0;white-space:nowrap;transform:none
+}
+.deck-wrap.landscape .deck-ruler .tick.half span{left:3px;right:auto}
+.deck-wrap.landscape .deck-front,.deck-wrap.landscape .deck-rear{
+  top:50%;bottom:auto;transform:translateY(-50%);writing-mode:vertical-rl
+}
+.deck-wrap.landscape .deck-front{left:6px}
+.deck-wrap.landscape .deck-rear{left:auto;right:6px}
+@media (orientation:landscape) and (max-height:700px){
+  .app{max-width:none;padding:10px 10px 34px}
+  .deck-shell{padding:8px}
+  .deck-wrap{width:min(100%,980px)}
+  .deck-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(min-width:720px){.vehicle-db-grid{grid-template-columns:1fr 1fr}}
+
+
+.deck-wrap.landscape .deck::before{
+  background:
+    repeating-linear-gradient(to right,transparent 0,transparent calc(1.838235% - .5px),rgba(255,255,255,.035) calc(1.838235% - .5px),rgba(255,255,255,.035) 1.838235%),
+    repeating-linear-gradient(to right,transparent 0,transparent calc(3.67647% - .8px),rgba(255,255,255,.05) calc(3.67647% - .8px),rgba(255,255,255,.05) 3.67647%),
+    repeating-linear-gradient(to right,transparent 0,transparent calc(7.35294% - 1px),rgba(45,212,255,.09) calc(7.35294% - 1px),rgba(45,212,255,.09) 7.35294%);
+}
+
+
+.db-warning{margin:10px 0;padding:11px;border:1px solid rgba(245,166,35,.45);border-radius:10px;background:rgba(245,166,35,.08);font-size:.76rem;line-height:1.45}
+.db-warning code{font-family:var(--mono);font-size:.68rem;color:var(--accent2)}
+.db-warning .btn{display:block;width:100%;margin-top:9px}
+.cargo-block.free-drag{outline:3px dashed #ffb020;outline-offset:2px;z-index:50;filter:brightness(1.12)}
+
+
+.personal-db-panel{
+  margin:10px 0 14px;padding:11px;border:1px solid var(--line);border-radius:11px;
+  background:rgba(255,255,255,.025)
+}
+.personal-db-title{font-weight:700;color:#fff;font-size:.82rem;margin-bottom:5px}
+.personal-db-note{font-size:.70rem;line-height:1.45;color:var(--muted);margin-bottom:8px}
+.personal-db-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.personal-db-actions .btn{width:100%;padding:9px 8px;font-size:.72rem}
+@media(max-width:480px){.personal-db-actions{grid-template-columns:1fr}}
+.db-incomplete{display:inline-block;margin-top:5px;color:#ffca63;font-weight:700;font-size:.68rem}
+
+
+.project-bar{position:sticky;top:0;z-index:120;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;margin:0 -14px 12px;background:rgba(8,11,15,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.project-bar-left{min-width:0}.project-title{font-weight:700;color:#fff;font-size:.88rem}.project-file-name{font-family:var(--mono);font-size:.66rem;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48vw}
+.project-bar-actions{display:flex;gap:7px}.project-bar-actions .btn{padding:8px 11px;font-size:.74rem;white-space:nowrap}
+@media(min-width:720px){.project-bar{margin:0 -22px 14px;padding:10px 22px}.project-file-name{max-width:420px}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="project-bar">
+ <div class="project-bar-left"><div class="project-title">TruckPesa</div><div id="projectFileName" class="project-file-name">truckpesa_progetto.json</div></div>
+ <div class="project-bar-actions">
+  <button class="btn btn-ghost" id="openProjectBtn" type="button">📂 Apri JSON</button>
+  <button class="btn btn-primary" id="saveProjectBtn" type="button">💾 Salva JSON</button>
+ </div>
+ <input id="openProjectFile" type="file" accept="application/json,.json" hidden>
+</div>
+<header class="hero">
+<div class="hero-top">
+<div class="plate"><span class="eu">🇪🇺<span>I</span></span><span class="num">AZ&nbsp;40T</span></div>
+<div class="crest" title="Andrea Zollet">Z</div>
+</div>
+<h1>Ripartizione Pesi · Autoarticolato 5 Assi</h1><p>Ford F‑Max 2023 + Schmitz Cargobull · posizionamento grafico della merce e calcolo statico tramite equilibrio dei momenti.</p><div class="hero-grid"><div class="hero-kpi"><b id="heroTotal">14.600 kg</b><span>Massa complessiva</span></div><div class="hero-kpi"><b id="heroCargo">0 kg</b><span>Merce caricata</span></div><div class="hero-kpi"><b id="heroCg">—</b><span>Baricentro merce</span></div></div></header>
+<section class="card"><details id="vehicleDetails">
+<summary>
+  <span>Dati veicolo <span class="small">· tocca per aprire/chiudere</span>
+    <span id="comboLabel" class="combo-label">Combinazione veicolo</span>
+  </span>
+</summary>
+
+<div class="vehicle-db-grid">
+  <div class="truck-picker">
+    <label for="truckSelect">Trattore</label>
+    <select id="truckSelect"></select>
+    <div style="margin-top:8px">
+      <label for="tankSelect">Configurazione serbatoi</label>
+      <select id="tankSelect"><option value="">—</option></select>
+    </div>
+    <div id="truckDbInfo" class="truck-db-info">Database trattori.</div>
+    <div class="vehicle-picker-actions">
+      <button class="btn btn-ghost" id="copyTruckBtn">⧉ Copia e salva trattore</button>
+    </div>
+  </div>
+
+  <div class="truck-picker">
+    <label for="trailerSelect">Semirimorchio centinato 3 assi</label>
+    <select id="trailerSelect"></select>
+    <div id="trailerDbInfo" class="sem-info">Database semirimorchi.</div>
+    <div class="vehicle-picker-actions">
+      <button class="btn btn-ghost" id="copyTrailerBtn">⧉ Copia e salva semirimorchio</button>
+    </div>
+  </div>
+</div>
+<div class="tech-grid">
+<div class="tech-box"><h3>Trattore</h3>
+<div class="vfield"><label>Passo asse 1 → asse 2 (mm)</label><input id="vWheelbase" type="number" step="10"></div>
+<div class="vfield"><label>Ralla, avanti asse motore (mm)</label><input id="vFifthLead" type="number" step="5"></div>
+<div class="vfield"><label>Peso trattore usato nei calcoli (kg)</label><input id="vTareTotal" type="number" step="10"></div>
+<div class="vfield"><label>Quota su asse motore (%)</label><input id="vDriveSharePct" type="number" step="0.01"></div>
+<div class="vderived">Asse 1: <b id="vAxle1Preview">—</b> · Asse 2: <b id="vAxle2Preview">—</b></div>
+</div>
+<div class="tech-box"><h3>Semirimorchio</h3>
+<div class="vfield"><label>Lunghezza interna tecnica (mm)</label><input id="vTrailerLen" type="number" step="10"></div>
+<div class="vfield"><label>Pianale — lunghezza (mm)</label><input id="vDeckLength" type="number" step="10"></div>
+<div class="vfield"><label>Pianale — larghezza (mm)</label><input id="vDeckWidth" type="number" step="10"></div>
+<div class="vfield"><label>Parete anteriore → kingpin (mm)</label><input id="vFrontToKingpin" type="number" step="10"></div>
+<div class="vfield"><label>Kingpin → centro tridem (mm)</label><input id="vKingpinToTridem" type="number" step="10"></div>
+<div class="vfield"><label>Tara tridem agganciato (kg)</label><input id="vTareTridem" type="number" step="10"></div>
+</div>
+<div class="tech-box"><h3>Limiti legali</h3>
+<div class="vfield"><label>Massa totale max (kg)</label><input id="vMaxGross" type="number" step="100"></div>
+<div class="vfield"><label>Asse motore max (kg)</label><input id="vMaxDrive" type="number" step="100"></div>
+<div class="vfield"><label>Asse 1 sterzante max (kg)</label><input id="vMaxSteer" type="number" step="100"></div>
+<div class="vfield"><label>Peso totale motrice max (kg) — 0 = non verificato</label><input id="vMaxTractor" type="number" step="100"></div>
+<div class="vfield"><label>Aderenza minima asse motore (%)</label><input id="vMinShare" type="number" step="0.5" readonly title="Regola di aderenza fissata al 25% per il profilo internazionale"></div>
+</div>
+</div>
+<div class="veh-actions"><button class="btn btn-primary" id="saveVehicleBtn">💾 Salva dati veicolo</button><button class="btn btn-ghost" id="resetVehicleBtn">↺ Ripristina predefiniti</button></div>
+<div id="vehicleMeta" class="saved-meta">I dati sono salvati in questo browser e usati per tutti i calcoli.</div><div class="saved-meta">Scelta trattore alimentata dal database JSON TruckPesa. I valori di ripartizione assi contrassegnati C sono riferimenti operativi e restano modificabili.</div>
+</details></section>
+<section class="card"><div class="section-title cargo-head"><div><h2>Merce Libera</h2><div class="small">Inserisci misure e peso; la posizione viene presa dal pianale</div></div><button class="btn btn-primary" id="addBtn">+ Aggiungi collo</button></div><div id="cargoList" class="cargo-list"></div></section>
+<section class="card deck-card"><div class="section-title"><div><h2>Pianale di carico</h2><div class="small" id="deckDimsLabel">2,44 m × 13,60 m · vista dall'alto</div></div><span class="small">FRONTE ↓ RETRO</span></div><div class="deck-note">Tieni premuto un collo e trascinalo: normalmente si ferma al contatto con gli altri. Con doppio tocco/click e mantenimento puoi trascinarlo liberamente sopra gli altri; al rilascio, se resta sovrapposto, torna automaticamente alla posizione iniziale. Durante lo spostamento vedi la distanza dalla testa.</div><div class="deck-shell"><div class="deck-wrap"><div id="deckRuler" class="deck-ruler"></div><div id="deck" class="deck"><div class="deck-front">PARETE ANTERIORE</div><div class="deck-rear">PORTE</div><div id="dragReadout" class="drag-readout"></div><div id="deckEmpty" class="deck-empty">Aggiungi un collo per posizionarlo sul pianale</div></div></div></div><div class="deck-toolbar"><button class="btn btn-ghost" id="rotateSelected">↻ Ruota 90°</button><button class="btn btn-ghost" id="duplicateSelected">⧉ Duplica collo</button><button class="btn btn-ghost" id="centerSelected">◎ Centra in larghezza</button></div><div id="selectionInfo" class="selection-info">Nessun collo selezionato.</div></section>
+<section class="card">
+<div class="section-title"><div><h2>Carichi salvati</h2><div class="small">Memorizzati nel file progetto JSON</div></div><span class="small">💾</span></div>
+<div class="save-grid"><input id="saveName" type="text" placeholder="Nome carico"><button class="btn btn-primary" id="saveLoadBtn">Salva carico</button></div>
+<div class="save-grid" style="margin-top:8px"><select id="savedLoads"><option value="">Nessun carico salvato</option></select><button class="btn btn-ghost" id="loadLoadBtn">Carica</button></div>
+<div class="save-actions"><button class="btn btn-danger" id="deleteLoadBtn">Elimina carico</button></div>
+<div id="savedMeta" class="saved-meta">Usa “Salva JSON” in alto per salvare tutto il progetto.</div>
+<div class="report-actions"><button class="btn btn-primary" id="pdfReportBtn">📄 Crea PDF carico + conformità</button></div>
+</section><section class="card"><div class="section-title"><h2>Riepilogo carico</h2><span class="small">aggiornamento automatico</span></div><div class="summary-grid"><div class="metric"><div class="label">Peso merce</div><div class="value" id="cargoWeight">0 kg</div></div><div class="metric"><div class="label">Baricentro globale</div><div class="value" id="cargoCg">—</div></div><div class="metric"><div class="label">Quota merce su ralla</div><div class="value" id="kingpinLoad">0 kg</div></div><div class="metric"><div class="label">Quota merce su tridem</div><div class="value" id="tridemCargo">0 kg</div></div><div class="metric"><div class="label">Spazio vuoto davanti</div><div class="value" id="emptyFront">—</div></div><div class="metric"><div class="label">Spazio vuoto dietro</div><div class="value" id="emptyRear">—</div></div></div></section>
+<div class="dashboard"><section class="card"><div class="section-title"><h2>Pesi finali a terra</h2><span class="small">tara + effetto merce</span></div><div id="axes"></div><div class="notice">La barra del tridem è indicativa; i limiti vincolanti applicati sono massa totale, asse 1 sterzante, asse motore e regola del 25% di aderenza.</div></section><section class="card"><div class="section-title"><h2>Conformità legale</h2><span class="small">profilo 40 t internazionale</span></div><div class="legal-grid"><div class="legal-item"><div><b id="grossLabel">Massa totale ≤ 40.000 kg</b><div class="calc" id="grossCalc"></div></div><span id="grossBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="steerLabel">Asse 1 sterzante ≤ 7.500 kg</b><div class="calc" id="steerCalc"></div></div><span id="steerBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="driveLabel">Asse motore ≤ 11.500 kg</b><div class="calc" id="driveCalc"></div></div><span id="driveBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="tractorLabel">Peso totale motrice</b><div class="calc" id="tractorCalc"></div></div><span id="tractorBadge" class="badge na">N/D</span></div><div class="legal-item"><div><b id="adhLabel">Aderenza asse motore ≥ 25%</b><div class="calc" id="adhCalc"></div></div><span id="adhBadge" class="badge ok">OK</span></div></div><div id="allStatus" class="all-status ok">TUTTO A NORMA</div>
+<div id="fixPanel" class="fix-panel">
+  <div class="fix-title">Assetto non a norma? Prova a ricalcolare la disposizione</div>
+  <div class="fix-conditions">
+    <label class="fix-check"><input type="checkbox" id="condRotate" checked> Posso ruotare i colli di 90° se serve spazio</label>
+    <label class="fix-check"><input type="checkbox" id="condRepack" checked> Posso raggruppare i colli su più file (doppia/tripla) o distenderli in fila singola</label>
+    <label class="fix-check"><input type="checkbox" id="condReorder" checked> Posso riordinare / scambiare la posizione dei colli</label>
+  </div>
+  <div class="fix-note">Il carico resta attaccato alla parete anteriore. Solo se non basta, ti chiedo se posso arretrarlo.</div>
+  <div class="fix-actions">
+    <button class="btn btn-primary" id="autoFixBtn">🔧 Cerca disposizione a norma</button>
+    <button class="btn btn-ghost" id="undoFixBtn" style="display:none">↩ Ripristina disposizione precedente</button>
+  </div>
+  <div id="autoFixResult" class="fix-result"></div>
+  <div id="autoFixBackWrap" style="display:none;margin-top:10px"><button class="btn btn-primary" id="autoFixBackBtn">⬅ Prova anche ad arretrare il carico</button></div>
+</div>
+<div class="notice">Controllo orientato ai tre criteri richiesti. Non sostituisce carta di circolazione, limiti nazionali specifici, limiti del gruppo tridem, pneumatici/sospensioni, omologazioni o pesatura certificata.</div></section></div>
+<section class="card" style="margin-top:14px"><details><summary>Come viene calcolata la ripartizione <span class="small">formule</span></summary><div style="margin-top:12px" class="formula" id="formulaText"></div><div class="notice">Il modello è statico e tratta kingpin e centro del tridem come appoggi equivalenti. La posizione longitudinale del carico è quindi determinante. I valori qui sopra si aggiornano con i dati veicolo inseriti.</div></details></section>
+<div class="footer">Calcolatore statico di supporto al carico · dati veicolo incorporati nel file<span class="sig">by <b>Andrea Zollet</b></span></div></div>
+<script>
+(()=>{'use strict';
+let VEHICLE_DB=null;
+let TRUCK_DB={trattori:[]};
+let TRAILER_DB={semirimorchi:[]};
+let PROJECT_DATA=null;
+let PROJECT_FILE_HANDLE=null;
+let PROJECT_FILE_NAME='truckpesa_progetto.json';
+const VEHICLE_DB_FILE='truckpesa_progetto.json';
+
+function normalizeTrailerRecord(t){
+  const geo=t.geometria_calcolo||{};
+  const mass=t.massa||{};
+  return {
+    ...t,
+    lunghezza_interna_mm:t.lunghezza_interna_mm??t.lunghezza_interna_utile_mm??null,
+    larghezza_interna_mm:t.larghezza_interna_mm??t.larghezza_interna_utile_mm??null,
+    deck_length_mm:t.deck_length_mm??t.lunghezza_interna_utile_mm??t.lunghezza_interna_mm??null,
+    deck_width_mm:t.deck_width_mm??t.larghezza_interna_utile_mm??t.larghezza_interna_mm??2440,
+    front_to_kingpin_mm:t.front_to_kingpin_mm??geo.distanza_parete_anteriore_kingpin_mm??null,
+    kingpin_to_tridem_mm:t.kingpin_to_tridem_mm??geo.passo_kingpin_centro_tridem_mm??null,
+    tare_tridem_ref_kg:t.tare_tridem_ref_kg??4300,
+    tare_totale_ref_kg:t.tare_totale_ref_kg??mass.tara_a_vuoto_riferimento_kg??null,
+    massa_tecnica_kg:t.massa_tecnica_kg??mass.massa_complessiva_tecnica_kg??null,
+    geoUsabile:geo.utilizzabile_per_calcolo!==false,
+    geoNota:geo.nota||''
+  };
+}
+function setVehicleDatabase(data){
+ data=ensureProjectShape(data);PROJECT_DATA=data;VEHICLE_DB=data;
+ TRUCK_DB={meta:data.meta||{},trattori:data.trattori.filter(t=>!(t.custom===true||t.marca==='Personalizzato'))};
+ TRAILER_DB={semirimorchi:data.semirimorchi.filter(t=>!(t.custom===true||t.marca==='Personalizzato')).map(normalizeTrailerRecord)};
+}
+async function loadVehicleDatabase(){
+ try{const res=await fetch(VEHICLE_DB_FILE,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}`);setVehicleDatabase(await res.json());PROJECT_FILE_NAME=VEHICLE_DB_FILE;$('#projectFileName').textContent=PROJECT_FILE_NAME;return true}
+ catch(err){console.warn(err);$('#projectFileName').textContent='Apri truckpesa_progetto.json';return false}
+}
+
+const CUSTOM_TRUCKS_KEY='__PROJECT_CUSTOM_TRUCKS__';
+const CUSTOM_TRAILERS_KEY='__PROJECT_CUSTOM_TRAILERS__';
+const TRAILER_SELECTION_KEY='truckPesaSemirimorchioSelezionatoV1';
+const TRUCK_SELECTION_KEY='truckPesaTrattoreSelezionatoV1';
+const TRUCK_TANK_KEY='truckPesaSerbatoioSelezionatoV1';
+const VEHICLE_STORAGE_KEY='ripartizionePesiVeicoloV1';
+const VEHICLE_DEFAULTS={tractorWheelbase:3600,fifthWheelLead:50,trailerInternalLength:13620,deckLength:13600,deckWidth:2440,frontWallToKingpin:1620,kingpinToTridem:7650,tareTractorTotal:10300,driveAxleSharePct:.470874,tareTridem:4300,maxGross:40000,maxDriveAxle:11500,maxSteerAxle:7500,maxTractorTotal:0,minDriveShare:.25};
+function buildVehicle(base){
+  const v={...VEHICLE_DEFAULTS,...base};
+  Object.defineProperty(v,'tareAxle1',{get(){return this.tareTractorTotal*(1-this.driveAxleSharePct)},enumerable:true});
+  Object.defineProperty(v,'tareAxle2',{get(){return this.tareTractorTotal*this.driveAxleSharePct},enumerable:true});
+  return v;
+}
+function loadVehicleBase(){try{const saved=JSON.parse(localStorage.getItem(VEHICLE_STORAGE_KEY)||'null');if(saved&&typeof saved==='object')return{...VEHICLE_DEFAULTS,...saved}}catch(e){}return{...VEHICLE_DEFAULTS}}
+let VEHICLE=buildVehicle(loadVehicleBase());
+let rows=[],nextId=1,selectedId=null,drag=null,longPressTimer=null;let state={},preFixSnapshot=null;
+const STORAGE_KEY='ripartizionePesiCarichiV2';
+const $=s=>document.querySelector(s);const fmtKg=n=>`${Math.round(n).toLocaleString('it-IT')} kg`;const fmtMm=n=>`${Math.round(n).toLocaleString('it-IT')} mm`;const fmtM=n=>`${(Math.max(0,n)/1000).toFixed(3).replace('.',',')} m`;const safeNum=v=>{const n=Number(String(v).replace(',','.'));return Number.isFinite(n)?n:0};const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function dims(r){const L=Math.max(1,safeNum(r.length)),W=Math.max(1,safeNum(r.width));return r.rotated?{long:W,wide:L}:{long:L,wide:W}}
+function clampPosition(r){const d=dims(r);const halfL=d.long/2,halfW=d.wide/2;r.x=clamp(safeNum(r.x)||halfL,halfL,Math.max(halfL,VEHICLE.deckLength-halfL));r.y=clamp(safeNum(r.y)||VEHICLE.deckWidth/2,halfW,Math.max(halfW,VEHICLE.deckWidth-halfW))}
+function overlaps(a,b,x=a.x,y=a.y){const da=dims(a),db=dims(b),eps=.05;return Math.abs(x-b.x)<(da.long+db.long)/2-eps&&Math.abs(y-b.y)<(da.wide+db.wide)/2-eps}
+function hasCollision(r,x=r.x,y=r.y){return rows.some(o=>o.id!==r.id&&overlaps(r,o,x,y))}
+function findFreePosition(r,preferredX=r.x,preferredY=r.y){clampPosition(r);const d=dims(r),minX=d.long/2,maxX=VEHICLE.deckLength-d.long/2,minY=d.wide/2,maxY=VEHICLE.deckWidth-d.wide/2;if(maxX<minX||maxY<minY)return false;const candidates=[];candidates.push([clamp(preferredX,minX,maxX),clamp(preferredY,minY,maxY)]);for(let x=minX;x<=maxX+1;x+=100){for(let y=minY;y<=maxY+1;y+=100)candidates.push([x,y])}for(const [x,y] of candidates){if(!hasCollision(r,x,y)){r.x=x;r.y=y;return true}}return false}
+function moveAxisUntilContact(r,axis,target){const d=dims(r),half=axis==='x'?d.long/2:d.wide/2,max=(axis==='x'?VEHICLE.deckLength:VEHICLE.deckWidth)-half,min=half;target=clamp(target,min,max);const start=r[axis];if(Math.abs(target-start)<.001)return;const test=(v)=>!hasCollision(r,axis==='x'?v:r.x,axis==='y'?v:r.y);if(test(target)){r[axis]=target;return}let lo=0,hi=1;for(let i=0;i<24;i++){const mid=(lo+hi)/2,v=start+(target-start)*mid;if(test(v))lo=mid;else hi=mid}r[axis]=start+(target-start)*lo}
+function moveWithoutOverlap(r,targetX,targetY){const dx=Math.abs(targetX-r.x)/VEHICLE.deckLength,dy=Math.abs(targetY-r.y)/VEHICLE.deckWidth;if(dx>=dy){moveAxisUntilContact(r,'x',targetX);moveAxisUntilContact(r,'y',targetY)}else{moveAxisUntilContact(r,'y',targetY);moveAxisUntilContact(r,'x',targetX)}}
+function addRow(data={}){const id=nextId++;const length=data.length??1200,width=data.width??800;const r={id,desc:data.desc||`Collo ${id}`,weight:data.weight??'',length,width,color:data.color||'#2563eb',rotated:data.rotated??false,x:data.x??0,y:data.y??VEHICLE.deckWidth/2};const d=dims(r);if(!data.x)r.x=Math.min(VEHICLE.deckLength-d.long/2,700+(rows.length*500));clampPosition(r);rows.push(r);if(hasCollision(r)&&!findFreePosition(r,r.x,r.y)){rows.pop();alert('Non c’è spazio libero sufficiente sul pianale per questo collo.');return}selectedId=id;renderAll();calculate()}
+function duplicateRow(id){
+  const src=rows.find(x=>x.id===id);
+  if(!src)return;
+  const raw=prompt('Quante copie vuoi creare di questo collo?','1');
+  if(raw===null)return;
+  const copies=Number.parseInt(raw,10);
+  if(!Number.isInteger(copies)||copies<1){
+    alert('Inserisci un numero di copie valido, almeno 1.');
+    return;
+  }
+  if(copies>100){
+    alert('Puoi duplicare al massimo 100 colli alla volta.');
+    return;
+  }
+  let created=0,lastId=null;
+  for(let i=0;i<copies;i++){
+    const nid=nextId++;
+    const copy={
+      id:nid,
+      desc:(src.desc||`Collo ${src.id}`)+(copies===1?' copia':` copia ${i+1}`),
+      weight:src.weight,length:src.length,width:src.width,color:src.color||'#2563eb',
+      rotated:src.rotated,x:src.x+250,y:src.y+120
+    };
+    clampPosition(copy);
+    rows.push(copy);
+    if(hasCollision(copy)&&!findFreePosition(copy,copy.x,copy.y)){
+      rows.pop(); nextId--; break;
+    }
+    created++; lastId=nid;
+  }
+  if(lastId!==null)selectedId=lastId;
+  renderAll(); calculate();
+  if(created<copies){
+    alert(`Create ${created} copie su ${copies}. Non c'è spazio sufficiente sul pianale per le altre senza sovrapposizioni.`);
+  }
+}
+function renderRows(){
+ const host=$('#cargoList');
+ host.innerHTML='';
+ if(!rows.length){host.innerHTML='<div class="empty">Nessun collo inserito. Tocca “Aggiungi collo”.</div>';return}
+ const wrap=document.createElement('div');
+ wrap.className='cargo-table-wrap';
+ wrap.innerHTML=`<table class="cargo-table">
+ <thead><tr>
+ <th>Nome</th><th>Peso kg</th><th>Lung. mm</th><th>Larg. mm</th><th>Colore</th><th>Centro</th><th>Azioni</th>
+ </tr></thead><tbody></tbody></table>`;
+ const body=wrap.querySelector('tbody');
+ rows.forEach((r,i)=>{
+   const d=dims(r),fits=d.long<=VEHICLE.deckLength&&d.wide<=VEHICLE.deckWidth;
+   const tr=document.createElement('tr');
+   if(r.id===selectedId)tr.className='selected-editor';
+   tr.innerHTML=`
+   <td class="td-name"><input data-k="desc" data-id="${r.id}" type="text" value="${escapeHtml(r.desc)}" placeholder="Collo ${i+1}"></td>
+   <td class="td-num"><input data-k="weight" data-id="${r.id}" type="number" min="0" step="1" inputmode="decimal" value="${r.weight}"></td>
+   <td class="td-num"><input data-k="length" data-id="${r.id}" type="number" min="1" step="10" inputmode="numeric" value="${r.length}"></td>
+   <td class="td-num"><input data-k="width" data-id="${r.id}" type="number" min="1" step="10" inputmode="numeric" value="${r.width}"></td>
+   <td class="td-color"><input data-k="color" data-id="${r.id}" type="color" value="${/^#[0-9a-f]{6}$/i.test(r.color||'')?r.color:'#2563eb'}" aria-label="Colore collo"></td>
+   <td class="td-center" title="${fits?`${Math.round(d.long)}×${Math.round(d.wide)} mm`:'Fuori sagoma'}">${fits?fmtMm(r.x):'⚠'}</td>
+   <td class="td-actions">
+     <button class="btn btn-ghost mini-btn rotate" data-rotate="${r.id}" title="Ruota 90°">↻ 90°</button>
+     <button class="btn btn-ghost mini-btn duplicate" data-duplicate="${r.id}" title="Duplica">⧉</button>
+     <button class="btn mini-btn mini-remove remove" data-remove="${r.id}" title="Rimuovi">✕</button>
+   </td>`;
+   body.appendChild(tr);
+ });
+ host.appendChild(wrap);
+}
+function renderRuler(){
+ const r=$('#deckRuler');r.innerHTML='';const land=isDeckLandscape();
+ r.classList.toggle('landscape',land);
+ for(let mm=0;mm<=VEHICLE.deckLength;mm+=250){
+   const t=document.createElement('div'),isM=mm%1000===0,isH=!isM&&mm%500===0;
+   t.className='tick '+(isM?'meter':isH?'half':'quarter');
+   if(land){t.style.left=`${(mm/VEHICLE.deckLength)*100}%`;t.style.top='auto'}
+   else{t.style.top=`${(mm/VEHICLE.deckLength)*100}%`;t.style.left='auto'}
+   const label=document.createElement('span');label.textContent=isM?`${mm/1000} m`:(isH?`${(mm/1000).toFixed(1).replace('.',',')}`:'');
+   t.appendChild(label);r.appendChild(t)
+ }
+}
+function textColorFor(bg){const m=/^#([0-9a-f]{6})$/i.exec(bg||'');if(!m)return '#fff';const n=parseInt(m[1],16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>155?'#0f172a':'#fff'}
+function renderDeck(){
+ const deck=$('#deck');deck.querySelectorAll('.cargo-block').forEach(e=>e.remove());
+ $('#deckEmpty').style.display=rows.length?'none':'flex';
+ const land=isDeckLandscape();
+ rows.forEach(r=>{
+   clampPosition(r);const d=dims(r),el=document.createElement('div');
+   el.className='cargo-block'+(r.id===selectedId?' selected':'')+((d.long>VEHICLE.deckLength||d.wide>VEHICLE.deckWidth)?' invalid':'');
+   el.dataset.id=r.id;
+   if(land){
+     el.style.left=`${((r.x-d.long/2)/VEHICLE.deckLength)*100}%`;
+     el.style.top=`${((r.y-d.wide/2)/VEHICLE.deckWidth)*100}%`;
+     el.style.width=`${(d.long/VEHICLE.deckLength)*100}%`;
+     el.style.height=`${(d.wide/VEHICLE.deckWidth)*100}%`;
+   }else{
+     el.style.left=`${((r.y-d.wide/2)/VEHICLE.deckWidth)*100}%`;
+     el.style.top=`${((r.x-d.long/2)/VEHICLE.deckLength)*100}%`;
+     el.style.width=`${(d.wide/VEHICLE.deckWidth)*100}%`;
+     el.style.height=`${(d.long/VEHICLE.deckLength)*100}%`;
+   }
+   if(!el.classList.contains('invalid')){el.style.background=(r.color||'#2563eb');el.style.color=textColorFor(r.color||'#2563eb')}
+   el.innerHTML=`<div class="block-name">${escapeHtml(r.desc||('Collo '+r.id))}<br><small>${safeNum(r.weight)||0} kg</small></div>`;
+   deck.appendChild(el)
+ });
+ updateSelectionInfo()
+}
+function renderAll(){renderRows();renderDeck()}
+function updateSelectionInfo(){const r=rows.find(x=>x.id===selectedId);const box=$('#selectionInfo');if(!r){box.textContent='Nessun collo selezionato.';return}const d=dims(r),front=Math.max(0,r.x-d.long/2);box.innerHTML=`<b>${escapeHtml(r.desc||('Collo '+r.id))}</b> · dalla testa <b>${fmtM(front)}</b> · centro <b>${fmtM(r.x)}</b> · centro laterale <b>${fmtMm(r.y)}</b> · ingombro <b>${Math.round(d.long)} × ${Math.round(d.wide)} mm</b>`}
+function rotate(id){const r=rows.find(x=>x.id===id);if(!r)return;const old={rotated:r.rotated,x:r.x,y:r.y};r.rotated=!r.rotated;clampPosition(r);if(hasCollision(r)){r.rotated=old.rotated;r.x=old.x;r.y=old.y;updateSelectionInfo();return}selectedId=id;renderAll();calculate()}
+$('#addBtn').addEventListener('click',()=>addRow());
+$('#cargoList').addEventListener('input',e=>{
+  const id=Number(e.target.dataset.id),k=e.target.dataset.k;
+  if(!id||!k)return;
+  const r=rows.find(x=>x.id===id);if(!r)return;
+
+  const old={value:r[k],x:r.x,y:r.y,rotated:r.rotated};
+  r[k]=e.target.value;
+
+  if(k==='length'||k==='width'){
+    const L=Math.max(1,safeNum(r.length)),W=Math.max(1,safeNum(r.width));
+    const normalFits=L<=VEHICLE.deckLength&&W<=VEHICLE.deckWidth;
+    const rotatedFits=W<=VEHICLE.deckLength&&L<=VEHICLE.deckWidth;
+
+    // Se l'orientamento attuale non entra più ma quello naturale sì,
+    // torna automaticamente all'orientamento non ruotato.
+    let d=dims(r);
+    if((d.long>VEHICLE.deckLength||d.wide>VEHICLE.deckWidth) && normalFits){
+      r.rotated=false;
+      d=dims(r);
+    }else if((d.long>VEHICLE.deckLength||d.wide>VEHICLE.deckWidth) && rotatedFits){
+      r.rotated=true;
+      d=dims(r);
+    }
+
+    // Se nessun orientamento può stare sul pianale, annulla la modifica
+    // e riallinea anche il campo visibile.
+    if(!normalFits&&!rotatedFits){
+      r[k]=old.value;r.x=old.x;r.y=old.y;r.rotated=old.rotated;
+      e.target.value=old.value;
+      alert('Queste dimensioni non possono entrare nel pianale in nessun orientamento.');
+      renderDeck();calculate(false);return;
+    }
+
+    clampPosition(r);
+
+    // La misura digitata non viene mai "finta": se crea una collisione
+    // prova a trovare uno spazio libero mantenendo la nuova dimensione.
+    if(hasCollision(r)){
+      if(!findFreePosition(r,r.x,r.y)){
+        r[k]=old.value;r.x=old.x;r.y=old.y;r.rotated=old.rotated;
+        e.target.value=old.value;
+        alert('La nuova dimensione non trova spazio libero sul pianale senza sovrapposizioni.');
+      }
+    }
+  }
+
+  renderDeck();calculate(false)
+});
+$('#cargoList').addEventListener('click',e=>{const rid=Number(e.target.dataset.remove),rot=Number(e.target.dataset.rotate),dup=Number(e.target.dataset.duplicate);if(rid){rows=rows.filter(r=>r.id!==rid);if(selectedId===rid)selectedId=rows[0]?.id??null;renderAll();calculate()}else if(rot)rotate(rot);else if(dup)duplicateRow(dup)});
+$('#rotateSelected').addEventListener('click',()=>{if(selectedId)rotate(selectedId)});$('#duplicateSelected').addEventListener('click',()=>{if(selectedId)duplicateRow(selectedId)});$('#centerSelected').addEventListener('click',()=>{const r=rows.find(x=>x.id===selectedId);if(!r)return;moveAxisUntilContact(r,'y',VEHICLE.deckWidth/2);renderAll();calculate()});
+const deck=$('#deck');
+function pointerToMm(ev){
+ const rect=deck.getBoundingClientRect();
+ if(isDeckLandscape())return{x:clamp((ev.clientX-rect.left)/rect.width,0,1)*VEHICLE.deckLength,y:clamp((ev.clientY-rect.top)/rect.height,0,1)*VEHICLE.deckWidth};
+ return{x:clamp((ev.clientY-rect.top)/rect.height,0,1)*VEHICLE.deckLength,y:clamp((ev.clientX-rect.left)/rect.width,0,1)*VEHICLE.deckWidth}
+}
+function showDragReadout(r){const d=dims(r),front=Math.max(0,r.x-d.long/2),rear=Math.min(VEHICLE.deckLength,r.x+d.long/2),el=$('#dragReadout');el.innerHTML=`DALLA TESTA <strong>${fmtM(front)}</strong><br><span>centro ${fmtM(r.x)} · fine collo ${fmtM(rear)}</span>`;el.classList.add('show')}
+function hideDragReadout(){$('#dragReadout').classList.remove('show')}
+let lastDeckTap={id:null,time:0};
+function startDeckDrag(ev,block,r,p,freeMode=false){
+  drag={
+    id:r.id,pointerId:ev.pointerId,dx:p.x-r.x,dy:p.y-r.y,
+    free:freeMode,originX:r.x,originY:r.y
+  };
+  block.setPointerCapture?.(ev.pointerId);
+  block.classList.add('dragging');
+  if(freeMode)block.classList.add('free-drag');
+  showDragReadout(r);
+  if(navigator.vibrate)navigator.vibrate(freeMode?[18,35,18]:25);
+}
+deck.addEventListener('pointerdown',ev=>{
+  const block=ev.target.closest('.cargo-block');if(!block)return;
+  const id=Number(block.dataset.id);selectedId=id;renderDeck();
+  const freshBlock=deck.querySelector(`.cargo-block[data-id="${id}"]`)||block;
+  const r=rows.find(x=>x.id===id);if(!r)return;
+  const p=pointerToMm(ev),now=Date.now();
+  const secondTap=lastDeckTap.id===id&&(now-lastDeckTap.time)<=380;
+  lastDeckTap={id,time:now};
+
+  if(secondTap){
+    if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+    startDeckDrag(ev,freshBlock,r,p,true);
+    return;
+  }
+  longPressTimer=setTimeout(()=>{
+    longPressTimer=null;
+    startDeckDrag(ev,freshBlock,r,p,false);
+  },220);
+});
+deck.addEventListener('pointermove',ev=>{
+  if(!drag||drag.pointerId!==ev.pointerId)return;
+  ev.preventDefault();
+  const r=rows.find(x=>x.id===drag.id);if(!r)return;
+  const p=pointerToMm(ev),d=dims(r),
+        tx=clamp(p.x-drag.dx,d.long/2,VEHICLE.deckLength-d.long/2),
+        ty=clamp(p.y-drag.dy,d.wide/2,VEHICLE.deckWidth-d.wide/2);
+  if(drag.free){r.x=tx;r.y=ty}
+  else moveWithoutOverlap(r,tx,ty);
+  renderDeck();
+  const active=deck.querySelector(`.cargo-block[data-id="${r.id}"]`);
+  if(active){active.classList.add('dragging');if(drag.free)active.classList.add('free-drag')}
+  showDragReadout(r);calculate(false);
+});
+function endPointer(ev){
+  if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null}
+  if(drag&&(!ev||drag.pointerId===ev.pointerId)){
+    const r=rows.find(x=>x.id===drag.id);
+    if(r&&drag.free&&hasCollision(r)){
+      r.x=drag.originX;r.y=drag.originY;
+      if(navigator.vibrate)navigator.vibrate([60,40,60]);
+    }
+    drag=null;hideDragReadout();renderAll();calculate()
+  }
+}
+deck.addEventListener('pointerup',endPointer);
+deck.addEventListener('pointercancel',endPointer);
+deck.addEventListener('pointerleave',ev=>{if(drag)endPointer(ev)});
+function axisHtml(name,value,visualMax,detail,strictLimit=null){const pct=Math.max(0,Math.min(100,(value/visualMax)*100));let state='';if(strictLimit!==null){if(value>strictLimit)state='bad';else if(value>strictLimit*.92)state='warn'}return `<div class="axis-card"><div class="axis-top"><div><div class="axis-name">${name}</div><div class="small">${detail}</div></div><div class="axis-value">${fmtKg(value)}</div></div><div class="bar"><span class="${state}" style="width:${pct}%"></span></div><div class="axis-sub"><span>0 kg</span><span>${strictLimit?`limite ${fmtKg(strictLimit)}`:`scala ${fmtKg(visualMax)}`}</span></div></div>`}
+function setBadge(id,ok,badText='SOVRACCARICO'){const e=$(id);e.className='badge '+(ok?'ok':'bad');e.textContent=ok?'OK':badText}
+function calculate(refreshRows=true){let cargo=0,moment=0,kingpinCargo=0,tridemCargo=0;rows.forEach(r=>{const w=Math.max(0,safeNum(r.weight)),x=clamp(safeNum(r.x),0,VEHICLE.deckLength);if(!w)return;cargo+=w;moment+=w*x;const tri=w*(x-VEHICLE.frontWallToKingpin)/VEHICLE.kingpinToTridem;tridemCargo+=tri;kingpinCargo+=(w-tri)});const cg=cargo>0?moment/cargo:0;const fifthWheelXFromFrontAxle=VEHICLE.tractorWheelbase-VEHICLE.fifthWheelLead;const cargoAxle1=kingpinCargo*(VEHICLE.tractorWheelbase-fifthWheelXFromFrontAxle)/VEHICLE.tractorWheelbase;const cargoAxle2=kingpinCargo*fifthWheelXFromFrontAxle/VEHICLE.tractorWheelbase;const axle1=VEHICLE.tareAxle1+cargoAxle1,axle2=VEHICLE.tareAxle2+cargoAxle2,tridem=VEHICLE.tareTridem+tridemCargo,gross=axle1+axle2+tridem,adhesion=gross>0?axle2/gross:0,tractorTotal=axle1+axle2;$('#cargoWeight').textContent=fmtKg(cargo);$('#cargoCg').textContent=cargo?fmtMm(cg):'—';$('#kingpinLoad').textContent=fmtKg(kingpinCargo);$('#tridemCargo').textContent=fmtKg(tridemCargo);if(rows.length){let front=Infinity,rearEdge=-Infinity;rows.forEach(r=>{const d=dims(r);front=Math.min(front,r.x-d.long/2);rearEdge=Math.max(rearEdge,r.x+d.long/2)});$('#emptyFront').textContent=`${(Math.max(0,front)/1000).toFixed(3).replace('.',',')} m`;$('#emptyRear').textContent=`${(Math.max(0,VEHICLE.deckLength-rearEdge)/1000).toFixed(3).replace('.',',')} m`}else{$('#emptyFront').textContent='—';$('#emptyRear').textContent='—'};$('#heroTotal').textContent=fmtKg(gross);$('#heroCargo').textContent=fmtKg(cargo);$('#heroCg').textContent=cargo?fmtMm(cg):'—';$('#axes').innerHTML=axisHtml('Asse 1 · Sterzante',axle1,VEHICLE.maxSteerAxle,'Trattore',VEHICLE.maxSteerAxle)+axisHtml('Asse 2 · Motore',axle2,VEHICLE.maxDriveAxle,'Trattore',VEHICLE.maxDriveAxle)+axisHtml('Tridem semirimorchio',tridem,27000,'Semirimorchio');const grossOk=gross<=VEHICLE.maxGross+1e-9,steerOk=axle1<=VEHICLE.maxSteerAxle+1e-9,driveOk=axle2<=VEHICLE.maxDriveAxle+1e-9,adhOk=adhesion+1e-9>=VEHICLE.minDriveShare,tractorChecked=VEHICLE.maxTractorTotal>0,tractorOk=!tractorChecked||tractorTotal<=VEHICLE.maxTractorTotal+1e-9;$('#grossLabel').textContent=`Massa totale ≤ ${fmtKg(VEHICLE.maxGross)}`;$('#steerLabel').textContent=`Asse 1 sterzante ≤ ${fmtKg(VEHICLE.maxSteerAxle)}`;$('#driveLabel').textContent=`Asse motore ≤ ${fmtKg(VEHICLE.maxDriveAxle)}`;$('#tractorLabel').textContent=tractorChecked?`Peso totale motrice ≤ ${fmtKg(VEHICLE.maxTractorTotal)}`:'Peso totale motrice';$('#adhLabel').textContent=`Aderenza asse motore ≥ ${(VEHICLE.minDriveShare*100).toFixed(1).replace('.',',')}%`;$('#grossCalc').textContent=`${fmtKg(gross)} / ${fmtKg(VEHICLE.maxGross)} · margine ${fmtKg(VEHICLE.maxGross-gross)}`;$('#steerCalc').textContent=`${fmtKg(axle1)} / ${fmtKg(VEHICLE.maxSteerAxle)} · margine ${fmtKg(VEHICLE.maxSteerAxle-axle1)}`;$('#driveCalc').textContent=`${fmtKg(axle2)} / ${fmtKg(VEHICLE.maxDriveAxle)} · margine ${fmtKg(VEHICLE.maxDriveAxle-axle2)}`;$('#tractorCalc').textContent=tractorChecked?`${fmtKg(tractorTotal)} / ${fmtKg(VEHICLE.maxTractorTotal)} · margine ${fmtKg(VEHICLE.maxTractorTotal-tractorTotal)}`:`${fmtKg(tractorTotal)} · imposta un limite nei dati veicolo per attivare il controllo`;$('#adhCalc').textContent=`${(adhesion*100).toFixed(1).replace('.',',')}% · minimo ${(VEHICLE.minDriveShare*100).toFixed(1).replace('.',',')}% · richiesti almeno ${fmtKg(gross*VEHICLE.minDriveShare)}`;setBadge('#grossBadge',grossOk);setBadge('#steerBadge',steerOk);setBadge('#driveBadge',driveOk);setBadge('#adhBadge',adhOk,'ADERENZA INSUFFICIENTE');const tb=$('#tractorBadge');if(tractorChecked){tb.className='badge '+(tractorOk?'ok':'bad');tb.textContent=tractorOk?'OK':'SOVRACCARICO'}else{tb.className='badge na';tb.textContent='N/D'}const all=grossOk&&steerOk&&driveOk&&adhOk&&tractorOk,st=$('#allStatus');st.className='all-status '+(all?'ok':'bad');st.textContent=all?'TUTTO A NORMA':'ATTENZIONE · VERIFICA IL CARICO';state.cargo=cargo;state.gross=gross;state.axle1=axle1;state.axle2=axle2;state.tridem=tridem;state.tractorTotal=tractorTotal;state.cg=cg;state.grossOk=grossOk;state.steerOk=steerOk;state.driveOk=driveOk;state.adhOk=adhOk;state.tractorOk=tractorOk;if(refreshRows)renderRows();updateSelectionInfo()}
+function footprintEdges(){let F=Infinity,R=-Infinity;rows.forEach(r=>{const d=dims(r);F=Math.min(F,r.x-d.long/2);R=Math.max(R,r.x+d.long/2)});if(!isFinite(F)){F=0;R=0}return{F:Math.max(0,F),R:Math.min(VEHICLE.deckLength,R)}}
+function cloneRows(){return rows.map(r=>({...r}))}
+function restoreRows(snap){rows=snap.map(r=>({...r}));selectedId=rows.some(r=>r.id===selectedId)?selectedId:(rows[0]?.id??null);renderAll();calculate()}
+function reorderByWeight(needIncrease){
+  const weighted=rows.filter(r=>safeNum(r.weight)>0);
+  if(weighted.length<2)return false;
+  const slots=weighted.map(r=>({x:r.x,y:r.y})).sort((a,b)=>a.x-b.x);
+  const order=[...weighted].sort((a,b)=>needIncrease?safeNum(a.weight)-safeNum(b.weight):safeNum(b.weight)-safeNum(a.weight));
+  const backup=weighted.map(r=>({id:r.id,x:r.x,y:r.y}));
+  order.forEach((r,i)=>{r.x=slots[i].x;r.y=slots[i].y});
+  weighted.forEach(r=>clampPosition(r));
+  const bad=weighted.some(r=>hasCollision(r));
+  if(bad){backup.forEach(b=>{const r=rows.find(x=>x.id===b.id);if(r){r.x=b.x;r.y=b.y}});return false}
+  return true;
+}
+function compactByRotation(){
+  rows.forEach(r=>{
+    const before=dims(r).long;
+    const oldRotated=r.rotated,oldX=r.x,oldY=r.y;
+    r.rotated=!r.rotated;
+    const after=dims(r).long;
+    if(after<before){
+      clampPosition(r);
+      if(hasCollision(r)){r.rotated=oldRotated;r.x=oldX;r.y=oldY}
+    }else{r.rotated=oldRotated;r.x=oldX;r.y=oldY}
+  });
+}
+function showFixResult(notes,ok){const el=$('#autoFixResult');el.className='fix-result '+(ok?'ok':'bad');el.innerHTML=notes.map(n=>`<div>${escapeHtml(n)}</div>`).join('')}
+function repackMerge(){
+  const weighted=rows.filter(r=>safeNum(r.weight)>0).slice().sort((a,b)=>a.x-b.x);
+  if(weighted.length<2)return false;
+  const backup=weighted.map(r=>({id:r.id,x:r.x,y:r.y}));
+  const F0=footprintEdges().F;
+  let cursor=F0,i=0,changed=false;
+  while(i<weighted.length){
+    let groupSize=1;
+    for(let g=3;g>=2;g--){
+      if(i+g<=weighted.length){
+        const totalWidth=weighted.slice(i,i+g).reduce((sum,r)=>sum+dims(r).wide,0);
+        if(totalWidth<=VEHICLE.deckWidth+1){groupSize=g;break}
+      }
+    }
+    const group=weighted.slice(i,i+groupSize);
+    const slotLong=Math.max(...group.map(r=>dims(r).long));
+    let yCursor=0;
+    group.forEach(r=>{const d=dims(r);r.x=cursor+slotLong/2;r.y=yCursor+d.wide/2;yCursor+=d.wide});
+    if(groupSize>1)changed=true;
+    cursor+=slotLong;i+=groupSize;
+  }
+  weighted.forEach(r=>clampPosition(r));
+  if(weighted.some(r=>hasCollision(r))||!changed){backup.forEach(b=>{const r=rows.find(x=>x.id===b.id);if(r){r.x=b.x;r.y=b.y}});return false}
+  return true;
+}
+function repackSplit(){
+  const weighted=rows.filter(r=>safeNum(r.weight)>0).slice().sort((a,b)=>a.x-b.x);
+  if(weighted.length<2)return false;
+  const backup=weighted.map(r=>({id:r.id,x:r.x,y:r.y}));
+  const F0=footprintEdges().F;
+  const totalLong=weighted.reduce((sum,r)=>sum+dims(r).long,0);
+  if(F0+totalLong>VEHICLE.deckLength+1)return false;
+  let cursor=F0,changed=false;
+  weighted.forEach(r=>{const d=dims(r),newX=cursor+d.long/2;if(Math.abs(newX-r.x)>1||Math.abs(r.y-VEHICLE.deckWidth/2)>1)changed=true;r.x=newX;r.y=VEHICLE.deckWidth/2;cursor+=d.long});
+  weighted.forEach(r=>clampPosition(r));
+  if(weighted.some(r=>hasCollision(r))||!changed){backup.forEach(b=>{const r=rows.find(x=>x.id===b.id);if(r){r.x=b.x;r.y=b.y}});return false}
+  return true;
+}
+function computeCgBounds(C,gross){
+  const xKP=VEHICLE.frontWallToKingpin,kToT=VEHICLE.kingpinToTridem,lead=VEHICLE.fifthWheelLead,wheelbase=VEHICLE.tractorWheelbase;
+  const K1=C*lead/wheelbase,K2=C*(wheelbase-lead)/wheelbase,Kt=C;
+  const notes=[];
+  const cgAxleMinRaw=K2>0?xKP+kToT*(VEHICLE.tareAxle2+K2-VEHICLE.maxDriveAxle)/K2:-Infinity;
+  const cgSteerMinRaw=K1>0?xKP+kToT*(VEHICLE.tareAxle1+K1-VEHICLE.maxSteerAxle)/K1:-Infinity;
+  const cgAdhMaxRaw=K2>0?xKP+kToT*(VEHICLE.tareAxle2+K2-VEHICLE.minDriveShare*gross)/K2:Infinity;
+  let cgTractorMinRaw=-Infinity;
+  if(VEHICLE.maxTractorTotal>0){
+    cgTractorMinRaw=Kt>0?xKP+kToT*(VEHICLE.tareTractorTotal+Kt-VEHICLE.maxTractorTotal)/Kt:-Infinity;
+    if(cgTractorMinRaw>VEHICLE.deckLength)notes.push('Anche spostando tutto il carico contro le porte posteriori, il peso totale della motrice resterebbe oltre il limite impostato.');
+  }
+  if(cgAxleMinRaw>VEHICLE.deckLength)notes.push('Anche spostando tutto il carico contro le porte posteriori, l\'asse motore resterebbe sovraccarico.');
+  if(cgSteerMinRaw>VEHICLE.deckLength)notes.push('Anche spostando tutto il carico verso il retro, l\'asse 1 resterebbe sovraccarico: la leva della ralla è minima, la posizione incide poco.');
+  if(cgAdhMaxRaw<0)notes.push('Anche spostando tutto il carico contro la parete anteriore, l\'aderenza resterebbe insufficiente.');
+  const cgLow=Math.max(0,cgAxleMinRaw,cgSteerMinRaw,cgTractorMinRaw),cgHigh=Math.min(VEHICLE.deckLength,cgAdhMaxRaw);
+  return{cgLow,cgHigh,notes};
+}
+function runAutoFix(allowBackward){
+  const allowRotate=$('#condRotate').checked,allowRepack=$('#condRepack').checked,allowReorder=$('#condReorder').checked;
+  calculate(false);
+  const s=state;
+  const C=s.cargo;
+  if(C<=0)return{ok:false,notes:['Nessun peso caricato: non c\'è nulla da ridistribuire.'],canBackward:false,s2:state};
+  if(allowRotate)compactByRotation();
+  const{cgLow,cgHigh,notes}=computeCgBounds(C,s.gross);
+  if(cgLow>cgHigh){
+    notes.push('Con questo carico non esiste una posizione che soddisfi insieme i limiti impostati: serve modificare il peso totale o la sua distribuzione tra i colli.');
+    renderAll();calculate();
+    return{ok:false,notes,canBackward:false,s2:state};
+  }
+  calculate(false);
+  let currentCg=state.cg;
+  const margin=Math.min(150,(cgHigh-cgLow)/4||0);
+  let target=currentCg;
+  if(currentCg<cgLow)target=Math.min(cgLow+margin,cgHigh);
+  else if(currentCg>cgHigh)target=Math.max(cgHigh-margin,cgLow);
+  else target=(cgLow+cgHigh)/2;
+  let delta=target-currentCg;
+  const needIncrease=delta>0;
+  if(allowRepack){
+    if(needIncrease){if(repackSplit()){calculate(false);currentCg=state.cg;delta=target-currentCg}}
+    else{if(repackMerge()){calculate(false);currentCg=state.cg;delta=target-currentCg}}
+  }
+  if(Math.abs(delta)>30&&allowReorder){
+    if(reorderByWeight(delta>0)){calculate(false);currentCg=state.cg;delta=target-currentCg}
+  }
+  if(allowBackward&&delta>30){
+    const{R}=footprintEdges();
+    const maxShift=Math.max(0,VEHICLE.deckLength-R);
+    const applied=Math.min(delta,maxShift);
+    if(applied>0.5){rows.forEach(r=>{r.x+=applied});calculate(false);currentCg=state.cg;delta=target-currentCg}
+  }
+  rows.forEach(r=>clampPosition(r));
+  renderAll();calculate();
+  const s2=state;
+  const okAll=s2.driveOk&&s2.adhOk&&s2.steerOk&&s2.tractorOk;
+  const canBackward=!allowBackward&&needIncrease&&delta>30;
+  return{ok:okAll,notes,canBackward,s2};
+}
+function autoFix(){
+  if(!rows.length){alert('Non ci sono colli da sistemare.');return}
+  calculate(false);
+  const s0=state,grossNote=[];
+  if(!s0.grossOk)grossNote.push(`Il peso totale supera il limite di ${fmtKg(s0.gross-VEHICLE.maxGross)}: riposizionare il carico non riduce la massa complessiva, occorre togliere almeno ${Math.ceil(s0.gross-VEHICLE.maxGross)} kg.`);
+  const alreadyOk=s0.driveOk&&s0.adhOk&&s0.steerOk&&s0.tractorOk;
+  if(alreadyOk){
+    if(grossNote.length)showFixResult(grossNote,false);else showFixResult(['Il carico è già a norma su tutti i parametri.'],true);
+    $('#autoFixBackWrap').style.display='none';
+    return;
+  }
+  preFixSnapshot=cloneRows();
+  $('#undoFixBtn').style.display='';
+  const res=runAutoFix(false);
+  const notes=[...grossNote,...res.notes];
+  if(res.ok){
+    notes.push('Disposizione trovata mantenendo il carico attaccato alla parete anteriore. Verifica comunque il carico prima di partire.');
+    showFixResult(notes,grossNote.length===0);
+    $('#autoFixBackWrap').style.display='none';
+  }else{
+    const s2=res.s2;
+    if(!s2.steerOk)notes.push(`Asse 1 ancora oltre il limite di ${fmtKg(s2.axle1-VEHICLE.maxSteerAxle)}.`);
+    if(!s2.driveOk)notes.push(`Asse motore ancora oltre il limite di ${fmtKg(s2.axle2-VEHICLE.maxDriveAxle)}.`);
+    if(VEHICLE.maxTractorTotal>0&&!s2.tractorOk)notes.push(`Peso motrice ancora oltre il limite di ${fmtKg(s2.tractorTotal-VEHICLE.maxTractorTotal)}.`);
+    if(!s2.adhOk)notes.push(`Aderenza ancora insufficiente (mancano ${fmtKg(s2.gross*VEHICLE.minDriveShare-s2.axle2)} sull'asse motore).`);
+    if(res.canBackward){
+      notes.push('Restando attaccato alla parete anteriore non basta.');
+      $('#autoFixBackWrap').style.display='';
+    }else{
+      $('#autoFixBackWrap').style.display='none';
+    }
+    showFixResult(notes,false);
+  }
+}
+$('#autoFixBtn').addEventListener('click',autoFix);
+$('#autoFixBackBtn').addEventListener('click',()=>{
+  const res=runAutoFix(true);
+  const notes=[...res.notes];
+  const s2=res.s2;
+  if(res.ok){
+    notes.push('Disposizione trovata arretrando il carico dalla parete anteriore. Verifica comunque il carico prima di partire.');
+    showFixResult(notes,true);$('#autoFixBackWrap').style.display='none';
+  }else{
+    if(!s2.steerOk)notes.push(`Asse 1 ancora oltre il limite di ${fmtKg(s2.axle1-VEHICLE.maxSteerAxle)}.`);
+    if(!s2.driveOk)notes.push(`Asse motore ancora oltre il limite di ${fmtKg(s2.axle2-VEHICLE.maxDriveAxle)}: non c'è più margine nemmeno arretrando fino alle porte posteriori.`);
+    if(VEHICLE.maxTractorTotal>0&&!s2.tractorOk)notes.push(`Peso motrice ancora oltre il limite di ${fmtKg(s2.tractorTotal-VEHICLE.maxTractorTotal)}.`);
+    if(!s2.adhOk)notes.push('Aderenza ancora insufficiente.');
+    notes.push('Anche arretrando il carico non si raggiunge la conformità: occorre alleggerire il carico o ridistribuirlo su un altro veicolo.');
+    showFixResult(notes,false);
+  }
+});
+$('#undoFixBtn').addEventListener('click',()=>{if(!preFixSnapshot)return;restoreRows(preFixSnapshot);preFixSnapshot=null;$('#undoFixBtn').style.display='none';$('#autoFixBackWrap').style.display='none';const el=$('#autoFixResult');el.innerHTML='';el.className='fix-result'});
+
+function asciiPdf(s){return String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,' ')}
+function pdfEscape(s){
+  const map={
+    'à':'\\340','è':'\\350','é':'\\351','ì':'\\354','ò':'\\362','ù':'\\371',
+    'À':'\\300','È':'\\310','É':'\\311','Ì':'\\314','Ò':'\\322','Ù':'\\331',
+    '°':'\\260'
+  };
+  return String(s??'').split('').map(ch=>{
+    if(map[ch])return map[ch];
+    const code=ch.charCodeAt(0);
+    if(code>=32&&code<=126){
+      if(ch==='\\')return '\\\\';
+      if(ch==='(')return '\\(';
+      if(ch===')')return '\\)';
+      return ch;
+    }
+    return asciiPdf(ch);
+  }).join('');
+}
+function makeLoadCanvas(){
+ const c=document.createElement('canvas');c.width=980;c.height=260;
+ const x0=25,y0=25,w=930,h=180,ctx=c.getContext('2d');
+ ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c.width,c.height);
+ ctx.fillStyle='#f3f6f8';ctx.fillRect(x0,y0,w,h);
+ ctx.strokeStyle='#263746';ctx.lineWidth=3;ctx.strokeRect(x0,y0,w,h);
+ for(let mm=0;mm<=VEHICLE.deckLength;mm+=250){
+   const x=x0+(mm/VEHICLE.deckLength)*w;
+   ctx.strokeStyle=mm%1000===0?'#6b8799':(mm%500===0?'#a7b7c2':'#d8e0e5');
+   ctx.lineWidth=mm%1000===0?1.4:0.6;ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y0+h);ctx.stroke();
+   if(mm%1000===0){ctx.fillStyle='#334155';ctx.font='12px Arial';ctx.fillText((mm/1000)+' m',x+2,y0+h+18)}
+ }
+ rows.forEach(r=>{
+   const d=dims(r),
+         x=x0+((r.x-d.long/2)/VEHICLE.deckLength)*w,
+         y=y0+((r.y-d.wide/2)/VEHICLE.deckWidth)*h,
+         rw=(d.long/VEHICLE.deckLength)*w,
+         rh=(d.wide/VEHICLE.deckWidth)*h;
+
+   ctx.fillStyle=r.color||'#2563eb';ctx.fillRect(x,y,rw,rh);
+   ctx.strokeStyle='#111827';ctx.lineWidth=1;ctx.strokeRect(x,y,rw,rh);
+
+   const txtColor=textColorFor(r.color||'#2563eb');
+   const name=String(r.desc||'Collo');
+   const sizeTxt=`${Math.round(d.long)} × ${Math.round(d.wide)} mm`;
+   const weightTxt=`${Math.round(safeNum(r.weight)||0)} kg`;
+
+   // Mostra sempre più informazioni possibile in funzione dello spazio disponibile.
+   ctx.fillStyle=txtColor;
+   ctx.textAlign='center';
+   ctx.textBaseline='middle';
+
+   if(rw>=72 && rh>=42){
+     const fontSize=Math.max(8,Math.min(11,Math.floor(Math.min(rw/10,rh/4.2))));
+     const lineH=fontSize+2;
+     const cy=y+rh/2;
+     ctx.font=`bold ${fontSize}px Arial`;
+     ctx.fillText(name.slice(0,22),x+rw/2,cy-lineH);
+     ctx.font=`${Math.max(7,fontSize-1)}px Arial`;
+     ctx.fillText(sizeTxt,x+rw/2,cy);
+     ctx.font=`bold ${Math.max(7,fontSize-1)}px Arial`;
+     ctx.fillText(weightTxt,x+rw/2,cy+lineH);
+   }else if(rw>=45 && rh>=26){
+     const fontSize=Math.max(7,Math.min(9,Math.floor(Math.min(rw/9,rh/2.5))));
+     ctx.font=`bold ${fontSize}px Arial`;
+     ctx.fillText(name.slice(0,14),x+rw/2,y+rh/2-fontSize/2);
+     ctx.font=`${Math.max(6,fontSize-1)}px Arial`;
+     ctx.fillText(`${sizeTxt} · ${weightTxt}`,x+rw/2,y+rh/2+fontSize/1.3);
+   }else if(rw>=24 && rh>=14){
+     const fontSize=Math.max(6,Math.min(8,Math.floor(Math.min(rw/7,rh/1.8))));
+     ctx.font=`bold ${fontSize}px Arial`;
+     ctx.fillText(weightTxt,x+rw/2,y+rh/2);
+   }
+
+   ctx.textAlign='start';ctx.textBaseline='alphabetic';
+ });
+ ctx.fillStyle='#111827';ctx.font='bold 13px Arial';ctx.fillText('TESTA',x0,y0-8);ctx.fillText('PORTE',x0+w-40,y0-8);
+ return c
+}
+function buildPdfWithJpeg(jpegBytes,imgW,imgH,lines,fileName){
+ const enc=new TextEncoder(),chunks=[],offsets=[0];let pos=0;
+ const pushText=t=>{const b=enc.encode(t);chunks.push(b);pos+=b.length};
+ const pushBytes=b=>{chunks.push(b);pos+=b.length};
+ pushText('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+ const addObj=(num,writer)=>{offsets[num]=pos;pushText(`${num} 0 obj\n`);writer();pushText('\nendobj\n')};
+ addObj(1,()=>pushText('<< /Type /Catalog /Pages 2 0 R >>'));
+ addObj(2,()=>pushText('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
+ addObj(3,()=>pushText('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R /F2 7 0 R >> /XObject << /Im1 5 0 R >> >> /Contents 6 0 R >>'));
+ addObj(4,()=>pushText('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'));
+ addObj(5,()=>{
+   pushText(`<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBytes.length} >>\nstream\n`);
+   pushBytes(jpegBytes);pushText('\nendstream')
+ });
+ let content='BT /F2 18 Tf 36 555 Td (TRUCKPESA - RAPPORTO CARICO) Tj ET\n';
+ let y=530;
+ lines.forEach((item,i)=>{
+   const ln=typeof item==='string'?{text:item}:item;
+   const font=ln.bold?'F2':'F1';
+   const size=ln.size||(i<2?10:9);
+   if(ln.gapBefore)y-=ln.gapBefore;
+   content+=`BT /${font} ${size} Tf 36 ${y} Td (${pdfEscape(ln.text)}) Tj ET\n`;
+   y-=ln.leading||14;
+ });
+ content+='q 770 0 0 204 36 44 cm /Im1 Do Q\n';
+ const cb=enc.encode(content);
+ addObj(6,()=>{pushText(`<< /Length ${cb.length} >>\nstream\n`);pushBytes(cb);pushText('\nendstream')});
+ addObj(7,()=>pushText('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'));
+ const xref=pos;pushText(`xref\n0 8\n0000000000 65535 f \n`);
+ for(let i=1;i<=7;i++)pushText(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
+ pushText(`trailer\n<< /Size 8 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+ const blob=new Blob(chunks,{type:'application/pdf'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)
+}
+async function createPdfReport(){
+ calculate(false);
+ const canvas=makeLoadCanvas(),data=canvas.toDataURL('image/jpeg',0.9);
+ const bin=atob(data.split(',')[1]),jpg=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)jpg[i]=bin.charCodeAt(i);
+ const t=currentTruck(),r=currentTrailer(),status=state.grossOk&&state.steerOk&&state.driveOk&&state.adhOk&&state.tractorOk?'CONFORME':'NON CONFORME';
+ const tractorLimit=VEHICLE.maxTractorTotal>0?`${Math.round(VEHICLE.maxTractorTotal)} kg`:'N/D';
+ const tractorStatus=VEHICLE.maxTractorTotal>0?(state.tractorOk?'OK':'NO'):'N/D';
+ const adhesionWeight=Math.round((state.gross||0)*0.25);
+ let freeFront=0,freeRear=0;
+ if(rows.length){
+   let front=Infinity,rearEdge=-Infinity;
+   rows.forEach(rr=>{const d=dims(rr);front=Math.min(front,rr.x-d.long/2);rearEdge=Math.max(rearEdge,rr.x+d.long/2)});
+   freeFront=Math.max(0,front);freeRear=Math.max(0,VEHICLE.deckLength-rearEdge);
+ }
+ const grossMargin=Math.round(VEHICLE.maxGross-(state.gross||0));
+ const steerMargin=Math.round(VEHICLE.maxSteerAxle-(state.axle1||0));
+ const driveMargin=Math.round(VEHICLE.maxDriveAxle-(state.axle2||0));
+ const tractorMargin=VEHICLE.maxTractorTotal>0?Math.round(VEHICLE.maxTractorTotal-(state.tractorTotal||0)):null;
+ const trailerLegalLimit=24000;
+ const trailerMargin=Math.round(trailerLegalLimit-(state.tridem||0));
+ const adhesionMargin=Math.round((state.axle2||0)-adhesionWeight);
+
+ const lines=[
+   {text:`Trattore: ${t?(t.custom_name||t.marca+' '+t.modello):'--'}`,size:10},
+   {text:`Semirimorchio: ${r?(r.custom_name||r.marca+' '+r.modello):'--'}`,size:10},
+   {text:`Baricentro merce dalla testa: ${Math.round(state.cg||0)} mm`},
+   {text:`Merce caricata: ${Math.round(state.cargo||0)} kg`,bold:true,size:10,gapBefore:2},
+   {text:`Spazio libero davanti: ${(freeFront/1000).toFixed(3).replace('.',',')} m    Spazio libero dietro: ${(freeRear/1000).toFixed(3).replace('.',',')} m`,bold:true},
+
+   {text:'CONFORMITÀ',bold:true,size:11,gapBefore:5},
+   {text:`Conformità complessiva: ${status}`,bold:true},
+   {text:`Massa complessiva: ${Math.round(state.gross||0)} kg / limite ${Math.round(VEHICLE.maxGross)} kg / margine ${grossMargin} kg: ${state.grossOk?'OK':'NO'}`,bold:true},
+   {text:`Asse 1 sterzante: ${Math.round(state.axle1||0)} kg / limite ${Math.round(VEHICLE.maxSteerAxle)} kg / margine ${steerMargin} kg: ${state.steerOk?'OK':'NO'}`,bold:true},
+   {text:`Asse 2 motore: ${Math.round(state.axle2||0)} kg / limite ${Math.round(VEHICLE.maxDriveAxle)} kg / margine ${driveMargin} kg: ${state.driveOk?'OK':'NO'}`,bold:true},
+   {text:`Peso trattore caricato: ${Math.round(state.tractorTotal||0)} kg / limite ${tractorLimit}${tractorMargin!==null?` / margine ${tractorMargin} kg`:''}: ${tractorStatus}`,bold:true},
+   {text:`Peso semirimorchio caricato (tridem): ${Math.round(state.tridem||0)} kg / limite ${trailerLegalLimit} kg / margine ${trailerMargin} kg: ${(state.tridem||0)<=trailerLegalLimit?'OK':'NO'}`,bold:true},
+   {text:`Aderenza minima: 25% massa complessiva = ${adhesionWeight} kg / peso reale asse motore = ${Math.round(state.axle2||0)} kg: ${state.adhOk?'OK':'NO'}`,bold:true},
+   {text:`Generato: ${new Date().toLocaleString('it-IT')}`,gapBefore:3}
+ ];
+ const name=($('#saveName').value.trim()||'carico').replace(/[^a-z0-9_-]+/gi,'_');
+ buildPdfWithJpeg(jpg,canvas.width,canvas.height,lines,`TruckPesa_${name}.pdf`)
+}
+
+function getSavedLoads(){if(!PROJECT_DATA)return{};PROJECT_DATA=ensureProjectShape(PROJECT_DATA);return PROJECT_DATA.carichi_salvati}
+function setSavedLoads(v){if(!PROJECT_DATA)return false;PROJECT_DATA.carichi_salvati=v||{};return true}
+function loadSnapshot(data){
+  if(!data||!Array.isArray(data.rows)){alert('File carico non valido.');return}
+  if(data.truckRecord?.custom)mergeCustomItems(CUSTOM_TRUCKS_KEY,[data.truckRecord]);
+  if(data.trailerRecord?.custom)mergeCustomItems(CUSTOM_TRAILERS_KEY,[data.trailerRecord]);
+  populateTruckSelect(data.truckId||$('#truckSelect').value);
+  populateTrailerSelect(data.trailerId||$('#trailerSelect').value);
+  const tt=getTruckById(data.truckId),tr=getTrailerById(data.trailerId);
+  if(tt)applyTruckFromDatabase(tt,true);
+  if(tr)applyTrailerFromDatabase(tr,true);
+  rows=data.rows.map((r,i)=>({id:i+1,desc:String(r.desc||`Collo ${i+1}`),weight:r.weight??'',length:r.length??1200,width:r.width??800,color:r.color||'#2563eb',rotated:!!r.rotated,x:safeNum(r.x),y:safeNum(r.y)||VEHICLE.deckWidth/2}));
+  nextId=rows.length+1;rows.forEach(r=>clampPosition(r));selectedId=rows[0]?.id??null;renderAll();calculate()
+}
+
+function renderSavedLoads(){
+  const sel=$('#savedLoads');
+  if(!sel)return;
+  const saved=getSavedLoads();
+  const names=Object.keys(saved).sort((a,b)=>(saved[b]?.savedAt||'').localeCompare(saved[a]?.savedAt||''));
+  const current=sel.value;
+  sel.innerHTML=names.length?'<option value="">Seleziona un carico salvato…</option>':'<option value="">Nessun carico salvato</option>';
+  names.forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;sel.appendChild(o)});
+  if(names.includes(current))sel.value=current;
+  const meta=$('#savedMeta');
+  if(meta)meta.textContent=names.length
+    ?`${names.length} carich${names.length===1?'o':'i'} nel progetto. Usa “Salva JSON” in alto per scrivere il file.`
+    :'Nessun carico salvato nel progetto aperto.';
+}
+function snapshot(name=''){
+  const ct=currentTruck(),cr=currentTrailer();
+  return{
+    version:4,name,savedAt:new Date().toISOString(),
+    vehicle:`${ct?(ct.custom_name||ct.marca+' '+ct.modello):'Trattore'} + ${cr?(cr.custom_name||cr.marca+' '+cr.modello):'Semirimorchio'}`,
+    truckId:ct?.id||'',trailerId:cr?.id||'',
+    truckRecord:ct?.custom?ct:null,trailerRecord:cr?.custom?cr:null,
+    rows:rows.map(r=>({desc:r.desc,weight:r.weight,length:r.length,width:r.width,color:r.color||'#2563eb',rotated:r.rotated,x:r.x,y:r.y}))
+  }
+}
+$('#saveLoadBtn').addEventListener('click',()=>{
+  if(!PROJECT_DATA){alert('Prima apri il file progetto JSON.');return}
+  if(!rows.length){alert('Non ci sono colli da salvare.');return}
+  let name=$('#saveName').value.trim();
+  if(!name){const d=new Date();name=`Carico ${d.toLocaleDateString('it-IT')} ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}`;$('#saveName').value=name}
+  const saved=getSavedLoads();
+  if(saved[name]&&!confirm(`Esiste già “${name}”. Vuoi sovrascriverlo?`))return;
+  saved[name]=snapshot(name);
+  setSavedLoads(saved);
+  renderSavedLoads();$('#savedLoads').value=name;
+  $('#savedMeta').textContent=`“${name}” aggiunto al progetto. Premi “Salva JSON” in alto per scriverlo nel file.`;
+});
+$('#loadLoadBtn').addEventListener('click',()=>{
+  const name=$('#savedLoads').value;
+  if(!name){alert('Seleziona un carico salvato.');return}
+  const data=getSavedLoads()[name];if(data)loadSnapshot(data)
+});
+$('#deleteLoadBtn').addEventListener('click',()=>{
+  const name=$('#savedLoads').value;
+  if(!name){alert('Seleziona il carico da eliminare.');return}
+  if(!confirm(`Eliminare il carico “${name}” dal progetto?`))return;
+  const saved=getSavedLoads();delete saved[name];setSavedLoads(saved);renderSavedLoads();$('#saveName').value=''
+});
+
+
+function updateDeckDimsLabel(){
+  const el=$('#deckDimsLabel');
+  if(el)el.textContent=`${(VEHICLE.deckWidth/1000).toFixed(2).replace('.',',')} m × ${(VEHICLE.deckLength/1000).toFixed(2).replace('.',',')} m · vista dall'alto`;
+}
+function isDeckLandscape(){
+  return matchMedia('(orientation: landscape) and (max-height: 700px)').matches;
+}
+function updateDeckAspectRatio(){
+  const deck=$('#deck'),wrap=$('.deck-wrap'),ruler=$('#deckRuler');
+  if(!deck)return;
+  const land=isDeckLandscape();
+  if(wrap)wrap.classList.toggle('landscape',land);
+  if(ruler)ruler.classList.toggle('landscape',land);
+  deck.style.aspectRatio=land
+    ?`${VEHICLE.deckLength} / ${VEHICLE.deckWidth}`
+    :`${VEHICLE.deckWidth} / ${VEHICLE.deckLength}`;
+}
+
+function updateFormulaText(){
+  const xKP=VEHICLE.frontWallToKingpin,kToT=VEHICLE.kingpinToTridem,lead=VEHICLE.fifthWheelLead,wheelbase=VEHICLE.tractorWheelbase,rear=wheelbase-lead;
+  $('#formulaText').textContent=`xKP = ${fmtMm(xKP)}
+xTRIDEM = ${fmtMm(xKP)} + ${fmtMm(kToT)} = ${fmtMm(xKP+kToT)}
+
+Per ogni collo di peso W, il centro longitudinale x è ricavato dalla sua posizione grafica sul pianale:
+Quota al tridem = W × (x − xKP) / ${fmtMm(kToT)}
+Quota al kingpin = W − quota al tridem
+
+Sul trattore, la ralla è ${fmtMm(lead)} davanti all'asse motore:
+Quota asse 1 = Kingpin × ${fmtMm(lead)} / ${fmtMm(wheelbase)}
+Quota asse 2 = Kingpin × ${fmtMm(rear)} / ${fmtMm(wheelbase)}
+
+Peso finale asse = tara agganciata + quota generata dalla merce.`;
+}
+
+
+function ensureProjectShape(data){
+ if(!data||typeof data!=='object')data={};
+ if(!Array.isArray(data.trattori))data.trattori=[];
+ if(!Array.isArray(data.semirimorchi))data.semirimorchi=[];
+ if(!data.personalizzazioni||typeof data.personalizzazioni!=='object')data.personalizzazioni={};
+ if(!Array.isArray(data.personalizzazioni.trattori))data.personalizzazioni.trattori=[];
+ if(!Array.isArray(data.personalizzazioni.semirimorchi))data.personalizzazioni.semirimorchi=[];
+ if(!data.carichi_salvati||typeof data.carichi_salvati!=='object')data.carichi_salvati={};
+ return data
+}
+function getCustomItems(key){if(!PROJECT_DATA)return[];PROJECT_DATA=ensureProjectShape(PROJECT_DATA);return key===CUSTOM_TRUCKS_KEY?PROJECT_DATA.personalizzazioni.trattori:PROJECT_DATA.personalizzazioni.semirimorchi}
+function uniqById(items){const m=new Map();(items||[]).forEach(x=>{if(x&&x.id)m.set(x.id,x)});return [...m.values()]}
+function mergeCustomItems(key,items){if(!PROJECT_DATA)return[];const merged=uniqById([...getCustomItems(key),...(items||[])]);if(key===CUSTOM_TRUCKS_KEY)PROJECT_DATA.personalizzazioni.trattori=merged;else PROJECT_DATA.personalizzazioni.semirimorchi=merged;return merged}
+function setCustomItems(key,items){if(!PROJECT_DATA)return false;if(key===CUSTOM_TRUCKS_KEY)PROJECT_DATA.personalizzazioni.trattori=uniqById(items||[]);else PROJECT_DATA.personalizzazioni.semirimorchi=uniqById(items||[]);return true}
+function allTrucks(){return uniqById([...TRUCK_DB.trattori,...getCustomItems(CUSTOM_TRUCKS_KEY)])}
+function allTrailers(){return uniqById([...TRAILER_DB.semirimorchi,...getCustomItems(CUSTOM_TRAILERS_KEY)])}
+function getTrailerById(id){return allTrailers().find(t=>t.id===id)||null}
+function currentTruck(){return getTruckById($('#truckSelect')?.value)||null}
+function currentTrailer(){return getTrailerById($('#trailerSelect')?.value)||null}
+function updateComboLabel(){
+  const t=currentTruck(),r=currentTrailer();
+  const tn=t?(t.custom_name||`${t.marca} ${t.modello}`):'Trattore';
+  const rn=r?(r.custom_name||`${r.marca} ${r.modello}`):'Semirimorchio';
+  const label=$('#comboLabel'); if(label)label.textContent=`${tn}  +  ${rn}`;
+  const p=document.querySelector('.hero p');
+  if(p)p.textContent=`${tn} + ${rn} · posizionamento grafico della merce e calcolo statico dei pesi.`;
+}
+function customId(prefix,name){return prefix+'_'+Date.now()+'_'+String(name).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')}
+
+
+function readLegacyJson(key,fallback){
+  try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch(e){return fallback}
+}
+function migrateLegacyStorageIntoProject(){
+  if(!PROJECT_DATA)return{trucks:0,trailers:0,loads:0};
+  PROJECT_DATA=ensureProjectShape(PROJECT_DATA);
+  const oldTrucks=readLegacyJson('truckPesaTrattoriPersonalizzatiV1',[]);
+  const oldTrailers=readLegacyJson('truckPesaSemirimorchiPersonalizzatiV1',[]);
+  const oldLoads=readLegacyJson('ripartizionePesiCarichiV2',{});
+  if(Array.isArray(oldTrucks)&&oldTrucks.length)mergeCustomItems(CUSTOM_TRUCKS_KEY,oldTrucks);
+  if(Array.isArray(oldTrailers)&&oldTrailers.length)mergeCustomItems(CUSTOM_TRAILERS_KEY,oldTrailers);
+  let addedLoads=0;
+  if(oldLoads&&typeof oldLoads==='object'&&!Array.isArray(oldLoads)){
+    Object.entries(oldLoads).forEach(([name,load])=>{
+      if(load&&Array.isArray(load.rows)&&!PROJECT_DATA.carichi_salvati[name]){
+        PROJECT_DATA.carichi_salvati[name]=load;addedLoads++
+      }
+    });
+  }
+  return{trucks:Array.isArray(oldTrucks)?oldTrucks.length:0,trailers:Array.isArray(oldTrailers)?oldTrailers.length:0,loads:addedLoads}
+}
+function isVehicleDatabase(data){
+  return !!data&&Array.isArray(data.trattori)&&Array.isArray(data.semirimorchi)
+}
+function isLegacyLoad(data){
+  return !!data&&Array.isArray(data.rows)&&!Array.isArray(data.trattori)
+}
+function normalizeProjectInput(data,fileName=''){
+  if(isVehicleDatabase(data)){
+    data=ensureProjectShape(data);
+    return{kind:'project',data}
+  }
+  if(isLegacyLoad(data)){
+    return{kind:'load',data}
+  }
+  throw new Error('Formato JSON non riconosciuto')
+}
+
+function buildProjectForSave(){if(!PROJECT_DATA)throw new Error('Nessun progetto aperto');PROJECT_DATA=ensureProjectShape(PROJECT_DATA);migrateLegacyStorageIntoProject();PROJECT_DATA.meta={...(PROJECT_DATA.meta||{}),ultimo_salvataggio:new Date().toISOString()};return PROJECT_DATA}
+async function saveProjectFile(){
+ try{
+  const text=JSON.stringify(buildProjectForSave(),null,2);
+  if(PROJECT_FILE_HANDLE&&PROJECT_FILE_HANDLE.createWritable){const w=await PROJECT_FILE_HANDLE.createWritable();await w.write(text);await w.close();alert('Progetto JSON salvato.');return}
+  if(window.showSaveFilePicker){PROJECT_FILE_HANDLE=await showSaveFilePicker({suggestedName:PROJECT_FILE_NAME||'truckpesa_progetto.json',types:[{description:'TruckPesa JSON',accept:{'application/json':['.json']}}]});PROJECT_FILE_NAME=PROJECT_FILE_HANDLE.name||'truckpesa_progetto.json';const w=await PROJECT_FILE_HANDLE.createWritable();await w.write(text);await w.close();$('#projectFileName').textContent=PROJECT_FILE_NAME;alert('Progetto JSON salvato.');return}
+  const blob=new Blob([text],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=PROJECT_FILE_NAME||'truckpesa_progetto.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)
+ }catch(err){if(err?.name!=='AbortError')alert('Impossibile salvare il progetto JSON.')}
+}
+async function openProjectData(data,name='truckpesa_progetto.json'){
+  const parsed=normalizeProjectInput(data,name);
+  if(parsed.kind==='load'){
+    if(!PROJECT_DATA||!PROJECT_DATA.trattori?.length){
+      throw new Error('Questo è un vecchio file carico. Apri prima il progetto/database TruckPesa, poi riapri questo file per importarlo.')
+    }
+    const load=parsed.data;
+    const loadName=(load.name||name.replace(/\.json$/i,'')||'Carico importato').trim();
+    PROJECT_DATA.carichi_salvati[loadName]=load;
+    renderSavedLoads();$('#savedLoads').value=loadName;loadSnapshot(load);
+    $('#saveName').value=loadName;
+    $('#savedMeta').textContent=`“${loadName}” importato nel progetto. Premi “Salva JSON” in alto.`;
+    return
+  }
+  setVehicleDatabase(parsed.data);
+  const migrated=migrateLegacyStorageIntoProject();
+  PROJECT_FILE_NAME=name||'truckpesa_progetto.json';
+  $('#projectFileName').textContent=PROJECT_FILE_NAME;
+  await initializeVehicleSelectors();
+  renderSavedLoads();
+  const selTruck=currentTruck(),selTrailer=currentTrailer();
+  if(!selTruck)throw new Error('Il progetto è stato letto, ma non è stato possibile inizializzare il trattore.');
+  if(!selTrailer)throw new Error('Il progetto è stato letto, ma non è stato possibile inizializzare il semirimorchio.');
+  const total=migrated.trucks+migrated.trailers+migrated.loads;
+  if(total>0){
+    $('#savedMeta').textContent=`Recuperati dal vecchio archivio: ${migrated.trucks} trattori, ${migrated.trailers} semirimorchi, ${migrated.loads} carichi. Premi “Salva JSON” per inserirli definitivamente nel progetto.`;
+  }
+}
+async function openProjectFilePicker(){
+ try{
+  if(window.showOpenFilePicker){const [h]=await showOpenFilePicker({multiple:false,types:[{description:'TruckPesa JSON',accept:{'application/json':['.json']}}]});PROJECT_FILE_HANDLE=h;const f=await h.getFile();await openProjectData(JSON.parse(await f.text()),h.name);return}
+  $('#openProjectFile').click()
+ }catch(err){if(err?.name!=='AbortError')alert(err?.message||'Impossibile aprire il progetto JSON.')}
+}
+
+function saveCustomTruck(){
+  const base=currentTruck()||{};
+  const def=(base.custom_name||`${base.marca||''} ${base.modello||''}`).trim();
+  const name=prompt('Nome del trattore personalizzato:',def+' - mio');
+  if(!name||!name.trim())return;
+  const total=Math.max(1,safeNum($('#vTareTotal').value));
+  const share=clamp(safeNum($('#vDriveSharePct').value)/100,0,1);
+  const item={
+    id:customId('custom_truck',name),custom:true,custom_name:name.trim(),
+    marca:'Personalizzato',modello:name.trim(),model_year:base.model_year||'personalizzato',
+    potenza_cv:base.potenza_cv||'',configurazione:'4x2',
+    passo_mm:safeNum($('#vWheelbase').value),
+    massa_complessiva_tecnica_kg:safeNum($('#vMaxTractor').value),
+    peso_a_vuoto_non_agganciato_kg:base.peso_a_vuoto_non_agganciato_kg||0,
+    tara_asse1_sterzante_riferimento_kg:Math.round(total*(1-share)),
+    tara_asse2_motore_riferimento_kg:Math.round(total*share),
+    avanzamento_ralla_mm_default:safeNum($('#vFifthLead').value),
+    serbatoi:Array.isArray(base.serbatoi)?base.serbatoi:[],
+    affidabilita:{passo:'personalizzato',peso_vuoto:'personalizzato',serbatoi:'personalizzato',ripartizione_assi:'personalizzato',avanzamento_ralla:'personalizzato'}
+  };
+  const list=getCustomItems(CUSTOM_TRUCKS_KEY); list.push(item);
+  if(setCustomItems(CUSTOM_TRUCKS_KEY,uniqById(list))){populateTruckSelect(item.id);applyTruckFromDatabase(item,true);alert(`Trattore “${name.trim()}” salvato.`)}
+}
+function saveCustomTrailer(){
+  const base=currentTrailer()||{};
+  const def=(base.custom_name||`${base.marca||''} ${base.modello||''}`).trim();
+  const name=prompt('Nome del semirimorchio personalizzato:',def+' - mio');
+  if(!name||!name.trim())return;
+  const item={
+    id:customId('custom_trailer',name),custom:true,custom_name:name.trim(),
+    marca:'Personalizzato',modello:name.trim(),assi:3,tipo:'Centinato / curtainsider',
+    lunghezza_interna_mm:safeNum($('#vTrailerLen').value),
+    larghezza_interna_mm:safeNum($('#vDeckWidth').value),
+    deck_length_mm:safeNum($('#vDeckLength').value),
+    deck_width_mm:safeNum($('#vDeckWidth').value),
+    front_to_kingpin_mm:safeNum($('#vFrontToKingpin').value),
+    kingpin_to_tridem_mm:safeNum($('#vKingpinToTridem').value),
+    tare_tridem_ref_kg:safeNum($('#vTareTridem').value),
+    massa_tecnica_kg:39000,
+    nota:'Configurazione personalizzata salvata dall’utente.'
+  };
+  const list=getCustomItems(CUSTOM_TRAILERS_KEY); list.push(item);
+  if(setCustomItems(CUSTOM_TRAILERS_KEY,uniqById(list))){populateTrailerSelect(item.id);applyTrailerFromDatabase(item,true);alert(`Semirimorchio “${name.trim()}” salvato.`)}
+}
+function renderTrailerInfo(t){
+  const box=$('#trailerDbInfo'); if(!box)return;
+  if(!t){box.textContent='Nessun semirimorchio selezionato.';return}
+  const len=t.deck_length_mm||t.lunghezza_interna_mm||0, wid=t.deck_width_mm||t.larghezza_interna_mm||0;
+  const kp=t.kingpin_to_tridem_mm;
+  const geoTxt=kp?`kingpin→tridem: <b>${fmtMm(kp)}</b>`:'kingpin→tridem: <b>da inserire</b>';
+  const warn=!t.geoUsabile?' · <span class="custom-mark">GEOMETRIA DA CONFERMARE</span>':'';
+  box.innerHTML=`<b>${escapeHtml(t.custom_name||`${t.marca} ${t.modello}${t.variante?' '+t.variante:''}`)}</b> · 3 assi · ${escapeHtml(t.tipo||'centinato')}<br>`+
+    `Pianale: <b>${fmtMm(len)} × ${fmtMm(wid)}</b> · ${geoTxt}${warn}<br>`+
+    `${t.custom?'<span class="custom-mark">PERSONALIZZATO</span> · ':''}${escapeHtml(t.nota||t.geoNota||'')}`;
+}
+function populateTrailerSelect(preferred=''){
+  const sel=$('#trailerSelect'); if(!sel)return;
+  const current=preferred||sel.value;
+  sel.innerHTML='';
+  const standard=TRAILER_DB.semirimorchi;
+  const g=document.createElement('optgroup');g.label='Centinati 3 assi';
+  standard.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=`${t.marca} · ${t.modello}`;g.appendChild(o)});sel.appendChild(g);
+  const custom=getCustomItems(CUSTOM_TRAILERS_KEY);
+  if(custom.length){const cg=document.createElement('optgroup');cg.label='Personalizzati';custom.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.custom_name||t.modello;cg.appendChild(o)});sel.appendChild(cg)}
+  if(getTrailerById(current))sel.value=current;
+  else sel.value=standard[0]?.id||'';
+  renderTrailerInfo(getTrailerById(sel.value));
+}
+function applyTrailerFromDatabase(t,persist=true){
+  if(!t)return;
+  $('#vTrailerLen').value=safeNum(t.lunghezza_interna_mm)||13620;
+  $('#vDeckLength').value=safeNum(t.deck_length_mm)||safeNum(t.lunghezza_interna_mm)||13620;
+  $('#vDeckWidth').value=safeNum(t.deck_width_mm)||safeNum(t.larghezza_interna_mm)||2440;
+  if(t.front_to_kingpin_mm!=null)$('#vFrontToKingpin').value=safeNum(t.front_to_kingpin_mm);
+  if(t.kingpin_to_tridem_mm!=null)$('#vKingpinToTridem').value=safeNum(t.kingpin_to_tridem_mm);
+  $('#vTareTridem').value=safeNum(t.tare_tridem_ref_kg)||4300;
+  commitVehicle(readVehicleFromForm(),true);
+  renderTrailerInfo(t);
+  if(persist){try{localStorage.setItem(TRAILER_SELECTION_KEY,t.id)}catch(e){}}
+  updateComboLabel();
+}
+
+function truckLabel(t){
+  return `${t.marca} · ${t.modello} · ${t.potenza_cv} CV · MY ${t.model_year}`;
+}
+function getTruckById(id){return allTrucks().find(t=>t.id===id)||null}
+function tankLabel(cfg){
+  if(!cfg)return '—';
+  let g=Array.isArray(cfg.gasolio_l)&&cfg.gasolio_l.length?cfg.gasolio_l.join('+'):(cfg.gasolio_totale_l??'—');
+  const a=cfg.adblue_l==null?'AdBlue n.d.':`AdBlue ${cfg.adblue_l} L`;
+  return `${g} L gasolio · ${a}`;
+}
+function renderTruckDbInfo(t,tank=null){
+  const box=$('#truckDbInfo');
+  if(!t){box.textContent='Nessun trattore selezionato.';return}
+  const rel=t.affidabilita||{};
+  const hasAxles=Number.isFinite(Number(t.tara_asse1_sterzante_riferimento_kg))&&Number.isFinite(Number(t.tara_asse2_motore_riferimento_kg));
+  const tare1=hasAxles?safeNum(t.tara_asse1_sterzante_riferimento_kg):0;
+  const tare2=hasAxles?safeNum(t.tara_asse2_motore_riferimento_kg):0;
+  const hasEmpty=Number.isFinite(Number(t.peso_a_vuoto_non_agganciato_kg));
+  const vuoto=hasEmpty?safeNum(t.peso_a_vuoto_non_agganciato_kg):0;
+  const tankTxt=tank?`<br><b>Serbatoi:</b> ${escapeHtml(tankLabel(tank))}`:'';
+  const dataTxt=
+    `${hasEmpty?`Peso a vuoto: <b>${fmtKg(vuoto)}</b>`:'Peso a vuoto: <b>da confermare</b>'} · `+
+    `${hasAxles?`riferimento assi: <b>${fmtKg(tare1)}</b> / <b>${fmtKg(tare2)}</b>`:'ripartizione assi: <b>da confermare</b>'}`;
+  box.innerHTML=
+    `<b>${escapeHtml(t.custom_name||t.marca+' '+t.modello)}</b> · ${escapeHtml(t.model_year||'')} · ${safeNum(t.potenza_cv)||'—'} CV<br>`+
+    dataTxt+tankTxt+'<br>'+
+    `<span class="truck-db-badge">passo ${escapeHtml(rel.passo||'n.d.')}</span>`+
+    `<span class="truck-db-badge">peso ${escapeHtml(rel.peso_vuoto||'n.d.')}</span>`+
+    `<span class="truck-db-badge">assi ${escapeHtml(rel.ripartizione_assi||'n.d.')}</span>`+
+    (!hasAxles?`<span class="db-incomplete">Dati di peso incompleti: selezionalo, poi crea una copia personalizzata con i dati reali del tuo mezzo.</span>`:'');
+}
+function populateTankSelect(t,preferred=''){
+  const sel=$('#tankSelect');
+  sel.innerHTML='';
+  const tanks=Array.isArray(t?.serbatoi)?t.serbatoi:[];
+  if(!tanks.length){
+    sel.innerHTML='<option value="">Nessuna configurazione disponibile</option>';
+    renderTruckDbInfo(t,null);
+    return;
+  }
+  tanks.forEach((cfg,i)=>{
+    const o=document.createElement('option');
+    o.value=cfg.id||String(i);
+    o.textContent=tankLabel(cfg);
+    sel.appendChild(o);
+  });
+  let chosen=preferred&&tanks.some(c=>(c.id||'')===preferred)?preferred:(tanks[0].id||'0');
+  sel.value=chosen;
+  const cfg=tanks.find(c=>(c.id||'')===sel.value)||tanks[0];
+  renderTruckDbInfo(t,cfg);
+}
+function estimateCoupledTareFromDb(t){
+  // Mantiene come riferimento la tara agganciata Ford già usata dall'HTML
+  // e applica al trattore scelto le differenze di ripartizione presenti nel JSON.
+  const ref=getTruckById('ford_fmax500_2022_2024')||TRUCK_DB.trattori[0];
+  const refA1=safeNum(ref?.tara_asse1_sterzante_riferimento_kg);
+  const refA2=safeNum(ref?.tara_asse2_motore_riferimento_kg);
+  const a1=5450+(safeNum(t.tara_asse1_sterzante_riferimento_kg)-refA1);
+  const a2=4850+(safeNum(t.tara_asse2_motore_riferimento_kg)-refA2);
+  const total=Math.max(1,a1+a2);
+  return{a1,a2,total,driveShare:a2/total};
+}
+function applyTruckFromDatabase(t,persist=true){
+  if(!t)return;
+  const hasAxles=Number.isFinite(Number(t.tara_asse1_sterzante_riferimento_kg))&&Number.isFinite(Number(t.tara_asse2_motore_riferimento_kg));
+  if(safeNum(t.passo_mm)>0)$('#vWheelbase').value=safeNum(t.passo_mm);
+  if(Number.isFinite(Number(t.avanzamento_ralla_mm_default)))$('#vFifthLead').value=Number(t.avanzamento_ralla_mm_default);
+  if(hasAxles){
+    const coupled=t.custom?(()=>{
+      const a1=safeNum(t.tara_asse1_sterzante_riferimento_kg),a2=safeNum(t.tara_asse2_motore_riferimento_kg),total=Math.max(1,a1+a2);
+      return{a1,a2,total,driveShare:a2/total}
+    })():estimateCoupledTareFromDb(t);
+    $('#vTareTotal').value=Math.round(coupled.total);
+    $('#vDriveSharePct').value=(coupled.driveShare*100).toFixed(2);
+  }
+  if(safeNum(t.massa_complessiva_tecnica_kg)>0)$('#vMaxTractor').value=safeNum(t.massa_complessiva_tecnica_kg);
+  $('#vMinShare').value='25.0';
+  updateVehiclePreview();
+  commitVehicle(readVehicleFromForm(),true);
+  if(persist){try{localStorage.setItem(TRUCK_SELECTION_KEY,t.id)}catch(e){}}
+  updateComboLabel();
+  const subtitle=document.querySelector('.hero p');
+  if(subtitle)subtitle.textContent=`${t.custom_name||t.marca+' '+t.modello} ${t.potenza_cv||''} CV · ${currentTrailer()?(currentTrailer().custom_name||currentTrailer().marca+' '+currentTrailer().modello):'Semirimorchio'} · calcolo statico dei pesi.`;
+}
+function populateTruckSelect(preferred=''){
+  const sel=$('#truckSelect'); if(!sel)return;
+  const current=preferred||sel.value;
+  sel.innerHTML='';
+  const groups={};
+  TRUCK_DB.trattori.forEach(t=>(groups[t.marca]||(groups[t.marca]=[])).push(t));
+  Object.keys(groups).sort((a,b)=>a.localeCompare(b,'it')).forEach(marca=>{
+    const g=document.createElement('optgroup');g.label=marca;
+    groups[marca].sort((a,b)=>a.modello.localeCompare(b.modello,'it')||String(a.model_year).localeCompare(String(b.model_year))).forEach(t=>{
+      const o=document.createElement('option');o.value=t.id;o.textContent=`${t.modello} · ${t.potenza_cv} CV · ${t.model_year}`;g.appendChild(o);
+    });sel.appendChild(g);
+  });
+  const custom=getCustomItems(CUSTOM_TRUCKS_KEY);
+  if(custom.length){const cg=document.createElement('optgroup');cg.label='Personalizzati';custom.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.custom_name||t.modello;cg.appendChild(o)});sel.appendChild(cg)}
+  if(getTruckById(current))sel.value=current;
+}
+function initTruckSelector(){
+  let saved='';try{saved=localStorage.getItem(TRUCK_SELECTION_KEY)||''}catch(e){}
+  if(!getTruckById(saved))saved='ford_fmax500_2022_2024';
+  if(!getTruckById(saved))saved=TRUCK_DB.trattori[0]?.id||'';
+  populateTruckSelect(saved);
+  const t=getTruckById($('#truckSelect').value);
+  let tankSaved='';try{tankSaved=localStorage.getItem(TRUCK_TANK_KEY)||''}catch(e){}
+  populateTankSelect(t,tankSaved);
+  renderTruckDbInfo(t,(t?.serbatoi||[]).find(c=>(c.id||'')===$('#tankSelect').value)||t?.serbatoi?.[0]||null);
+  if(t)applyTruckFromDatabase(t,false);
+  let semi='';try{semi=localStorage.getItem(TRAILER_SELECTION_KEY)||''}catch(e){}
+  populateTrailerSelect(semi||'schmitz_scs_universal_3ax_standard');
+  const st=getTrailerById($('#trailerSelect').value); if(st)applyTrailerFromDatabase(st,false);
+  updateComboLabel();
+}
+
+function applyVehicleToForm(){
+  $('#vWheelbase').value=VEHICLE.tractorWheelbase;
+  $('#vFifthLead').value=VEHICLE.fifthWheelLead;
+  $('#vTareTotal').value=Math.round(VEHICLE.tareTractorTotal);
+  $('#vDriveSharePct').value=(VEHICLE.driveAxleSharePct*100).toFixed(2);
+  $('#vTrailerLen').value=VEHICLE.trailerInternalLength;
+  $('#vDeckLength').value=VEHICLE.deckLength;
+  $('#vDeckWidth').value=VEHICLE.deckWidth;
+  $('#vFrontToKingpin').value=VEHICLE.frontWallToKingpin;
+  $('#vKingpinToTridem').value=VEHICLE.kingpinToTridem;
+  $('#vTareTridem').value=VEHICLE.tareTridem;
+  $('#vMaxGross').value=VEHICLE.maxGross;
+  $('#vMaxDrive').value=VEHICLE.maxDriveAxle;
+  $('#vMaxSteer').value=VEHICLE.maxSteerAxle;
+  $('#vMaxTractor').value=VEHICLE.maxTractorTotal;
+  $('#vMinShare').value='25.0';
+  updateVehiclePreview();
+}
+function updateVehiclePreview(){
+  const total=Math.max(0,safeNum($('#vTareTotal').value)),pct=clamp(safeNum($('#vDriveSharePct').value)/100,0,1);
+  $('#vAxle1Preview').textContent=fmtKg(total*(1-pct));
+  $('#vAxle2Preview').textContent=fmtKg(total*pct);
+}
+function readVehicleFromForm(){
+  const d=VEHICLE_DEFAULTS;
+  const num=(id,fallback)=>{const n=safeNum($(id).value);return Number.isFinite(n)&&n>0?n:fallback};
+  return{
+    tractorWheelbase:num('#vWheelbase',d.tractorWheelbase),
+    fifthWheelLead:Number.isFinite(safeNum($('#vFifthLead').value))?safeNum($('#vFifthLead').value):d.fifthWheelLead,
+    tareTractorTotal:num('#vTareTotal',d.tareTractorTotal),
+    driveAxleSharePct:clamp(safeNum($('#vDriveSharePct').value)/100,0.01,0.99)||d.driveAxleSharePct,
+    trailerInternalLength:num('#vTrailerLen',d.trailerInternalLength),
+    deckLength:num('#vDeckLength',d.deckLength),
+    deckWidth:num('#vDeckWidth',d.deckWidth),
+    frontWallToKingpin:num('#vFrontToKingpin',d.frontWallToKingpin),
+    kingpinToTridem:num('#vKingpinToTridem',d.kingpinToTridem),
+    tareTridem:num('#vTareTridem',d.tareTridem),
+    maxGross:num('#vMaxGross',d.maxGross),
+    maxDriveAxle:num('#vMaxDrive',d.maxDriveAxle),
+    maxSteerAxle:num('#vMaxSteer',d.maxSteerAxle),
+    maxTractorTotal:Math.max(0,safeNum($('#vMaxTractor').value)),
+    minDriveShare:0.25,
+  };
+}
+function commitVehicle(base,persist){
+  VEHICLE=buildVehicle(base);
+  if(persist){try{localStorage.setItem(VEHICLE_STORAGE_KEY,JSON.stringify(base));$('#vehicleMeta').textContent='Dati veicolo salvati in questo browser · '+new Date().toLocaleString('it-IT');}catch(e){$('#vehicleMeta').textContent='Impossibile salvare nel browser: i dati restano attivi solo in questa sessione.'}}
+  updateDeckAspectRatio();updateDeckDimsLabel();updateFormulaText();renderRuler();
+  rows.forEach(r=>clampPosition(r));
+  renderAll();calculate();
+  applyVehicleToForm();
+}
+$('#saveVehicleBtn').addEventListener('click',()=>{commitVehicle(readVehicleFromForm(),true)});
+$('#resetVehicleBtn').addEventListener('click',()=>{if(!confirm('Ripristinare i dati veicolo predefiniti?'))return;commitVehicle({...VEHICLE_DEFAULTS},true)});
+['vTareTotal','vDriveSharePct'].forEach(id=>$('#'+id).addEventListener('input',updateVehiclePreview));
+
+
+
+
+
+
+$('#openProjectBtn').addEventListener('click',openProjectFilePicker);
+$('#saveProjectBtn').addEventListener('click',saveProjectFile);
+$('#openProjectFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{PROJECT_FILE_HANDLE=null;await openProjectData(JSON.parse(await f.text()),f.name)}catch(err){alert(err?.message||'Il file selezionato non è un progetto TruckPesa valido.')}finally{e.target.value=''}});
+
+$('#copyTruckBtn').addEventListener('click',saveCustomTruck);
+$('#copyTrailerBtn').addEventListener('click',saveCustomTrailer);
+$('#trailerSelect').addEventListener('change',()=>{
+  const t=getTrailerById($('#trailerSelect').value);if(t)applyTrailerFromDatabase(t,true)
+});
+$('#pdfReportBtn').addEventListener('click',createPdfReport);
+const orientMedia=matchMedia('(orientation: landscape) and (max-height: 700px)');
+const onDeckOrientation=()=>{updateDeckAspectRatio();renderRuler();renderDeck()};
+if(orientMedia.addEventListener)orientMedia.addEventListener('change',onDeckOrientation);
+else if(orientMedia.addListener)orientMedia.addListener(onDeckOrientation);
+
+$('#truckSelect').addEventListener('change',()=>{
+  const t=getTruckById($('#truckSelect').value);
+  if(!t)return;
+  populateTankSelect(t,'');
+  try{localStorage.setItem(TRUCK_TANK_KEY,$('#tankSelect').value||'')}catch(e){}
+  applyTruckFromDatabase(t,true);updateComboLabel();
+});
+$('#tankSelect').addEventListener('change',()=>{
+  const t=getTruckById($('#truckSelect').value);
+  const cfg=(t?.serbatoi||[]).find(c=>(c.id||'')===$('#tankSelect').value)||null;
+  renderTruckDbInfo(t,cfg);
+  try{localStorage.setItem(TRUCK_TANK_KEY,$('#tankSelect').value||'')}catch(e){}
+});
+
+async function initializeVehicleSelectors(){
+  initTruckSelector();
+  applyVehicleToForm();updateDeckAspectRatio();updateDeckDimsLabel();updateFormulaText();
+  renderRuler();renderSavedLoads();
+  if(!rows.length)addRow({desc:'Collo 1',weight:'',length:1200,width:800});
+}
+(async()=>{const ok=await loadVehicleDatabase();if(ok){migrateLegacyStorageIntoProject();await initializeVehicleSelectors()}else{applyVehicleToForm();updateDeckAspectRatio();updateDeckDimsLabel();updateFormulaText();renderRuler();renderSavedLoads();if(!rows.length)addRow({desc:'Collo 1',weight:'',length:1200,width:800})}})();
+})();
+</script></body></html>
