@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08111f">
+<title>Gallery Search → GitHub v3</title>
+<style>
+:root{--bg:#08111f;--panel:#101b2d;--line:#263957;--text:#edf4ff;--muted:#9db0ca;--accent:#3b82f6;--ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--r:18px}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{min-height:100vh}
+button,input,select{font:inherit}.wrap{max-width:1200px;margin:auto;padding:14px 14px 80px}
+header{display:flex;align-items:center;gap:12px;padding:8px 2px 16px;position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg) 80%,transparent)}
+.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(145deg,#2563eb,#60a5fa);display:grid;place-items:center;font-size:22px;font-weight:900;box-shadow:0 10px 30px #2563eb33}
+h1{font-size:20px;margin:0}.sub{color:var(--muted);font-size:12px;margin-top:2px}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}.card{background:linear-gradient(180deg,var(--panel),#0c1727);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:0 16px 40px #0003}.card h2{font-size:15px;margin:0 0 12px}
+.row{display:grid;grid-template-columns:1fr;gap:9px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+label{display:block;color:var(--muted);font-size:12px;margin:0 0 5px}
+input,select{width:100%;background:#081321;color:var(--text);border:1px solid #2a3d5c;border-radius:12px;padding:11px 12px;outline:none}
+input:focus,select:focus{border-color:#5598ff;box-shadow:0 0 0 3px #3b82f622}
+button{border:0;border-radius:12px;padding:11px 13px;font-weight:700;cursor:pointer}
+.primary{background:var(--accent);color:#fff}.secondary{background:#1d2b42;color:var(--text);border:1px solid #304563}.ghost{background:transparent;color:#bcd0eb;border:1px solid #2c405f}.success{background:#123723;color:#bff8d1;border:1px solid #23633b}.danger{background:#3a1720;color:#ffd3da;border:1px solid #722838}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1;min-width:130px}
+.status{font-size:12px;color:var(--muted);padding-top:8px;min-height:24px;line-height:1.45}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}.stat{background:#091524;border:1px solid #213552;border-radius:14px;padding:10px}.stat b{display:block;font-size:18px}.stat span{font-size:11px;color:var(--muted)}
+.checks{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.check{display:flex;gap:7px;align-items:center;background:#0a1626;border:1px solid #263a59;padding:8px 10px;border-radius:999px;color:#cbd8e9;font-size:12px}.check input{width:auto;margin:0}
+.notice{font-size:12px;color:#b6c5d9;background:#0a1625;border:1px solid #233754;border-radius:12px;padding:10px;line-height:1.5}
+.rootList{display:grid;gap:8px;margin-top:10px}.rootItem{display:flex;align-items:center;gap:8px;background:#091524;border:1px solid #213552;border-radius:13px;padding:10px}.rootItem .name{flex:1;min-width:0}.rootItem b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rootItem small{color:var(--muted)}.dot{width:10px;height:10px;border-radius:50%;background:#64748b;flex:0 0 auto}.dot.ok{background:#22c55e}.dot.warn{background:#f59e0b}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}.toolbar input{flex:1}.badge{font-size:11px;padding:5px 8px;border-radius:999px;background:#19304f;color:#b9d5ff;white-space:nowrap}
+.gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.photo{position:relative;background:#091524;border:1px solid #213552;border-radius:14px;overflow:hidden}.photo img,.photo video{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#060b12}.meta{padding:8px;font-size:11px;color:var(--muted);line-height:1.35;min-height:68px}.meta b{color:var(--text);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pick{position:absolute;top:7px;right:7px;background:#07111ee8;border-radius:10px;padding:5px}.pick input{width:19px;height:19px}.score{position:absolute;left:7px;top:7px;background:#07111ee8;border:1px solid #38577e;border-radius:999px;padding:4px 7px;font-size:10px}.mediaBadge{position:absolute;left:7px;bottom:74px;background:#07111ee8;border-radius:999px;padding:4px 7px;font-size:10px}
+.progress{height:9px;background:#081321;border:1px solid #273a57;border-radius:999px;overflow:hidden;margin:8px 0}.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563eb,#60a5fa)}.small{font-size:11px;color:var(--muted)}.hidden{display:none!important}.warnTxt{color:#ffd18a}.okTxt{color:#bff8d1}
+.rangeRow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.rangeRow output{min-width:52px;text-align:right;font-weight:800;color:#cfe1ff}input[type=range]{padding:0;height:38px}
+.secure{border-color:#23583a;background:#0d2018}.insecure{border-color:#74411d;background:#21170e}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}.row{grid-template-columns:repeat(2,1fr)}.gallery{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1050px){.gallery{grid-template-columns:repeat(5,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="logo">G</div><div><h1>Gallery Search → GitHub v3</h1><div class="sub">Accesso persistente cartelle · scansione automatica · foto/video · nudità</div></div></header>
+
+<div class="grid">
+<section class="card">
+<h2>1. Accesso alla galleria</h2>
+<div id="contextNotice" class="notice"></div>
+<div class="actions" style="margin-top:10px">
+  <button class="primary" id="addRoot">➕ Autorizza cartella</button>
+  <button class="secondary" id="rescan">🔄 Scansiona ora</button>
+  <button class="danger" id="forgetRoots">🗑️ Dimentica cartelle</button>
+</div>
+<input id="folderFallback" class="hidden" type="file" accept="image/*,video/*" webkitdirectory multiple>
+<div id="rootList" class="rootList"></div>
+<div class="stats">
+  <div class="stat"><b id="nAll">0</b><span>file</span></div>
+  <div class="stat"><b id="nPhoto">0</b><span>foto</span></div>
+  <div class="stat"><b id="nVideo">0</b><span>video</span></div>
+  <div class="stat"><b id="nMatch">0</b><span>risultati</span></div>
+</div>
+<div class="progress"><i id="scanProgress"></i></div>
+<div class="status" id="scanStatus">Inizializzazione…</div>
+</section>
+
+<section class="card">
+<h2>2. Criteri</h2>
+<div class="row">
+  <div><label>Nome file contiene</label><input id="qName" placeholder="es. IMG_, camion, vacanza"></div>
+  <div><label>Tipo media</label><select id="qType"><option value="">Foto + video</option><option value="image">Solo foto</option><option value="video">Solo video</option></select></div>
+  <div><label>Parola / oggetto AI generica</label><input id="qAI" placeholder="es. truck, car, dog"></div>
+  <div><label>Testo nella foto (OCR)</label><input id="qOCR" placeholder="es. SCHMITZ, cliente"></div>
+</div>
+<div class="row2" style="margin-top:9px">
+  <div><label>Dal giorno</label><input id="qFrom" type="date"></div>
+  <div><label>Al giorno</label><input id="qTo" type="date"></div>
+  <div><label>Dimensione minima foto (MP)</label><input id="qMP" type="number" min="0" step=".1" placeholder="es. 8"></div>
+  <div><label>Peso massimo file (MB)</label><input id="qMB" type="number" min="0" step=".1" placeholder="es. 200"></div>
+</div>
+<div class="checks">
+  <label class="check"><input id="useAI" type="checkbox"> AI generica</label>
+  <label class="check"><input id="useOCR" type="checkbox"> OCR</label>
+  <label class="check"><input id="useNude" type="checkbox"> 🔞 Nudità</label>
+  <label class="check"><input id="autoSelect" type="checkbox" checked> Seleziona risultati</label>
+</div>
+<div id="nudeOptions" class="hidden">
+  <label>Soglia nudità</label>
+  <div class="rangeRow"><input id="nudeThreshold" type="range" min="20" max="95" step="5" value="60"><output id="nudeThresholdOut">60%</output></div>
+  <div class="row2">
+    <div><label>Fotogrammi per video</label><select id="videoSamples"><option>3</option><option selected>5</option><option>8</option><option>12</option></select></div>
+    <div><label>Modalità video</label><select id="videoRule"><option value="any" selected>Almeno 1 fotogramma</option><option value="avg">Media fotogrammi</option></select></div>
+  </div>
+  <div class="small warnTxt" style="margin-top:8px">Il risultato è probabilistico. Nei video vengono analizzati fotogrammi campionati.</div>
+</div>
+<div class="actions" style="margin-top:10px"><button class="primary" id="search">🔎 Cerca</button><button class="secondary" id="saveCriteria">💾 Salva criteri</button><button class="ghost" id="loadCriteria">↩ Ripristina</button></div>
+<div class="progress"><i id="aiProgress"></i></div>
+<div class="status" id="searchStatus">Pronto.</div>
+</section>
+
+<section class="card">
+<h2>3. GitHub</h2>
+<div class="row">
+  <div><label>Owner</label><input id="ghOwner" placeholder="es. KnightTrucker"></div>
+  <div><label>Repository</label><input id="ghRepo" placeholder="es. FotoPrivate"></div>
+  <div><label>Branch</label><input id="ghBranch" value="main"></div>
+  <div><label>Cartella destinazione</label><input id="ghPath" value="gallery"></div>
+</div>
+<div style="margin-top:9px"><label>Fine-grained token GitHub (Contents: write)</label><input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+<div class="checks"><label class="check"><input id="saveManifest" type="checkbox" checked> Manifest JSON</label><label class="check"><input id="saveProfile" type="checkbox" checked> Criteri JSON</label></div>
+<div class="actions"><button class="secondary" id="testGitHub">🔐 Test connessione</button><button class="success" id="upload">⬆️ Pubblica selezionate</button></div>
+<div class="progress"><i id="upProgress"></i></div><div class="status" id="ghStatus">Il token non viene salvato.</div>
+</section>
+
+<section class="card">
+<h2>Come usarla su Android</h2>
+<div class="notice">
+Pubblica questo HTML con <b>GitHub Pages</b> e aprilo dall'indirizzo HTTPS. Alla prima apertura premi <b>Autorizza cartella</b> e scegli una cartella come DCIM; ripeti per Pictures, Download, Movies o Android/media se il selettore le rende disponibili. 
+Le cartelle autorizzate vengono memorizzate nel browser. Alle aperture successive la pagina prova a riutilizzarle e, se il permesso è ancora attivo, avvia la scansione automaticamente.
+</div>
+</section>
+
+<section class="card wide">
+<div class="toolbar"><input id="quickFilter" placeholder="Filtra i risultati visualizzati..."><span class="badge" id="shownBadge">0 mostrate</span></div>
+<div class="actions" style="margin-bottom:10px"><button class="secondary" id="selectAll">Seleziona risultati</button><button class="ghost" id="clearSel">Deseleziona tutto</button></div>
+<div class="gallery" id="gallery"></div>
+</section>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const state={items:[],matches:[],roots:[],model:null,nsfw:null,urls:new Map(),busy:false};
+const DB_NAME='GallerySearchV3', DB_VER=1, STORE='roots';
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function fmtBytes(n){if(!n)return'0 B';const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}
+function extOf(n){return(n.split('.').pop()||'').toLowerCase()}
+function normPath(p){return p.split('/').filter(Boolean).map(x=>x.replace(/[<>:"\\|?*\x00-\x1F]/g,'_')).join('/')}
+function setStatus(id,msg){$(id).textContent=msg}
+function setProgress(id,v){$(id).style.width=Math.max(0,Math.min(100,v))+'%'}
+function mediaKind(f){if(f.type.startsWith('video/'))return'video';if(f.type.startsWith('image/'))return'image';return /\.(mp4|webm|mkv|mov|3gp|avi|m4v)$/i.test(f.name)?'video':'image'}
+
+function openDB(){return new Promise((ok,bad)=>{const r=indexedDB.open(DB_NAME,DB_VER);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:'id'})};r.onsuccess=()=>ok(r.result);r.onerror=()=>bad(r.error)})}
+async function dbGetRoots(){const db=await openDB();return new Promise((ok,bad)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>bad(r.error)})}
+async function dbPutRoot(rec){const db=await openDB();return new Promise((ok,bad)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(rec);tx.oncomplete=()=>ok();tx.onerror=()=>bad(tx.error)})}
+async function dbClearRoots(){const db=await openDB();return new Promise((ok,bad)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).clear();tx.oncomplete=()=>ok();tx.onerror=()=>bad(tx.error)})}
+
+async function permissionOf(handle){
+  try{return await handle.queryPermission({mode:'read'})}catch{return'unknown'}
+}
+async function requestPermission(handle){
+  try{return await handle.requestPermission({mode:'read'})}catch{return'denied'}
+}
+
+function renderRoots(){
+  const box=$('#rootList');
+  if(!state.roots.length){box.innerHTML='<div class="small">Nessuna cartella memorizzata.</div>';return}
+  box.innerHTML=state.roots.map((r,i)=>`<div class="rootItem"><span class="dot ${r.permission==='granted'?'ok':r.permission==='prompt'?'warn':''}"></span><div class="name"><b>${esc(r.name)}</b><small>${r.permission==='granted'?'autorizzata':r.permission==='prompt'?'da riautorizzare':'non disponibile'}</small></div>${r.permission==='prompt'?`<button class="secondary" data-auth="${i}">Autorizza</button>`:''}</div>`).join('');
+  box.querySelectorAll('[data-auth]').forEach(b=>b.onclick=async()=>{const r=state.roots[+b.dataset.auth];r.permission=await requestPermission(r.handle);await dbPutRoot({id:r.id,name:r.name,handle:r.handle});renderRoots();if(r.permission==='granted')scanAllRoots()})
+}
+
+async function loadStoredRoots(){
+  if(!('indexedDB'in window))return;
+  try{
+    const rows=await dbGetRoots();
+    state.roots=[];
+    for(const r of rows){
+      const p=await permissionOf(r.handle);
+      state.roots.push({...r,permission:p});
+    }
+    renderRoots();
+  }catch(e){setStatus('#scanStatus','Archivio autorizzazioni non disponibile: '+e.message)}
+}
+
+async function walkDir(handle,prefix='',rootName=''){
+  const out=[];
+  for await(const [name,entry] of handle.entries()){
+    const rel=prefix?prefix+'/'+name:name;
+    if(entry.kind==='file'){
+      const f=await entry.getFile();
+      if(/^image\//.test(f.type)||/^video\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp|heic|mp4|webm|mkv|mov|3gp|avi|m4v)$/i.test(f.name)){
+        out.push({file:f,rel:(rootName?rootName+'/':'')+rel});
+      }
+    }else if(entry.kind==='directory'){
+      try{out.push(...await walkDir(entry,rel,rootName))}catch{}
+    }
+  }
+  return out;
+}
+
+async function readImageMeta(item){
+  if(item.kind!=='image'||item.width!==undefined)return;
+  item.width=0;item.height=0;item.mp=0;
+  const url=URL.createObjectURL(item.file);
+  try{await new Promise(resolve=>{const im=new Image();im.onload=()=>{item.width=im.naturalWidth;item.height=im.naturalHeight;item.mp=item.width*item.height/1e6;resolve()};im.onerror=()=>resolve();im.src=url})}
+  finally{URL.revokeObjectURL(url)}
+}
+
+async function addWrappedFiles(wrapped,replace=false){
+  if(replace){
+    for(const u of state.urls.values())URL.revokeObjectURL(u);
+    state.urls.clear();state.items=[];
+  }
+  const existing=new Set(state.items.map(x=>x.key));
+  for(const w of wrapped){
+    const f=w.file,rel=w.rel||f.webkitRelativePath||f.name,key=rel+'|'+f.size+'|'+f.lastModified;
+    if(existing.has(key))continue;
+    state.items.push({file:f,key,rel,name:f.name,ext:extOf(f.name),kind:mediaKind(f),selected:false,match:true,ai:[],ocr:'',nude:null,nudeFrames:[],width:undefined,height:undefined,mp:0});
+    existing.add(key);
+  }
+  let done=0,images=state.items.filter(x=>x.kind==='image');
+  for(let i=0;i<images.length;i+=8){
+    await Promise.all(images.slice(i,i+8).map(readImageMeta));done=Math.min(images.length,i+8);
+    setProgress('#scanProgress',images.length?done/images.length*100:100);
+  }
+  state.matches=[...state.items];updateStats();render();
+}
+
+async function scanAllRoots(){
+  if(state.busy)return;
+  const granted=state.roots.filter(r=>r.permission==='granted');
+  if(!granted.length){setStatus('#scanStatus','Nessuna cartella attualmente autorizzata.');return}
+  state.busy=true;setProgress('#scanProgress',0);
+  try{
+    let all=[];
+    for(let i=0;i<granted.length;i++){
+      setStatus('#scanStatus',`Scansione ${i+1}/${granted.length}: ${granted[i].name}…`);
+      try{all.push(...await walkDir(granted[i].handle,'',granted[i].name))}
+      catch(e){setStatus('#scanStatus',`Errore leggendo ${granted[i].name}: ${e.message}`)}
+      setProgress('#scanProgress',(i+1)/granted.length*75);
+    }
+    setStatus('#scanStatus',`Trovati ${all.length} file multimediali. Lettura metadati…`);
+    await addWrappedFiles(all,true);
+    setProgress('#scanProgress',100);
+    setStatus('#scanStatus',`Scansione completata: ${state.items.length} file.`);
+  }finally{state.busy=false}
+}
+
+$('#addRoot').onclick=async()=>{
+  if('showDirectoryPicker'in window){
+    try{
+      const h=await showDirectoryPicker({mode:'read'});
+      const id=(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());
+      const rec={id,name:h.name,handle:h};
+      await dbPutRoot(rec);
+      const p=await permissionOf(h);
+      state.roots.push({...rec,permission:p});
+      renderRoots();
+      if(p==='granted')await scanAllRoots();
+    }catch(e){if(e.name!=='AbortError')setStatus('#scanStatus','Autorizzazione cartella: '+e.message)}
+  }else{
+    $('#folderFallback').click();
+  }
+};
+$('#folderFallback').onchange=async e=>{
+  const wrapped=[...e.target.files].map(f=>({file:f,rel:f.webkitRelativePath||f.name}));
+  await addWrappedFiles(wrapped,true);
+  setStatus('#scanStatus','Cartella caricata. Questo browser non consente di memorizzare il permesso: alla prossima apertura dovrai selezionarla di nuovo.');
+};
+$('#rescan').onclick=scanAllRoots;
+$('#forgetRoots').onclick=async()=>{if(!confirm('Dimenticare tutte le cartelle autorizzate?'))return;await dbClearRoots();state.roots=[];renderRoots();setStatus('#scanStatus','Cartelle dimenticate. I file già caricati restano visibili fino al ricaricamento della pagina.')};
+
+function updateStats(){
+  $('#nAll').textContent=state.items.length;
+  $('#nPhoto').textContent=state.items.filter(x=>x.kind==='image').length;
+  $('#nVideo').textContent=state.items.filter(x=>x.kind==='video').length;
+  $('#nMatch').textContent=state.matches.length;
+}
+
+$('#useNude').onchange=()=>$('#nudeOptions').classList.toggle('hidden',!$('#useNude').checked);
+$('#nudeThreshold').oninput=()=>$('#nudeThresholdOut').textContent=$('#nudeThreshold').value+'%';
+
+function criteria(){return{
+  name:$('#qName').value.trim().toLowerCase(),type:$('#qType').value,ai:$('#qAI').value.trim().toLowerCase(),ocr:$('#qOCR').value.trim().toLowerCase(),
+  from:$('#qFrom').value?new Date($('#qFrom').value+'T00:00:00').getTime():0,to:$('#qTo').value?new Date($('#qTo').value+'T23:59:59').getTime():Infinity,
+  mp:+$('#qMP').value||0,mb:+$('#qMB').value||0,useAI:$('#useAI').checked,useOCR:$('#useOCR').checked,useNude:$('#useNude').checked,
+  nudeThreshold:+$('#nudeThreshold').value/100,videoSamples:+$('#videoSamples').value,videoRule:$('#videoRule').value,autoSelect:$('#autoSelect').checked
+}}
+function baseMatch(x,c){const f=x.file;return(!c.name||(x.name+' '+x.rel).toLowerCase().includes(c.name))&&(!c.type||x.kind===c.type)&&(f.lastModified>=c.from&&f.lastModified<=c.to)&&(!c.mp||x.kind!=='image'||x.mp>=c.mp)&&(!c.mb||f.size<=c.mb*1024*1024)}
+
+async function ensureRemoteAI(){
+  if(location.protocol!=='https:'&&location.hostname!=='localhost')throw new Error('AI non disponibile da '+location.protocol+' — pubblica il file su GitHub Pages (HTTPS).');
+  if(typeof tf==='undefined')throw new Error('TensorFlow non caricato. Controlla connessione Internet.');
+}
+async function ensureModel(){await ensureRemoteAI();if(!state.model){setStatus('#searchStatus','Caricamento MobileNet…');state.model=await mobilenet.load({version:2,alpha:.5})}return state.model}
+async function ensureNsfw(){await ensureRemoteAI();if(!state.nsfw){if(typeof nsfwjs==='undefined')throw new Error('Modulo nudità non caricato.');setStatus('#searchStatus','Caricamento classificatore nudità…');state.nsfw=await nsfwjs.load()}return state.nsfw}
+async function imageElement(file){const url=URL.createObjectURL(file),el=new Image();el.src=url;await new Promise((ok,bad)=>{el.onload=ok;el.onerror=()=>bad(new Error('Immagine non leggibile'))});return{el,url}}
+async function classifyGeneric(item){const{el,url}=await imageElement(item.file);try{item.ai=await state.model.classify(el,5)}finally{URL.revokeObjectURL(url)}}
+async function doOCR(item){if(item.kind!=='image')return;await ensureRemoteAI();try{const r=await Tesseract.recognize(item.file,'eng+ita',{logger:()=>{}});item.ocr=r.data.text||''}catch{item.ocr=''}}
+function nudeScoreFrom(pred){const m=Object.fromEntries(pred.map(p=>[p.className,p.probability]));return Math.max(m.Porn||0,m.Sexy||0,m.Hentai||0)}
+async function classifyNudeImage(item){const{el,url}=await imageElement(item.file);try{const pred=await state.nsfw.classify(el);item.nude=nudeScoreFrom(pred);item.nudeFrames=[item.nude]}catch{item.nude=0;item.nudeFrames=[]}finally{URL.revokeObjectURL(url)}}
+async function classifyNudeVideo(item,samples,rule){
+  const url=URL.createObjectURL(item.file),video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='metadata';video.src=url;
+  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
+  try{
+    await new Promise((ok,bad)=>{video.onloadedmetadata=ok;video.onerror=()=>bad(new Error('Codec video non supportato'))});
+    const dur=Math.max(.1,video.duration||.1),times=Array.from({length:samples},(_,i)=>dur*(i+1)/(samples+1)),scores=[];canvas.width=224;canvas.height=224;
+    for(const t of times){
+      video.currentTime=Math.min(t,Math.max(0,dur-.05));
+      await new Promise((ok,bad)=>{video.onseeked=ok;video.onerror=()=>bad(new Error('Errore lettura video'))});
+      ctx.drawImage(video,0,0,224,224);scores.push(nudeScoreFrom(await state.nsfw.classify(canvas)));
+    }
+    item.nudeFrames=scores;item.nude=rule==='avg'?scores.reduce((a,b)=>a+b,0)/(scores.length||1):Math.max(0,...scores)
+  }catch(e){item.nude=0;item.nudeFrames=[];item.videoError=e.message}
+  finally{URL.revokeObjectURL(url);video.removeAttribute('src');video.load()}
+}
+
+$('#search').onclick=async()=>{
+  if(state.busy)return;const c=criteria();state.busy=true;setProgress('#aiProgress',0);
+  try{
+    let candidates=state.items.filter(x=>baseMatch(x,c)),work=0,done=0;
+    if(c.useAI&&c.ai)work+=candidates.filter(x=>x.kind==='image').length;
+    if(c.useOCR&&c.ocr)work+=candidates.filter(x=>x.kind==='image').length;
+    if(c.useNude)work+=candidates.length;
+    const tick=msg=>{done++;setProgress('#aiProgress',work?done/work*100:100);setStatus('#searchStatus',msg)};
+    if(c.useAI&&c.ai){
+      await ensureModel();
+      for(const x of candidates.filter(x=>x.kind==='image')){if(!x.ai.length)await classifyGeneric(x);tick(`AI generica ${done}/${work}`)}
+      candidates=candidates.filter(x=>x.kind==='video'||x.ai.some(p=>p.className.toLowerCase().includes(c.ai)))
+    }
+    if(c.useOCR&&c.ocr){
+      for(const x of candidates.filter(x=>x.kind==='image')){if(!x.ocr)await doOCR(x);tick(`OCR ${done}/${work}`)}
+      candidates=candidates.filter(x=>x.kind==='video'||(x.ocr||'').toLowerCase().includes(c.ocr))
+    }
+    if(c.useNude){
+      await ensureNsfw();
+      for(const x of candidates){setStatus('#searchStatus',`Nudità: ${x.name}`);if(x.kind==='image')await classifyNudeImage(x);else await classifyNudeVideo(x,c.videoSamples,c.videoRule);tick(`Analisi nudità ${done}/${work}`)}
+      candidates=candidates.filter(x=>(x.nude||0)>=c.nudeThreshold)
+    }
+    state.items.forEach(x=>x.match=candidates.includes(x));state.matches=candidates;if(c.autoSelect)state.items.forEach(x=>x.selected=x.match);
+    updateStats();render();setProgress('#aiProgress',100);setStatus('#searchStatus',`Ricerca completata: ${candidates.length} risultati su ${state.items.length}.`);
+  }catch(e){setStatus('#searchStatus','Errore ricerca: '+e.message)}
+  finally{state.busy=false}
+};
+
+function savedCriteria(){const c=criteria();delete c.autoSelect;return c}
+$('#saveCriteria').onclick=()=>{localStorage.setItem('gallerySearchCriteriaV3',JSON.stringify({version:3,savedAt:new Date().toISOString(),criteria:savedCriteria()}));setStatus('#searchStatus','Criteri salvati.')};
+$('#loadCriteria').onclick=()=>{try{
+  const c=JSON.parse(localStorage.getItem('gallerySearchCriteriaV3')||'{}').criteria||{};
+  $('#qName').value=c.name||'';$('#qType').value=c.type||'';$('#qAI').value=c.ai||'';$('#qOCR').value=c.ocr||'';
+  $('#qFrom').value=c.from&&isFinite(c.from)?new Date(c.from).toISOString().slice(0,10):'';$('#qTo').value=c.to&&isFinite(c.to)?new Date(c.to).toISOString().slice(0,10):'';
+  $('#qMP').value=c.mp||'';$('#qMB').value=c.mb||'';$('#useAI').checked=!!c.useAI;$('#useOCR').checked=!!c.useOCR;$('#useNude').checked=!!c.useNude;
+  $('#nudeThreshold').value=Math.round((c.nudeThreshold||.6)*100);$('#nudeThresholdOut').textContent=$('#nudeThreshold').value+'%';$('#videoSamples').value=c.videoSamples||5;$('#videoRule').value=c.videoRule||'any';
+  $('#nudeOptions').classList.toggle('hidden',!c.useNude);setStatus('#searchStatus','Criteri ripristinati.');
+}catch{setStatus('#searchStatus','Nessun profilo valido.')}};
+
+function previewURL(x){if(!state.urls.has(x.key))state.urls.set(x.key,URL.createObjectURL(x.file));return state.urls.get(x.key)}
+function render(){
+  const q=$('#quickFilter').value.trim().toLowerCase(),list=state.matches.filter(x=>!q||(x.name+' '+x.rel+' '+x.ai.map(a=>a.className).join(' ')+' '+x.ocr).toLowerCase().includes(q)),cap=list.slice(0,250);
+  $('#gallery').innerHTML=cap.map(x=>{
+    const idx=state.items.indexOf(x),nude=x.nude==null?'':`🔞 ${Math.round(x.nude*100)}%`,media=x.kind==='video'?'🎬 VIDEO':'🖼️ FOTO';
+    const preview=x.kind==='video'?`<video muted playsinline preload="metadata" src="${previewURL(x)}"></video>`:`<img loading="lazy" src="${previewURL(x)}" alt="">`;
+    return`<article class="photo">${preview}${nude?`<span class="score">${nude}</span>`:''}<span class="mediaBadge">${media}</span><label class="pick"><input type="checkbox" data-i="${idx}" ${x.selected?'checked':''}></label><div class="meta"><b title="${esc(x.rel)}">${esc(x.name)}</b>${x.kind==='image'&&x.width?`${x.width}×${x.height} · ${x.mp.toFixed(1)} MP · `:''}${fmtBytes(x.file.size)}<br>${new Date(x.file.lastModified).toLocaleDateString('it-IT')}${x.videoError?'<br><span class="warnTxt">Video non analizzato</span>':''}</div></article>`
+  }).join('');
+  $('#shownBadge').textContent=`${list.length} mostrate${list.length>250?' (prime 250)':''}`;
+  $('#gallery').querySelectorAll('input[data-i]').forEach(el=>el.onchange=()=>state.items[+el.dataset.i].selected=el.checked)
+}
+$('#quickFilter').oninput=render;$('#selectAll').onclick=()=>{state.matches.forEach(x=>x.selected=true);render()};$('#clearSel').onclick=()=>{state.items.forEach(x=>x.selected=false);render()};
+
+function ghConfig(){return{owner:$('#ghOwner').value.trim(),repo:$('#ghRepo').value.trim(),branch:$('#ghBranch').value.trim()||'main',path:normPath($('#ghPath').value.trim()),token:$('#ghToken').value.trim()}}
+function ghHeaders(token){return{'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'}}
+async function ghFetch(url,opt={}){const c=ghConfig(),r=await fetch('https://api.github.com'+url,{...opt,headers:{...ghHeaders(c.token),...(opt.headers||{})}});let body=null;try{body=await r.json()}catch{}if(!r.ok)throw new Error(`${r.status} ${body?.message||r.statusText}`);return body}
+$('#testGitHub').onclick=async()=>{const c=ghConfig();if(!c.owner||!c.repo||!c.token)return setStatus('#ghStatus','Compila owner, repository e token.');try{const r=await ghFetch(`/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}`);setStatus('#ghStatus',`Connesso: ${r.full_name}.`)}catch(e){setStatus('#ghStatus','Connessione fallita: '+e.message)}};
+function ab2b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode(...b.subarray(i,Math.min(i+0x8000,b.length)));return btoa(s)}
+async function putContent(path,base64,message){const c=ghConfig(),url=`/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;let sha;try{sha=(await ghFetch(url+'?ref='+encodeURIComponent(c.branch))).sha}catch(e){if(!String(e.message).startsWith('404'))throw e}return ghFetch(url,{method:'PUT',body:JSON.stringify({message,content:base64,branch:c.branch,...(sha?{sha}:{})})})}
+async function putText(path,obj,message){const bytes=new TextEncoder().encode(JSON.stringify(obj,null,2));return putContent(path,ab2b64(bytes.buffer),message)}
+$('#upload').onclick=async()=>{
+  if(state.busy)return;const c=ghConfig(),selected=state.items.filter(x=>x.selected);
+  if(!c.owner||!c.repo||!c.token)return setStatus('#ghStatus','Compila owner, repository e token.');
+  if(!selected.length)return setStatus('#ghStatus','Nessun file selezionato.');
+  state.busy=true;setProgress('#upProgress',0);const root=c.path?c.path+'/':'',manifest={version:3,createdAt:new Date().toISOString(),criteria:savedCriteria(),files:[]};
+  try{
+    let n=0;
+    for(const x of selected){
+      const rel=normPath(x.rel||x.name),target=root+rel;setStatus('#ghStatus',`Upload ${n+1}/${selected.length}: ${x.name}`);
+      const res=await putContent(target,ab2b64(await x.file.arrayBuffer()),`Upload ${x.name} da Gallery Search v3`);
+      manifest.files.push({source:x.rel,path:target,type:x.kind,size:x.file.size,lastModified:new Date(x.file.lastModified).toISOString(),sha:res.content?.sha||null,nudeScore:x.nude,ai:x.ai});
+      n++;setProgress('#upProgress',n/selected.length*100)
+    }
+    if($('#saveManifest').checked)await putText(root+'_gallery_manifest.json',manifest,'Aggiorna manifest galleria');
+    if($('#saveProfile').checked)await putText(root+'_search_criteria.json',{version:3,savedAt:new Date().toISOString(),criteria:savedCriteria()},'Aggiorna criteri ricerca');
+    setStatus('#ghStatus',`Completato: ${selected.length} file pubblicati.`);setProgress('#upProgress',100)
+  }catch(e){setStatus('#ghStatus','Upload interrotto: '+e.message)}
+  finally{state.busy=false}
+};
+['ghOwner','ghRepo','ghBranch','ghPath'].forEach(id=>{const el=$('#'+id),key='gsg3_'+id;el.value=localStorage.getItem(key)||el.value;el.addEventListener('change',()=>localStorage.setItem(key,el.value))});
+
+async function boot(){
+  const secure=location.protocol==='https:'||location.hostname==='localhost';
+  const fs='showDirectoryPicker'in window;
+  $('#contextNotice').className='notice '+(secure?'secure':'insecure');
+  $('#contextNotice').innerHTML=secure
+    ?`✅ Connessione sicura HTTPS. ${fs?'Il browser supporta l’accesso persistente alle cartelle.':'Questo browser non espone showDirectoryPicker: userò il selettore cartella di compatibilità.'}`
+    :`⚠️ La pagina è aperta come <b>${esc(location.protocol)}</b>. Per AI e permessi persistenti pubblicala su <b>GitHub Pages</b> e aprila in HTTPS.`;
+  await loadStoredRoots();
+  const granted=state.roots.filter(r=>r.permission==='granted');
+  if(granted.length){setStatus('#scanStatus',`${granted.length} cartelle già autorizzate. Avvio scansione automatica…`);await scanAllRoots()}
+  else if(state.roots.some(r=>r.permission==='prompt'))setStatus('#scanStatus','Cartelle memorizzate ma Android/Chrome richiede una nuova autorizzazione. Tocca “Autorizza” accanto alla cartella.');
+  else setStatus('#scanStatus','Prima apertura: tocca “Autorizza cartella” e scegli DCIM, Pictures o un’altra cartella.');
+}
+boot();
+</script>
+</body>
+</html>
