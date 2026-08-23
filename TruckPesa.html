@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b0f14">
-<title>TruckPesa v19 · Progetto JSON unico stabile</title>
+<title>TruckPesa v18 · Progetto JSON unico corretto</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
@@ -460,21 +460,6 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 <div class="report-actions"><button class="btn btn-primary" id="pdfReportBtn">📄 Crea PDF carico + conformità</button></div>
 </section><section class="card"><div class="section-title"><h2>Riepilogo carico</h2><span class="small">aggiornamento automatico</span></div><div class="summary-grid"><div class="metric"><div class="label">Peso merce</div><div class="value" id="cargoWeight">0 kg</div></div><div class="metric"><div class="label">Baricentro globale</div><div class="value" id="cargoCg">—</div></div><div class="metric"><div class="label">Quota merce su ralla</div><div class="value" id="kingpinLoad">0 kg</div></div><div class="metric"><div class="label">Quota merce su tridem</div><div class="value" id="tridemCargo">0 kg</div></div><div class="metric"><div class="label">Spazio vuoto davanti</div><div class="value" id="emptyFront">—</div></div><div class="metric"><div class="label">Spazio vuoto dietro</div><div class="value" id="emptyRear">—</div></div></div></section>
 <div class="dashboard"><section class="card"><div class="section-title"><h2>Pesi finali a terra</h2><span class="small">tara + effetto merce</span></div><div id="axes"></div><div class="notice">La barra del tridem è indicativa; i limiti vincolanti applicati sono massa totale, asse 1 sterzante, asse motore e regola del 25% di aderenza.</div></section><section class="card"><div class="section-title"><h2>Conformità legale</h2><span class="small">profilo 40 t internazionale</span></div><div class="legal-grid"><div class="legal-item"><div><b id="grossLabel">Massa totale ≤ 40.000 kg</b><div class="calc" id="grossCalc"></div></div><span id="grossBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="steerLabel">Asse 1 sterzante ≤ 7.500 kg</b><div class="calc" id="steerCalc"></div></div><span id="steerBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="driveLabel">Asse motore ≤ 11.500 kg</b><div class="calc" id="driveCalc"></div></div><span id="driveBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="tractorLabel">Peso totale motrice</b><div class="calc" id="tractorCalc"></div></div><span id="tractorBadge" class="badge na">N/D</span></div><div class="legal-item"><div><b id="adhLabel">Aderenza asse motore ≥ 25%</b><div class="calc" id="adhCalc"></div></div><span id="adhBadge" class="badge ok">OK</span></div></div><div id="allStatus" class="all-status ok">TUTTO A NORMA</div>
-<div id="fixPanel" class="fix-panel">
-  <div class="fix-title">Assetto non a norma? Prova a ricalcolare la disposizione</div>
-  <div class="fix-conditions">
-    <label class="fix-check"><input type="checkbox" id="condRotate" checked> Posso ruotare i colli di 90° se serve spazio</label>
-    <label class="fix-check"><input type="checkbox" id="condRepack" checked> Posso raggruppare i colli su più file (doppia/tripla) o distenderli in fila singola</label>
-    <label class="fix-check"><input type="checkbox" id="condReorder" checked> Posso riordinare / scambiare la posizione dei colli</label>
-  </div>
-  <div class="fix-note">Il carico resta attaccato alla parete anteriore. Solo se non basta, ti chiedo se posso arretrarlo.</div>
-  <div class="fix-actions">
-    <button class="btn btn-primary" id="autoFixBtn">🔧 Cerca disposizione a norma</button>
-    <button class="btn btn-ghost" id="undoFixBtn" style="display:none">↩ Ripristina disposizione precedente</button>
-  </div>
-  <div id="autoFixResult" class="fix-result"></div>
-  <div id="autoFixBackWrap" style="display:none;margin-top:10px"><button class="btn btn-primary" id="autoFixBackBtn">⬅ Prova anche ad arretrare il carico</button></div>
-</div>
 <div class="notice">Controllo orientato ai tre criteri richiesti. Non sostituisce carta di circolazione, limiti nazionali specifici, limiti del gruppo tridem, pneumatici/sospensioni, omologazioni o pesatura certificata.</div></section></div>
 <section class="card" style="margin-top:14px"><details><summary>Come viene calcolata la ripartizione <span class="small">formule</span></summary><div style="margin-top:12px" class="formula" id="formulaText"></div><div class="notice">Il modello è statico e tratta kingpin e centro del tridem come appoggi equivalenti. La posizione longitudinale del carico è quindi determinante. I valori qui sopra si aggiornano con i dati veicolo inseriti.</div></details></section>
 <div class="footer">Calcolatore statico di supporto al carico · dati veicolo incorporati nel file<span class="sig">by <b>Andrea Zollet</b></span></div></div>
@@ -932,8 +917,8 @@ function autoFix(){
     showFixResult(notes,false);
   }
 }
-$('#autoFixBtn').addEventListener('click',autoFix);
-$('#autoFixBackBtn').addEventListener('click',()=>{
+$('#autoFixBtn')?.addEventListener('click',autoFix);
+$('#autoFixBackBtn')?.addEventListener('click',()=>{
   const res=runAutoFix(true);
   const notes=[...res.notes];
   const s2=res.s2;
@@ -949,7 +934,7 @@ $('#autoFixBackBtn').addEventListener('click',()=>{
     showFixResult(notes,false);
   }
 });
-$('#undoFixBtn').addEventListener('click',()=>{if(!preFixSnapshot)return;restoreRows(preFixSnapshot);preFixSnapshot=null;$('#undoFixBtn').style.display='none';$('#autoFixBackWrap').style.display='none';const el=$('#autoFixResult');el.innerHTML='';el.className='fix-result'});
+$('#undoFixBtn')?.addEventListener('click',()=>{if(!preFixSnapshot)return;restoreRows(preFixSnapshot);preFixSnapshot=null;$('#undoFixBtn').style.display='none';$('#autoFixBackWrap').style.display='none';const el=$('#autoFixResult');el.innerHTML='';el.className='fix-result'});
 
 function asciiPdf(s){return String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,' ')}
 function pdfEscape(s){
@@ -1133,7 +1118,7 @@ function renderSavedLoads(){
   const meta=$('#savedMeta');
   if(meta)meta.textContent=names.length
     ?`${names.length} carich${names.length===1?'o':'i'} nel progetto. Usa “Salva JSON” in alto per scrivere il file.`
-    :'Nessun carico salvato nel progetto aperto.';
+    :'Nessun carico salvato nel progetto.';
 }
 function snapshot(name=''){
   const ct=currentTruck(),cr=currentTrailer();
@@ -1168,25 +1153,6 @@ $('#deleteLoadBtn').addEventListener('click',()=>{
   if(!confirm(`Eliminare il carico “${name}” dal progetto?`))return;
   const saved=getSavedLoads();delete saved[name];setSavedLoads(saved);renderSavedLoads();$('#saveName').value=''
 });
-
-
-function updateDeckDimsLabel(){
-  const el=$('#deckDimsLabel');
-  if(el)el.textContent=`${(VEHICLE.deckWidth/1000).toFixed(2).replace('.',',')} m × ${(VEHICLE.deckLength/1000).toFixed(2).replace('.',',')} m · vista dall'alto`;
-}
-function isDeckLandscape(){
-  return matchMedia('(orientation: landscape) and (max-height: 700px)').matches;
-}
-function updateDeckAspectRatio(){
-  const deck=$('#deck'),wrap=$('.deck-wrap'),ruler=$('#deckRuler');
-  if(!deck)return;
-  const land=isDeckLandscape();
-  if(wrap)wrap.classList.toggle('landscape',land);
-  if(ruler)ruler.classList.toggle('landscape',land);
-  deck.style.aspectRatio=land
-    ?`${VEHICLE.deckLength} / ${VEHICLE.deckWidth}`
-    :`${VEHICLE.deckWidth} / ${VEHICLE.deckLength}`;
-}
 
 function updateFormulaText(){
   const xKP=VEHICLE.frontWallToKingpin,kToT=VEHICLE.kingpinToTridem,lead=VEHICLE.fifthWheelLead,wheelbase=VEHICLE.tractorWheelbase,rear=wheelbase-lead;
@@ -1302,9 +1268,6 @@ async function openProjectData(data,name='truckpesa_progetto.json'){
   $('#projectFileName').textContent=PROJECT_FILE_NAME;
   await initializeVehicleSelectors();
   renderSavedLoads();
-  const selTruck=currentTruck(),selTrailer=currentTrailer();
-  if(!selTruck)throw new Error('Il progetto è stato letto, ma non è stato possibile inizializzare il trattore.');
-  if(!selTrailer)throw new Error('Il progetto è stato letto, ma non è stato possibile inizializzare il semirimorchio.');
   const total=migrated.trucks+migrated.trailers+migrated.loads;
   if(total>0){
     $('#savedMeta').textContent=`Recuperati dal vecchio archivio: ${migrated.trucks} trattori, ${migrated.trailers} semirimorchi, ${migrated.loads} carichi. Premi “Salva JSON” per inserirli definitivamente nel progetto.`;
