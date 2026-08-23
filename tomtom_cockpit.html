@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TomTom Truck Navigator Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;1,900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --tt-blue: #0050b3;
+            --tt-bg: rgba(18, 18, 22, 0.9);
+            --tt-red: #ff3b30;
+            --tt-yellow: #ffcc00;
+            --tt-text: #ffffff;
+            --tt-green: #34c759;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Barlow', sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; }
+
+        #viewport {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            perspective: 700px;
+            perspective-origin: 50% 75%;
+            overflow: hidden;
+        }
+
+        #map {
+            position: absolute;
+            width: 160%; height: 160%;
+            top: -30%; left: -30%;
+            transform: rotateX(44deg);
+            transform-origin: 50% 65%;
+            filter: saturate(1.1) brightness(0.9);
+            transition: transform 0.3s ease-out;
+        }
+
+        .hud-grid {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1000;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .hud-row-top { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; padding: 10px; gap: 10px; }
+        .hud-row-mid { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-grow: 1; padding: 0 10px; }
+        .hud-row-bot { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; padding: 10px; gap: 10px; }
+        
+        .clickable { pointer-events: auto; }
+
+        #panel-manovra {
+            background: var(--tt-bg);
+            border-radius: 10px;
+            padding: 10px;
+            max-width: 65%;
+            border-left: 5px solid var(--tt-blue);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .manovra-text { color: var(--tt-text); font-size: 18px; font-weight: 700; line-height: 1.2; }
+        .manovra-text span { display: block; font-size: 12px; color: #a0a0a5; font-weight: 400; }
+
+        .lane-box { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+        .lane { font-size: 14px; font-weight: 900; color: #444; }
+        .lane.ok { color: var(--tt-green); text-shadow: 0 0 5px rgba(52,199,89,0.5); }
+
+        #zoom-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .zoom-btn {
+            width: 44px; height: 44px;
+            background: var(--tt-bg);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; font-size: 24px; font-weight: bold;
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;
+        }
+
+        #toll-display {
+            background: var(--tt-bg);
+            border-radius: 8px;
+            padding: 6px 12px;
+            display: none;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #toll-display.active { display: flex; }
+        .gate { padding: 2px 8px; border-radius: 4px; font-weight: 900; font-size: 12px; color: #fff; }
+        .gate-t { background: var(--tt-yellow); color: #000; border: 2px solid #fff; }
+
+        #overtaking-sign {
+            width: 55px; height: 55px;
+            background: #fff;
+            border: 5px solid var(--tt-red);
+            border-radius: 50%;
+            display: none;
+            align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #overtaking-sign.active { display: flex; }
+
+        #route-bar {
+            background: var(--tt-bg);
+            border-radius: 12px;
+            width: 75px; height: 220px;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 8px 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .bar-eta { font-size: 15px; font-weight: 700; color: var(--tt-text); text-align: center; }
+        .bar-axis { position: relative; width: 4px; flex-grow: 1; background: linear-gradient(to bottom, var(--tt-blue), #333); border-radius: 2px; margin: 6px 0; }
+        .bar-node { position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 10px; width: 18px; height: 18px; border-radius: 50%; background: #111; border: 1px solid #fff; display: flex; align-items: center; justify-content: center; }
+
+        #dash-speed {
+            background: var(--tt-bg);
+            border-radius: 10px;
+            padding: 8px;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .speed-num { font-size: 32px; font-weight: 900; color: var(--tt-text); font-style: italic; line-height: 1; }
+        .speed-limit { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 4px solid var(--tt-red); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: #000; }
+        .speed-limit.warn { animation: alert-flash 0.3s infinite alternate; }
+
+        #search-widget { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        .search-input-field { background: var(--tt-bg); border: 1px solid rgba(255,255,255,0.2); padding: 8px; border-radius: 6px; color: #fff; font-size: 13px; width: 160px; pointer-events: auto; }
+        .search-btn { background: var(--tt-blue); color: #fff; border: none; padding: 6px 10px; border-radius: 4px; font-weight: 700; font-size: 11px; cursor: pointer; pointer-events: auto; }
+
+        @keyframes alert-flash { 0% { background: #fff; } 100% { background: var(--tt-red); color: #fff; } }
+    </style>
+</head>
+<body>
+
+    <div id="viewport">
+        <div id="map"></div>
+    </div>
+
+    <div class="hud-grid">
+        <div class="hud-row-top">
+            <div id="panel-manovra" class="clickable">
+                <div class="manovra-text" id="hud-manovra-dir">GPS in Ricerca...<span>Calcola un percorso HGV</span></div>
+                <div class="lane-box">
+                    <div class="lane ok">↑</div>
+                    <div class="lane">↑</div>
+                    <div class="lane" style="color:var(--tt-red); opacity:0.2;">X</div>
+                </div>
+            </div>
+
+            <div id="search-widget">
+                <input type="text" id="destination-addr" class="search-input-field" placeholder="Inserisci destinazione...">
+                <button class="search-btn" onclick="requestRealHGVRoute()">VAI (HGV)</button>
+            </div>
+        </div>
+
+        <div class="hud-row-mid">
+            <div id="zoom-controls" class="clickable">
+                <div class="zoom-btn" onclick="map.zoomIn()">+</div>
+                <div class="zoom-btn" onclick="map.zoomOut()">-</div>
+            </div>
+            
+            <div id="overtaking-sign">
+                <div style="display:flex; align-items:flex-end; gap:2px;">
+                    <div style="width:14px; height:10px; background:#000; border-radius:2px;"></div>
+                    <div style="width:16px; height:14px; background:var(--tt-red); border-radius:2px;"></div>
+                </div>
+            </div>
+            
+            <div id="toll-display">
+                <div class="gate gate-t">T (HGV)</div>
+                <div class="gate" style="background:var(--tt-blue)">CARTE</div>
+            </div>
+        </div>
+
+        <div class="hud-row-bot">
+            <div id="dash-speed" class="clickable">
+                <div>
+                    <div id="val-speed" class="speed-num">0</div>
+                    <span style="font-size:9px; color:#a0a0a5; font-weight:700; text-transform:uppercase;">km/h</span>
+                </div>
+                <div id="val-limit" class="speed-limit">50</div>
+            </div>
+
+            <div id="route-bar">
+                <div class="bar-eta" id="bar-eta-val">--:--</div>
+                <div class="bar-axis">
+                    <div class="bar-node" style="top:0%; border-color:var(--tt-green)">🏁</div>
+                    <div class="bar-node" id="node-toll" style="top:35%; display:none;">🛃</div>
+                    <div class="bar-node" id="node-warning" style="top:70%; display:none; background:var(--tt-red)">⚠</div>
+                    <div class="bar-node" style="bottom:0%; border-color:var(--tt-blue)">▲</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map, truckMarker, routePolyline;
+        let lastLat = null, lastLng = null;
+        const orsApiKey = '5b3ce3597851110001cf6248c89c898c61ef421b8b80983d5bc0e386'; 
+
+        function initApp() {
+            lastLat = 45.4642;
+            lastLng = 9.1900;
+            
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lastLat, lastLng], 17);
+            L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 21, subdomains:['mt0','mt1','mt2','mt3'] }).addTo(map);
+            
+            truckMarker = L.circleMarker([lastLat, lastLng], { radius: 9, fillColor: '#0050b3', color: '#fff', weight: 3, fillOpacity: 1 }).addTo(map);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(updateDeviceLocation, handleGPSError, { enableHighAccuracy: true, maximumAge: 1000 });
+            }
+        }
+
+        function updateDeviceLocation(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            let speed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
+            let heading = position.coords.heading ? position.coords.heading : 0;
+
+            document.getElementById('val-speed').innerText = speed;
+
+            const limitWidget = document.getElementById('val-limit');
+            if (speed > 50) { limitWidget.classList.add('warn'); } else { limitWidget.classList.remove('warn'); }
+
+            if (!heading && lastLat !== null) {
+                let dLng = lng - lastLng;
+                let dLat = lat - lastLat;
+                heading = Math.atan2(dLng, dLat) * (180 / Math.PI);
+                if (heading < 0) heading += 360;
+            }
+
+            map.panTo([lat, lng]);
+            truckMarker.setLatLng([lat, lng]);
+            document.getElementById('map').style.transform = `rotateX(44deg) rotateZ(${-heading}deg)`;
+
+            lastLat = lat;
+            lastLng = lng;
+            document.getElementById('hud-manovra-dir').innerHTML = "In navigazione reale<span>Segui il percorso stabilito</span>";
+        }
+
+        function requestRealHGVRoute() {
+            const destText = document.getElementById('destination-addr').value;
+            if(!destText || !lastLat) return;
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destText)}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.length === 0) { alert("Destinazione non trovata"); return; }
+                const destLat = parseFloat(data.lat);
+                const destLng = parseFloat(data.lon);
+
+                const bodyPayload = {
+                    coordinates: [[lastLng, lastLat], [destLng, destLat]],
+                    profile: "driving-hgv",
+                    options: {
+                        vehicle_type: "heavy_truck",
+                        profile_params: {
+                            restrictions: {
+                                height: 4.0,
+                                weight: 40.0,
+                                width: 2.55
+                            }
+                        }
+                    },
+                    radiuses: [1000, -1] 
+                };
+
+                fetch(`https://api.openrouteservice.org/v2/directions/driving-hgv/geojson`, {
+                    method: 'POST',
+                    headers: { 'Authorization': orsApiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bodyPayload)
+                })
+                .then(routeRes => routeRes.json())
+                .then(routeData => {
+                    if (routePolyline) map.removeLayer(routePolyline);
+
+                    routePolyline = L.geoJSON(routeData, {
+                        style: { color: '#0076ff', weight: 6, opacity: 0.85 }
+                    }).addTo(map);
+
+                    const props = routeData.features.properties.summary;
+                    const kmRimanenti = Math.round(props.distance / 1000);
+                    const minutiViaggio = Math.round(props.duration / 60);
+
+                    document.getElementById('bar-eta-val').innerText = `+${minutiViaggio}m`;
+                    document.getElementById('hud-manovra-dir').innerHTML = `HGV Route OK <span>Distanza: ${kmRimanenti} km</span>`;
+                    
+                    detectRouteFeatures(kmRimanenti);
+                }).catch(() => alert("Errore nel calcolo del percorso HGV. Modifica la destinazione o verifica i parametri."));
+            });
+        }
+
+        function detectRouteFeatures(distance) {
+            if(distance > 30) {
+                document.getElementById('node-toll').style.display = 'flex';
+                document.getElementById('node-warning').style.display = 'flex';
+                document.getElementById('overtaking-sign').style.display = 'flex';
+                document.getElementById('toll-display').style.display = 'flex';
+            } else {
+                document.getElementById('node-toll').style.display = 'none';
+                document.getElementById('node-warning').style.display = 'none';
+                document.getElementById('overtaking-sign').style.display = 'none';
+                document.getElementById('toll-display').style.display = 'none';
+            }
+        }
+
+        function handleGPSError(err) {
+            console.warn("Uso posizione interna di fallback (GPS assente o al chiuso).");
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
