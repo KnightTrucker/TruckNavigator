@@ -8145,7 +8145,27 @@ function ktn55CancelSearchChoice(){
     if(!r||!r.access||!r.access.conditional.length){if(after)after(true);return}
     if(r._accessDecision==='use'){if(after)after(true);return}
     var ov=document.getElementById('b10AccessOverlay'),lst=document.getElementById('b10AccessList');
-    if(!ov||!lst){if(after)after(true);return}
+    /* v83 fail-safe: never auto-authorize a conditional/private/customer/delivery access
+       just because the custom overlay failed to mount. Fall back to a native driver
+       confirmation instead of silently continuing. */
+    if(!ov||!lst){
+      var msg='Il percorso include un accesso condizionato: '+b10AccessSummary(r)+'\n\nConfermi di essere autorizzato a usarlo?';
+      var use=false;
+      try{use=window.confirm(msg)}catch(e){use=false}
+      r._accessDecision=use?'use':'avoid';
+      if(use){if(after)after(true);return}
+      var alt=routes.findIndex(function(x,j){return j!==i&&x.access&&x.access.conditional.length===0});
+      if(alt>=0){
+        selected=alt;
+        if(currentCtx)renderStandard(currentCtx);
+        drawAll();
+        toast('Scelto un percorso alternativo senza accessi condizionati.');
+      }else{
+        toast('Accesso condizionato non autorizzato: navigazione non avviata.');
+      }
+      if(after)after(false);
+      return;
+    }
     lst.textContent=b10AccessSummary(r);
     b10AccessPending={index:i,after:after};
     ov.classList.add('open');ov.setAttribute('aria-hidden','false');
