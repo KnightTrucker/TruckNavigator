@@ -2,9 +2,7 @@ name: Update road safety database
 
 on:
   workflow_dispatch:
-
   schedule:
-    # Ogni notte alle 02:17 UTC
     - cron: "17 2 * * *"
 
 permissions:
@@ -14,1292 +12,185 @@ concurrency:
   group: update-road-safety
   cancel-in-progress: false
 
-
 jobs:
-
-  # ============================================================
-  # DOWNLOAD DEI PAESI
-  # ============================================================
-
   download-country:
-
     name: ${{ matrix.name }}
-
     runs-on: ubuntu-latest
-
     timeout-minutes: 12
-
     strategy:
-
       fail-fast: false
-
-      # Non facciamo 9 richieste Overpass tutte insieme.
       max-parallel: 3
-
       matrix:
-
         include:
-
-          - code: IT
-            name: Italy
-
-          - code: CH
-            name: Switzerland
-
-          - code: FR
-            name: France
-
-          - code: DE
-            name: Germany
-
-          - code: BE
-            name: Belgium
-
-          - code: LU
-            name: Luxembourg
-
-          - code: NL
-            name: Netherlands
-
-          - code: AT
-            name: Austria
-
-          - code: ES
-            name: Spain
-
+          - { code: IT, name: Italy }
+          - { code: CH, name: Switzerland }
+          - { code: FR, name: France }
+          - { code: DE, name: Germany }
+          - { code: BE, name: Belgium }
+          - { code: LU, name: Luxembourg }
+          - { code: NL, name: Netherlands }
+          - { code: AT, name: Austria }
+          - { code: ES, name: Spain }
 
     steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-
       - name: Download ${{ matrix.name }}
         shell: bash
-
         env:
-
           COUNTRY_CODE: ${{ matrix.code }}
-
           COUNTRY_NAME: ${{ matrix.name }}
-
         run: |
-
           python - <<'PY'
-
-          import json
-          import os
-          import time
-          import urllib.parse
-          import urllib.request
-
+          import json, os, time, urllib.parse, urllib.request
           from datetime import datetime, timezone
           from pathlib import Path
 
-
-          CODE = os.environ["COUNTRY_CODE"]
-
-          NAME = os.environ["COUNTRY_NAME"]
-
-
-          OUTPUT = Path(
-              f"country_{CODE}.json"
-          )
-
-
-          OLD_DATABASE = Path(
-              "road_safety.json"
-          )
-
-
-          ENDPOINTS = [
-
-              "https://overpass-api.de/api/interpreter",
-
-              "https://overpass.kumi.systems/api/interpreter",
-
-              "https://overpass.nchc.org.tw/api/interpreter"
-
+          CODE=os.environ["COUNTRY_CODE"]; NAME=os.environ["COUNTRY_NAME"]
+          OUT=Path(f"country_{CODE}.json")
+          OLD_SPLIT=Path("road_safety")/f"{CODE}.json"
+          OLD_MERGED=Path("road_safety.json")
+          ENDPOINTS=[
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://overpass.nchc.org.tw/api/interpreter"
           ]
 
+          def num(v):
+            if v is None:return None
+            s=str(v).lower().replace(",",".")
+            for t in ("tonnes","tonne","tons","ton","meters","meter","metres","metre"):s=s.replace(t,"")
+            try:return float(s.strip())
+            except:return None
 
-          # =====================================================
-          # CONVERSIONE VALORI NUMERICI
-          # =====================================================
-
-          def number(value):
-
-              if value is None:
-                  return None
-
-
-              s = str(value).strip().lower()
-
-
-              replacements = (
-
-                  "tonnes",
-
-                  "tonne",
-
-                  "tons",
-
-                  "ton",
-
-                  "meters",
-
-                  "meter",
-
-                  "metres",
-
-                  "metre"
-
-              )
-
-
-              for token in replacements:
-
-                  s = s.replace(
-                      token,
-                      ""
-                  )
-
-
-              s = s.replace(
-                  ",",
-                  "."
-              ).strip()
-
-
+          def previous():
+            for p in (OLD_SPLIT,OLD_MERGED):
+              if not p.exists():continue
               try:
+                o=json.loads(p.read_text(encoding="utf-8")); a=o.get("items",[])
+                return a if p==OLD_SPLIT else [x for x in a if x.get("country")==CODE]
+              except:pass
+            return []
 
-                  return float(s)
-
-              except:
-
-                  return None
-
-
-          # =====================================================
-          # RECUPERA DATI PRECEDENTI DEL PAESE
-          # =====================================================
-
-          def previous_country_items():
-
-              if not OLD_DATABASE.exists():
-
-                  return []
-
-
-              try:
-
-                  old = json.loads(
-                      OLD_DATABASE.read_text(
-                          encoding="utf-8"
-                      )
-                  )
-
-
-                  items = old.get(
-                      "items",
-                      []
-                  )
-
-
-                  return [
-
-                      item
-
-                      for item in items
-
-                      if item.get("country")
-                      == CODE
-
-                  ]
-
-
-              except Exception as error:
-
-                  print(
-                      "Impossibile leggere DB precedente:",
-                      error
-                  )
-
-                  return []
-
-
-          # =====================================================
-          # QUERY OVERPASS
-          # =====================================================
-
-          def build_query():
-
-              return f'''
-
-              [out:json][timeout:120];
-
-              area["ISO3166-1"="{CODE}"][admin_level=2]->.country;
-
-              (
-
-                nwr(area.country)["hgv"];
-
-                nwr(area.country)["hgv:conditional"];
-
-
-                nwr(area.country)["maxheight"];
-
-                nwr(area.country)["maxheight:conditional"];
-
-
-                nwr(area.country)["maxweight"];
-
-                nwr(area.country)["maxweight:conditional"];
-
-
-                nwr(area.country)["maxwidth"];
-
-                nwr(area.country)["maxwidth:conditional"];
-
-
-                nwr(area.country)["maxlength"];
-
-                nwr(area.country)["maxlength:conditional"];
-
-
-                nwr(area.country)["maxaxleload"];
-
-                nwr(area.country)["maxaxleload:conditional"];
-
-
-                node(area.country)["highway"="speed_camera"];
-
-              );
-
-              out center tags;
-
-              '''
-
-
-          # =====================================================
-          # DOWNLOAD
-          # =====================================================
+          query=f'''
+          [out:json][timeout:120];
+          area["ISO3166-1"="{CODE}"][admin_level=2]->.country;
+          (
+            nwr(area.country)["hgv"];
+            nwr(area.country)["hgv:conditional"];
+            nwr(area.country)["maxheight"];
+            nwr(area.country)["maxheight:conditional"];
+            nwr(area.country)["maxweight"];
+            nwr(area.country)["maxweight:conditional"];
+            nwr(area.country)["maxwidth"];
+            nwr(area.country)["maxwidth:conditional"];
+            nwr(area.country)["maxlength"];
+            nwr(area.country)["maxlength:conditional"];
+            nwr(area.country)["maxaxleload"];
+            nwr(area.country)["maxaxleload:conditional"];
+            node(area.country)["highway"="speed_camera"];
+          );
+          out center tags;
+          '''
+          payload=urllib.parse.urlencode({"data":query}).encode()
 
           def download():
-
-              query = build_query()
-
-
-              payload = urllib.parse.urlencode(
-
-                  {
-                      "data": query
-                  }
-
-              ).encode()
-
-
-              errors = []
-
-
-              for endpoint in ENDPOINTS:
-
-
-                  try:
-
-                      print(
-                          f"{CODE}: provo {endpoint}"
-                      )
-
-
-                      request = urllib.request.Request(
-
-                          endpoint,
-
-                          data=payload,
-
-                          headers={
-
-                              "User-Agent":
-                              "KnightTruckerNavy-RoadSafety/5.0",
-
-                              "Content-Type":
-                              "application/x-www-form-urlencoded"
-
-                          },
-
-                          method="POST"
-
-                      )
-
-
-                      with urllib.request.urlopen(
-
-                          request,
-
-                          timeout=150
-
-                      ) as response:
-
-
-                          raw = response.read()
-
-
-                          print(
-                              f"{CODE}: ricevuti {len(raw)} byte"
-                          )
-
-
-                          return json.loads(
-                              raw.decode("utf-8")
-                          )
-
-
-                  except Exception as error:
-
-
-                      errors.append(
-                          f"{endpoint}: {error}"
-                      )
-
-
-                      print(
-                          f"{CODE}: errore:",
-                          error
-                      )
-
-
-                      time.sleep(3)
-
-
-              raise RuntimeError(
-                  " | ".join(errors)
-              )
-
-
-          # =====================================================
-          # CONVERSIONE RECORD
-          # =====================================================
-
-          def convert(element):
-
-
-              tags = element.get(
-                  "tags"
-              ) or {}
-
-
-              osm_type = element.get(
-                  "type"
-              )
-
-
-              osm_id = element.get(
-                  "id"
-              )
-
-
-              if not osm_type or osm_id is None:
-
-                  return None
-
-
-              lat = element.get(
-                  "lat"
-              )
-
-
-              lon = element.get(
-                  "lon"
-              )
-
-
-              center = element.get(
-                  "center"
-              ) or {}
-
-
-              if lat is None:
-
-                  lat = center.get(
-                      "lat"
-                  )
-
-
-              if lon is None:
-
-                  lon = center.get(
-                      "lon"
-                  )
-
-
-              is_camera = (
-
-                  tags.get("highway")
-                  == "speed_camera"
-
-              )
-
-
-              is_restriction = any(
-
-                  key in tags
-
-                  for key in (
-
-                      "hgv",
-
-                      "hgv:conditional",
-
-                      "maxheight",
-
-                      "maxheight:conditional",
-
-                      "maxweight",
-
-                      "maxweight:conditional",
-
-                      "maxwidth",
-
-                      "maxwidth:conditional",
-
-                      "maxlength",
-
-                      "maxlength:conditional",
-
-                      "maxaxleload",
-
-                      "maxaxleload:conditional"
-
-                  )
-
-              )
-
-
-              if not is_camera and not is_restriction:
-
-                  return None
-
-
-              item = {
-
-                  "id":
-                      f"{osm_type}/{osm_id}",
-
-                  "country":
-                      CODE,
-
-                  "countryName":
-                      NAME,
-
-                  "osmType":
-                      osm_type,
-
-                  "osmId":
-                      osm_id,
-
-                  "lat":
-                      lat,
-
-                  "lon":
-                      lon,
-
-                  "name":
-                      tags.get("name")
-                      or tags.get("ref")
-                      or "",
-
-                  "road":
-                      tags.get("name")
-                      or "",
-
-                  "source":
-                      "OpenStreetMap",
-
-                  "type":
-                      (
-                          "speed_camera"
-
-                          if is_camera
-
-                          else "hgv_restriction"
-                      ),
-
-                  "tags": {}
-
-              }
-
-
-              useful_tags = (
-
-                  "hgv",
-
-                  "hgv:conditional",
-
-                  "access",
-
-                  "access:conditional",
-
-                  "maxheight",
-
-                  "maxheight:conditional",
-
-                  "maxweight",
-
-                  "maxweight:conditional",
-
-                  "maxwidth",
-
-                  "maxwidth:conditional",
-
-                  "maxlength",
-
-                  "maxlength:conditional",
-
-                  "maxaxleload",
-
-                  "maxaxleload:conditional",
-
-                  "traffic_sign",
-
-                  "highway",
-
-                  "ref",
-
-                  "name"
-
-              )
-
-
-              for tag in useful_tags:
-
-                  if tag in tags:
-
-                      item["tags"][tag] = tags[tag]
-
-
-              # ================================================
-              # HGV
-              # ================================================
-
-              if "hgv" in tags:
-
-
-                  hgv = str(
-                      tags["hgv"]
-                  ).lower()
-
-
-                  item["hgvRaw"] = (
-                      tags["hgv"]
-                  )
-
-
-                  item["hgv"] = (
-
-                      False
-
-                      if hgv in (
-                          "no",
-                          "private"
-                      )
-
-                      else True
-
-                  )
-
-
-              # ================================================
-              # LIMITI NUMERICI
-              # ================================================
-
-              for field in (
-
-                  "maxheight",
-
-                  "maxweight",
-
-                  "maxwidth",
-
-                  "maxlength",
-
-                  "maxaxleload"
-
-              ):
-
-
-                  value = number(
-                      tags.get(field)
-                  )
-
-
-                  if value is not None:
-
-                      item[field] = value
-
-
-              # ================================================
-              # RESTRIZIONI CONDIZIONALI
-              # ================================================
-
-              conditional = {}
-
-
-              for field in (
-
-                  "hgv:conditional",
-
-                  "access:conditional",
-
-                  "maxheight:conditional",
-
-                  "maxweight:conditional",
-
-                  "maxwidth:conditional",
-
-                  "maxlength:conditional",
-
-                  "maxaxleload:conditional"
-
-              ):
-
-
-                  if field in tags:
-
-                      conditional[field] = (
-                          tags[field]
-                      )
-
-
-              if conditional:
-
-                  item["conditional"] = (
-                      conditional
-                  )
-
-
-              return item
-
-
-          # =====================================================
-          # ESECUZIONE
-          # =====================================================
-
-          now = datetime.now(
-              timezone.utc
-          )
-
-
+            errs=[]
+            for ep in ENDPOINTS:
+              try:
+                req=urllib.request.Request(ep,data=payload,method="POST",headers={"User-Agent":"KnightTruckerNavy-RoadSafety/6.0","Content-Type":"application/x-www-form-urlencoded"})
+                with urllib.request.urlopen(req,timeout=150) as r:return json.loads(r.read().decode("utf-8"))
+              except Exception as e:errs.append(str(e));time.sleep(3)
+            raise RuntimeError(" | ".join(errs))
+
+          def convert(el):
+            t=el.get("tags") or {}; typ=el.get("type"); oid=el.get("id")
+            if not typ or oid is None:return None
+            lat=el.get("lat"); lon=el.get("lon"); c=el.get("center") or {}
+            if lat is None:lat=c.get("lat")
+            if lon is None:lon=c.get("lon")
+            cam=t.get("highway")=="speed_camera"
+            rst=any(k in t for k in ("hgv","hgv:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional"))
+            if not cam and not rst:return None
+            x={"id":f"{typ}/{oid}","country":CODE,"countryName":NAME,"osmType":typ,"osmId":oid,"lat":lat,"lon":lon,"name":t.get("name") or t.get("ref") or "","road":t.get("name") or "","source":"OpenStreetMap","type":"speed_camera" if cam else "hgv_restriction","tags":{}}
+            for k in ("hgv","hgv:conditional","access","access:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional","traffic_sign","highway","ref","name"):
+              if k in t:x["tags"][k]=t[k]
+            if "hgv" in t:
+              h=str(t["hgv"]).lower();x["hgvRaw"]=t["hgv"];x["hgv"]=False if h in ("no","private") else True
+            for k in ("maxheight","maxweight","maxwidth","maxlength","maxaxleload"):
+              n=num(t.get(k))
+              if n is not None:x[k]=n
+            return x
+
+          now=datetime.now(timezone.utc)
           try:
-
-              raw = download()
-
-
-              records = []
-
-
-              for element in raw.get(
-                  "elements",
-                  []
-              ):
-
-
-                  item = convert(
-                      element
-                  )
-
-
-                  if item is not None:
-
-                      records.append(
-                          item
-                      )
-
-
-              # Rimuove duplicati OSM
-
-              unique = {}
-
-
-              for item in records:
-
-                  unique[
-                      item["id"]
-                  ] = item
-
-
-              records = list(
-                  unique.values()
-              )
-
-
-              records.sort(
-
-                  key=lambda x: (
-
-                      x.get(
-                          "type",
-                          ""
-                      ),
-
-                      x.get(
-                          "id",
-                          ""
-                      )
-
-                  )
-
-              )
-
-
-              result = {
-
-                  "country":
-                      CODE,
-
-                  "countryName":
-                      NAME,
-
-                  "status":
-                      "updated",
-
-                  "updatedAt":
-                      int(
-                          now.timestamp()
-                          * 1000
-                      ),
-
-                  "records":
-                      len(records),
-
-                  "items":
-                      records
-
-              }
-
-
-              print(
-                  f"{NAME}: {len(records)} record aggiornati"
-              )
-
-
-          except Exception as error:
-
-
-              print(
-                  f"{NAME}: aggiornamento fallito"
-              )
-
-
-              print(
-                  str(error)
-              )
-
-
-              old_records = (
-                  previous_country_items()
-              )
-
-
-              result = {
-
-                  "country":
-                      CODE,
-
-                  "countryName":
-                      NAME,
-
-                  "status":
-                      "fallback",
-
-                  "error":
-                      str(error),
-
-                  "updatedAt":
-                      int(
-                          now.timestamp()
-                          * 1000
-                      ),
-
-                  "records":
-                      len(old_records),
-
-                  "items":
-                      old_records
-
-              }
-
-
-              print(
-                  f"{NAME}: mantengo {len(old_records)} record precedenti"
-              )
-
-
-          OUTPUT.write_text(
-
-              json.dumps(
-
-                  result,
-
-                  ensure_ascii=False,
-
-                  separators=(
-                      ",",
-                      ":"
-                  )
-
-              ),
-
-              encoding="utf-8"
-
-          )
-
-
-          print(
-              f"Creato {OUTPUT}"
-          )
-
+            raw=download(); items=[convert(e) for e in raw.get("elements",[])];items=[x for x in items if x]
+            items=list({x["id"]:x for x in items}.values());status="updated";err=""
+          except Exception as e:
+            items=previous();status="fallback";err=str(e)
+
+          OUT.write_text(json.dumps({"version":7,"country":CODE,"countryName":NAME,"status":status,"error":err,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"items":items},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          print(CODE,status,len(items))
           PY
 
-
-      - name: Upload country database
-        uses: actions/upload-artifact@v4
-
+      - uses: actions/upload-artifact@v4
         with:
-
           name: road-safety-${{ matrix.code }}
-
           path: country_${{ matrix.code }}.json
-
           retention-days: 1
 
-
-
-  # ============================================================
-  # UNIONE DEI 9 PAESI
-  # ============================================================
-
   merge-database:
-
     name: Merge road safety database
-
-    needs:
-      - download-country
-
+    needs: [download-country]
     runs-on: ubuntu-latest
-
     timeout-minutes: 10
-
-
     steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-
-      - name: Download country databases
-        uses: actions/download-artifact@v4
-
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-
           pattern: road-safety-*
-
           path: country-data
-
           merge-multiple: true
 
-
-      - name: Merge databases
+      - name: Build merged and split databases
         shell: bash
-
         run: |
-
           python - <<'PY'
-
           import json
-
           from datetime import datetime, timezone
-
           from pathlib import Path
 
-
-          DATA_DIR = Path(
-              "country-data"
-          )
-
-
-          OUTPUT = Path(
-              "road_safety.json"
-          )
-
-
-          country_files = sorted(
-              DATA_DIR.glob(
-                  "country_*.json"
-              )
-          )
-
-
-          if not country_files:
-
-              raise RuntimeError(
-                  "Nessun database paese trovato"
-              )
-
-
-          all_items = []
-
-          countries = []
-
-          failed_countries = []
-
-
-          for file in country_files:
-
-
-              data = json.loads(
-                  file.read_text(
-                      encoding="utf-8"
-                  )
-              )
-
-
-              code = data.get(
-                  "country"
-              )
-
-
-              name = data.get(
-                  "countryName"
-              )
-
-
-              status = data.get(
-                  "status",
-                  "unknown"
-              )
-
-
-              records = data.get(
-                  "items",
-                  []
-              )
-
-
-              countries.append({
-
-                  "code":
-                      code,
-
-                  "name":
-                      name,
-
-                  "records":
-                      len(records),
-
-                  "status":
-                      status
-
-              })
-
-
-              if status != "updated":
-
-                  failed_countries.append({
-
-                      "code":
-                          code,
-
-                      "name":
-                          name,
-
-                      "error":
-                          data.get(
-                              "error",
-                              "Aggiornamento non riuscito"
-                          ),
-
-                      "previousRecordsKept":
-                          len(records)
-
-                  })
-
-
-              all_items.extend(
-                  records
-              )
-
-
-          # =====================================================
-          # ELIMINA DUPLICATI
-          # =====================================================
-
-          unique = {}
-
-
-          for item in all_items:
-
-
-              key = (
-
-                  str(
-                      item.get(
-                          "country",
-                          ""
-                      )
-                  )
-
-                  + ":"
-
-                  + str(
-                      item.get(
-                          "id",
-                          ""
-                      )
-                  )
-
-              )
-
-
-              unique[key] = item
-
-
-          items = list(
-              unique.values()
-          )
-
-
-          items.sort(
-
-              key=lambda x: (
-
-                  x.get(
-                      "country",
-                      ""
-                  ),
-
-                  x.get(
-                      "type",
-                      ""
-                  ),
-
-                  x.get(
-                      "id",
-                      ""
-                  )
-
-              )
-
-          )
-
-
-          hgv_count = sum(
-
-              1
-
-              for item in items
-
-              if item.get(
-                  "type"
-              ) == "hgv_restriction"
-
-          )
-
-
-          camera_count = sum(
-
-              1
-
-              for item in items
-
-              if item.get(
-                  "type"
-              ) == "speed_camera"
-
-          )
-
-
-          now = datetime.now(
-              timezone.utc
-          )
-
-
-          result = {
-
-              "version":
-                  6,
-
-              "updatedAt":
-                  int(
-                      now.timestamp()
-                      * 1000
-                  ),
-
-              "updatedAtIso":
-                  now.isoformat().replace(
-                      "+00:00",
-                      "Z"
-                  ),
-
-              "source":
-                  "OpenStreetMap / Overpass API",
-
-              "scope":
-                  "IT, CH, FR, DE, BE, LU, NL, AT, ES",
-
-              "description":
-                  "KnightTruckerNavy road safety database",
-
-              "counts": {
-
-                  "total":
-                      len(items),
-
-                  "hgvRestrictions":
-                      hgv_count,
-
-                  "speedCameras":
-                      camera_count,
-
-                  "countries":
-                      len(countries),
-
-                  "updatedCountries":
-                      sum(
-                          1
-                          for c in countries
-                          if c["status"] == "updated"
-                      ),
-
-                  "fallbackCountries":
-                      len(failed_countries)
-
-              },
-
-              "countries":
-                  countries,
-
-              "failedCountries":
-                  failed_countries,
-
-              "items":
-                  items
-
-          }
-
-
-          OUTPUT.write_text(
-
-              json.dumps(
-
-                  result,
-
-                  ensure_ascii=False,
-
-                  separators=(
-                      ",",
-                      ":"
-                  )
-
-              ),
-
-              encoding="utf-8"
-
-          )
-
-
-          print()
-          print("=" * 60)
-
-          print(
-              "KNIGHTTRUCKERNAVY DATABASE COMPLETATO"
-          )
-
-          print(
-              "Record totali:",
-              len(items)
-          )
-
-          print(
-              "Restrizioni HGV:",
-              hgv_count
-          )
-
-          print(
-              "Autovelox:",
-              camera_count
-          )
-
-          print(
-              "Paesi aggiornati:",
-              result["counts"]["updatedCountries"]
-          )
-
-          print(
-              "Paesi con dati precedenti:",
-              result["counts"]["fallbackCountries"]
-          )
-
-
-          for country in countries:
-
-              print(
-
-                  country["code"],
-
-                  country["records"],
-
-                  country["status"]
-
-              )
-
-
-          print("=" * 60)
-
+          files=sorted(Path("country-data").glob("country_*.json"))
+          if not files:raise RuntimeError("Nessun database paese trovato")
+          folder=Path("road_safety");folder.mkdir(exist_ok=True)
+          all_items=[];countries=[];failed=[];manifest=[]
+          now=datetime.now(timezone.utc)
+
+          for f in files:
+            d=json.loads(f.read_text(encoding="utf-8"));code=d["country"];name=d["countryName"];items=d.get("items",[]);status=d.get("status","unknown")
+            obj={"version":7,"country":code,"countryName":name,"status":status,"updatedAt":d.get("updatedAt"),"updatedAtIso":d.get("updatedAtIso"),"source":"OpenStreetMap / Overpass API","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera")},"items":items}
+            (folder/f"{code}.json").write_text(json.dumps(obj,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+            countries.append({"code":code,"name":name,"records":len(items),"status":status})
+            manifest.append({"code":code,"name":name,"file":f"./road_safety/{code}.json","records":len(items),"status":status})
+            if status!="updated":failed.append({"code":code,"name":name,"error":d.get("error",""),"previousRecordsKept":len(items)})
+            all_items.extend(items)
+
+          unique={f'{x.get("country","")}:{x.get("id","")}':x for x in all_items};items=list(unique.values())
+          result={"version":7,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"source":"OpenStreetMap / Overpass API","scope":"IT, CH, FR, DE, BE, LU, NL, AT, ES","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera"),"countries":len(countries),"updatedCountries":sum(1 for x in countries if x["status"]=="updated"),"fallbackCountries":len(failed)},"countries":countries,"failedCountries":failed,"items":items}
+          Path("road_safety.json").write_text(json.dumps(result,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          (folder/"manifest.json").write_text(json.dumps({"version":1,"updatedAt":result["updatedAt"],"updatedAtIso":result["updatedAtIso"],"countries":manifest},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          print(result["counts"])
           PY
 
-
-      # ========================================================
-      # COMMIT SU GITHUB
-      # ========================================================
-
-      - name: Commit road_safety.json
+      - name: Commit databases
         shell: bash
-
         run: |
-
-          if git diff --quiet -- road_safety.json; then
-
-            echo "Nessuna modifica al database."
-
-            exit 0
-
-          fi
-
-
-          git config \
-            user.name \
-            "github-actions[bot]"
-
-
-          git config \
-            user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-
-
-          git add \
-            road_safety.json
-
-
-          git commit \
-            -m "Aggiornamento database sicurezza stradale"
-
-
+          if git diff --quiet -- road_safety.json road_safety/; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add road_safety.json road_safety/
+          git commit -m "Aggiornamento database sicurezza stradale"
           git push
