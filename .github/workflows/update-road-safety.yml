@@ -1,0 +1,337 @@
+name: Update road safety database
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # Aggiornamento automatico ogni giorno alle 03:17 UTC
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-road-safety
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Update road_safety.json from OpenStreetMap
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import time
+          import urllib.parse
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          OUT = Path("road_safety.json")
+
+          ENDPOINTS = [
+              "https://overpass-api.de/api/interpreter",
+              "https://overpass.kumi.systems/api/interpreter",
+              "https://overpass.nchc.org.tw/api/interpreter",
+          ]
+
+          QUERY = r'''
+          [out:json][timeout:180];
+          area["ISO3166-1"="IT"][admin_level=2]->.it;
+          (
+            nwr(area.it)["hgv"];
+            nwr(area.it)["maxheight"];
+            nwr(area.it)["maxweight"];
+            nwr(area.it)["maxwidth"];
+            nwr(area.it)["maxlength"];
+            nwr(area.it)["maxaxleload"];
+            node(area.it)["highway"="speed_camera"];
+          );
+          out center tags;
+          '''
+
+          def fetch_overpass(query):
+              data = urllib.parse.urlencode({"data": query}).encode()
+              last_error = None
+
+              for endpoint in ENDPOINTS:
+                  for attempt in range(3):
+                      try:
+                          req = urllib.request.Request(
+                              endpoint,
+                              data=data,
+                              headers={
+                                  "User-Agent":
+                                      "KnightTruckerNavy-RoadSafety-Updater/1.0",
+                                  "Content-Type":
+                                      "application/x-www-form-urlencoded; charset=UTF-8",
+                              },
+                              method="POST",
+                          )
+
+                          with urllib.request.urlopen(
+                              req,
+                              timeout=210
+                          ) as response:
+                              return json.loads(
+                                  response.read().decode("utf-8")
+                              )
+
+                      except Exception as e:
+                          last_error = e
+                          time.sleep(4 + attempt * 5)
+
+              raise RuntimeError(
+                  f"Overpass unavailable: {last_error}"
+              )
+
+
+          def fnum(value):
+              if value is None:
+                  return None
+
+              s = str(value).strip().lower()
+
+              for token in (
+                  "tonnes",
+                  "tonne",
+                  "tons",
+                  "ton",
+                  "t",
+                  "meters",
+                  "meter",
+                  "metres",
+                  "metre",
+                  "m",
+              ):
+                  s = s.replace(token, "")
+
+              s = s.replace(",", ".").strip()
+
+              try:
+                  return float(s)
+              except Exception:
+                  return None
+
+
+          raw = fetch_overpass(QUERY)
+
+          items = []
+          seen = set()
+
+          for element in raw.get("elements", []):
+
+              tags = element.get("tags") or {}
+              osm_type = element.get("type")
+              osm_id = element.get("id")
+
+              if not osm_type or osm_id is None:
+                  continue
+
+              lat = element.get("lat")
+              lon = element.get("lon")
+
+              center = element.get("center") or {}
+
+              if lat is None:
+                  lat = center.get("lat")
+
+              if lon is None:
+                  lon = center.get("lon")
+
+              is_camera = (
+                  tags.get("highway") == "speed_camera"
+              )
+
+              has_hgv = any(
+                  key in tags
+                  for key in (
+                      "hgv",
+                      "maxheight",
+                      "maxweight",
+                      "maxwidth",
+                      "maxlength",
+                      "maxaxleload",
+                  )
+              )
+
+              if not (is_camera or has_hgv):
+                  continue
+
+              key = f"{osm_type}/{osm_id}"
+
+              if key in seen:
+                  continue
+
+              seen.add(key)
+
+              item = {
+                  "id": key,
+                  "osmType": osm_type,
+                  "osmId": osm_id,
+                  "lat": lat,
+                  "lon": lon,
+                  "name": tags.get("name")
+                          or tags.get("ref")
+                          or "",
+                  "road": tags.get("name") or "",
+                  "type":
+                      "speed_camera"
+                      if is_camera
+                      else "hgv_restriction",
+                  "source": "OSM",
+                  "tags": {},
+              }
+
+              for tag in (
+                  "hgv",
+                  "hgv:conditional",
+                  "access",
+                  "access:conditional",
+                  "maxheight",
+                  "maxheight:conditional",
+                  "maxweight",
+                  "maxweight:conditional",
+                  "maxwidth",
+                  "maxwidth:conditional",
+                  "maxlength",
+                  "maxlength:conditional",
+                  "maxaxleload",
+                  "maxaxleload:conditional",
+                  "traffic_sign",
+                  "highway",
+                  "ref",
+                  "name",
+              ):
+                  if tag in tags:
+                      item["tags"][tag] = tags[tag]
+
+              if "hgv" in tags:
+
+                  hgv = str(
+                      tags.get("hgv", "")
+                  ).lower()
+
+                  item["hgv"] = (
+                      False
+                      if hgv in ("no", "private")
+                      else True
+                  )
+
+                  item["hgvRaw"] = tags.get("hgv")
+
+              for source, destination in (
+                  ("maxheight", "maxheight"),
+                  ("maxweight", "maxweight"),
+                  ("maxwidth", "maxwidth"),
+                  ("maxlength", "maxlength"),
+                  ("maxaxleload", "maxaxleload"),
+              ):
+
+                  number = fnum(tags.get(source))
+
+                  if number is not None:
+                      item[destination] = number
+
+              items.append(item)
+
+
+          items.sort(
+              key=lambda x: (
+                  x.get("type", ""),
+                  x.get("id", ""),
+              )
+          )
+
+          now = datetime.now(timezone.utc)
+
+          result = {
+              "version": 2,
+
+              "updatedAt":
+                  int(now.timestamp() * 1000),
+
+              "updatedAtIso":
+                  now.isoformat().replace(
+                      "+00:00",
+                      "Z"
+                  ),
+
+              "source":
+                  "OpenStreetMap / Overpass API",
+
+              "scope":
+                  "Italy",
+
+              "description":
+                  "KnightTruckerNavy road safety database - HGV restrictions and speed cameras",
+
+              "counts": {
+                  "total": len(items),
+
+                  "hgvRestrictions":
+                      sum(
+                          1 for x in items
+                          if x.get("type")
+                          == "hgv_restriction"
+                      ),
+
+                  "speedCameras":
+                      sum(
+                          1 for x in items
+                          if x.get("type")
+                          == "speed_camera"
+                      ),
+              },
+
+              "items": items,
+          }
+
+          OUT.write_text(
+              json.dumps(
+                  result,
+                  ensure_ascii=False,
+                  indent=2
+              ),
+              encoding="utf-8",
+          )
+
+          print(
+              json.dumps(
+                  result["counts"],
+                  ensure_ascii=False
+              )
+          )
+
+          PY
+
+      - name: Commit updated database
+        shell: bash
+        run: |
+          if git diff --quiet -- road_safety.json; then
+            echo "No database changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add road_safety.json
+
+          git commit \
+            -m "chore: update road safety database"
+
+          git push
