@@ -1,6 +1,9 @@
 {
-  "version": 1,
+  "version": 2,
   "updatedAt": 0,
-  "description": "KnightTruckerNavy road safety database",
+  "updatedAtIso": null,
+  "source": "OpenStreetMap / Overpass API",
+  "scope": "Italy",
+  "description": "KnightTruckerNavy road safety database - HGV restrictions and speed cameras",
   "items": []
 }
