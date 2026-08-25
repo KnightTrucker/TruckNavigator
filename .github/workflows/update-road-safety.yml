@@ -1,26 +1,24 @@
-name: Update European road safety database
+name: Update road safety database
 
 on:
   workflow_dispatch:
 
   schedule:
-    # Aggiornamento automatico ogni notte
     - cron: "17 2 * * *"
 
 permissions:
   contents: write
 
 concurrency:
-  group: update-europe-road-safety
+  group: update-road-safety
   cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -29,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Update European road safety database
+      - name: Update road_safety.json
         shell: bash
         run: |
           python - <<'PY'
@@ -46,72 +44,25 @@ jobs:
           OUT = Path("road_safety.json")
 
 
-          # ============================================================
-          # PAESI EUROPEI
-          # ============================================================
-
           COUNTRIES = {
-
-              "AL": "Albania",
-              "AD": "Andorra",
-              "AT": "Austria",
-              "BE": "Belgium",
-              "BA": "Bosnia and Herzegovina",
-              "BG": "Bulgaria",
-              "HR": "Croatia",
-              "CY": "Cyprus",
-              "CZ": "Czechia",
-              "DK": "Denmark",
-              "EE": "Estonia",
-              "FI": "Finland",
+              "IT": "Italy",
+              "CH": "Switzerland",
               "FR": "France",
               "DE": "Germany",
-              "GR": "Greece",
-              "HU": "Hungary",
-              "IS": "Iceland",
-              "IE": "Ireland",
-              "IT": "Italy",
-              "LV": "Latvia",
-              "LI": "Liechtenstein",
-              "LT": "Lithuania",
+              "BE": "Belgium",
               "LU": "Luxembourg",
-              "MT": "Malta",
-              "MD": "Moldova",
-              "MC": "Monaco",
-              "ME": "Montenegro",
               "NL": "Netherlands",
-              "MK": "North Macedonia",
-              "NO": "Norway",
-              "PL": "Poland",
-              "PT": "Portugal",
-              "RO": "Romania",
-              "SM": "San Marino",
-              "RS": "Serbia",
-              "SK": "Slovakia",
-              "SI": "Slovenia",
-              "ES": "Spain",
-              "SE": "Sweden",
-              "CH": "Switzerland",
-              "TR": "Turkey",
-              "UA": "Ukraine",
-              "GB": "United Kingdom",
-              "VA": "Vatican City"
+              "AT": "Austria",
+              "ES": "Spain"
           }
 
 
           ENDPOINTS = [
-
               "https://overpass-api.de/api/interpreter",
-
               "https://overpass.kumi.systems/api/interpreter",
-
               "https://overpass.nchc.org.tw/api/interpreter"
           ]
 
-
-          # ============================================================
-          # CONVERSIONE NUMERI OSM
-          # ============================================================
 
           def number(value):
 
@@ -120,21 +71,17 @@ jobs:
 
               s = str(value).strip().lower()
 
-              replacements = [
-
+              for token in (
                   "tonnes",
                   "tonne",
                   "tons",
                   "ton",
-
                   "meters",
                   "meter",
                   "metres",
                   "metre"
-              ]
-
-              for x in replacements:
-                  s = s.replace(x, "")
+              ):
+                  s = s.replace(token, "")
 
               s = s.replace(",", ".").strip()
 
@@ -145,10 +92,6 @@ jobs:
                   return None
 
 
-          # ============================================================
-          # OVERPASS
-          # ============================================================
-
           def download_country(code):
 
               query = f'''
@@ -157,42 +100,33 @@ jobs:
               area["ISO3166-1"="{code}"][admin_level=2]->.country;
 
               (
-
                 nwr(area.country)["hgv"];
-
                 nwr(area.country)["hgv:conditional"];
 
                 nwr(area.country)["maxheight"];
-
                 nwr(area.country)["maxheight:conditional"];
 
                 nwr(area.country)["maxweight"];
-
                 nwr(area.country)["maxweight:conditional"];
 
                 nwr(area.country)["maxwidth"];
-
                 nwr(area.country)["maxwidth:conditional"];
 
                 nwr(area.country)["maxlength"];
-
                 nwr(area.country)["maxlength:conditional"];
 
                 nwr(area.country)["maxaxleload"];
-
                 nwr(area.country)["maxaxleload:conditional"];
 
                 node(area.country)["highway"="speed_camera"];
-
               );
 
               out center tags;
               '''
 
-
-              payload = urllib.parse.urlencode(
-                  {"data": query}
-              ).encode()
+              payload = urllib.parse.urlencode({
+                  "data": query
+              }).encode()
 
 
               last_error = None
@@ -200,35 +134,26 @@ jobs:
 
               for endpoint in ENDPOINTS:
 
-                  for attempt in range(3):
+                  for attempt in range(2):
 
                       try:
 
                           print(
-                              f"Download {code} "
-                              f"da {endpoint} "
-                              f"tentativo {attempt+1}"
+                              f"{code} - {endpoint} - tentativo {attempt + 1}"
                           )
-
 
                           request = urllib.request.Request(
-
                               endpoint,
-
                               data=payload,
-
                               headers={
-
                                   "User-Agent":
-                                  "KnightTruckerNavy-European-Updater/2.0",
+                                      "KnightTruckerNavy-RoadSafety/4.0",
 
                                   "Content-Type":
-                                  "application/x-www-form-urlencoded"
+                                      "application/x-www-form-urlencoded"
                               },
-
                               method="POST"
                           )
-
 
                           with urllib.request.urlopen(
                               request,
@@ -239,29 +164,22 @@ jobs:
                                   response.read().decode("utf-8")
                               )
 
-
                       except Exception as error:
 
                           last_error = error
 
                           print(
-                              "Errore:",
+                              f"Errore {code}:",
                               error
                           )
 
-                          time.sleep(
-                              5 + attempt * 5
-                          )
+                          time.sleep(5)
 
 
               raise RuntimeError(
                   str(last_error)
               )
 
-
-          # ============================================================
-          # CONVERSIONE RECORD
-          # ============================================================
 
           def convert_element(
               element,
@@ -271,27 +189,20 @@ jobs:
 
               tags = element.get("tags") or {}
 
-
               osm_type = element.get("type")
-
               osm_id = element.get("id")
-
 
               if not osm_type or osm_id is None:
                   return None
 
 
               lat = element.get("lat")
-
               lon = element.get("lon")
-
 
               center = element.get("center") or {}
 
-
               if lat is None:
                   lat = center.get("lat")
-
 
               if lon is None:
                   lon = center.get("lon")
@@ -303,39 +214,30 @@ jobs:
               )
 
 
-              restriction = any(
-
+              is_restriction = any(
                   key in tags
-
                   for key in (
-
                       "hgv",
                       "hgv:conditional",
-
                       "maxheight",
                       "maxheight:conditional",
-
                       "maxweight",
                       "maxweight:conditional",
-
                       "maxwidth",
                       "maxwidth:conditional",
-
                       "maxlength",
                       "maxlength:conditional",
-
                       "maxaxleload",
                       "maxaxleload:conditional"
                   )
               )
 
 
-              if not is_camera and not restriction:
+              if not is_camera and not is_restriction:
                   return None
 
 
               item = {
-
                   "id":
                       f"{osm_type}/{osm_id}",
 
@@ -379,7 +281,6 @@ jobs:
 
 
               useful_tags = (
-
                   "hgv",
                   "hgv:conditional",
 
@@ -402,11 +303,8 @@ jobs:
                   "maxaxleload:conditional",
 
                   "traffic_sign",
-
                   "highway",
-
                   "ref",
-
                   "name"
               )
 
@@ -414,13 +312,8 @@ jobs:
               for tag in useful_tags:
 
                   if tag in tags:
-
                       item["tags"][tag] = tags[tag]
 
-
-              # ========================================================
-              # DIVIETO HGV
-              # ========================================================
 
               if "hgv" in tags:
 
@@ -428,115 +321,74 @@ jobs:
                       tags["hgv"]
                   ).lower()
 
-
                   item["hgvRaw"] = tags["hgv"]
 
-
-                  if hgv in (
-                      "no",
-                      "private"
-                  ):
-
-                      item["hgv"] = False
-
-                  else:
-
-                      item["hgv"] = True
+                  item["hgv"] = (
+                      False
+                      if hgv in ("no", "private")
+                      else True
+                  )
 
 
-              # ========================================================
-              # LIMITI NUMERICI
-              # ========================================================
-
-              fields = (
-
+              for field in (
                   "maxheight",
-
                   "maxweight",
-
                   "maxwidth",
-
                   "maxlength",
-
                   "maxaxleload"
-              )
-
-
-              for field in fields:
+              ):
 
                   value = number(
                       tags.get(field)
                   )
 
                   if value is not None:
-
                       item[field] = value
 
 
-              # ========================================================
-              # RESTRIZIONI CONDIZIONALI
-              # ========================================================
-
               conditional = {}
 
-
               for field in (
-
                   "hgv:conditional",
-
                   "access:conditional",
-
                   "maxheight:conditional",
-
                   "maxweight:conditional",
-
                   "maxwidth:conditional",
-
                   "maxlength:conditional",
-
                   "maxaxleload:conditional"
               ):
 
                   if field in tags:
-
                       conditional[field] = tags[field]
 
 
               if conditional:
-
                   item["conditional"] = conditional
 
 
               return item
 
 
-          # ============================================================
-          # DATABASE
-          # ============================================================
-
           all_items = []
 
           countries_ok = []
-
           countries_failed = []
 
 
           for code, name in COUNTRIES.items():
 
               print()
-              print("=" * 60)
+              print("=" * 50)
               print(
-                  "PAESE:",
                   name,
                   "(" + code + ")"
               )
-              print("=" * 60)
+              print("=" * 50)
 
 
               try:
 
                   data = download_country(code)
-
 
                   count = 0
 
@@ -555,19 +407,14 @@ jobs:
 
                       if item:
 
-                          all_items.append(
-                              item
-                          )
+                          all_items.append(item)
 
                           count += 1
 
 
                   countries_ok.append({
-
                       "code": code,
-
                       "name": name,
-
                       "records": count
                   })
 
@@ -586,29 +433,19 @@ jobs:
 
 
                   countries_failed.append({
-
                       "code": code,
-
                       "name": name,
-
                       "error": str(error)
                   })
 
 
-              # Non martelliamo Overpass
+              time.sleep(2)
 
-              time.sleep(3)
-
-
-          # ============================================================
-          # ELIMINA DUPLICATI
-          # ============================================================
 
           unique = {}
 
 
           for item in all_items:
-
               unique[item["id"]] = item
 
 
@@ -618,23 +455,10 @@ jobs:
 
 
           items.sort(
-
               key=lambda x: (
-
-                  x.get(
-                      "country",
-                      ""
-                  ),
-
-                  x.get(
-                      "type",
-                      ""
-                  ),
-
-                  x.get(
-                      "id",
-                      ""
-                  )
+                  x.get("country", ""),
+                  x.get("type", ""),
+                  x.get("id", "")
               )
           )
 
@@ -645,26 +469,23 @@ jobs:
 
 
           hgv_count = sum(
-
-              1 for item in items
-
+              1
+              for item in items
               if item.get("type")
               == "hgv_restriction"
           )
 
 
           camera_count = sum(
-
-              1 for item in items
-
+              1
+              for item in items
               if item.get("type")
               == "speed_camera"
           )
 
 
           result = {
-
-              "version": 3,
+              "version": 5,
 
               "updatedAt":
                   int(
@@ -682,13 +503,12 @@ jobs:
                   "OpenStreetMap / Overpass API",
 
               "scope":
-                  "Europe",
+                  "IT, CH, FR, DE, BE, LU, NL, AT, ES",
 
               "description":
-                  "KnightTruckerNavy European HGV road safety database",
+                  "KnightTruckerNavy road safety database",
 
               "counts": {
-
                   "total":
                       len(items),
 
@@ -717,26 +537,24 @@ jobs:
 
 
           OUT.write_text(
-
               json.dumps(
                   result,
                   ensure_ascii=False,
                   separators=(",", ":")
               ),
-
               encoding="utf-8"
           )
 
 
           print()
-          print("=" * 60)
+          print("=" * 50)
 
           print(
               "DATABASE COMPLETATO"
           )
 
           print(
-              "Record totali:",
+              "Record:",
               len(items)
           )
 
@@ -760,23 +578,18 @@ jobs:
               len(countries_failed)
           )
 
-          print("=" * 60)
+          print("=" * 50)
 
           PY
 
 
       - name: Commit database
-
         shell: bash
-
         run: |
 
           if git diff --quiet -- road_safety.json; then
-
-            echo "Nessuna modifica al database."
-
+            echo "Nessuna modifica."
             exit 0
-
           fi
 
 
@@ -794,7 +607,7 @@ jobs:
 
 
           git commit \
-            -m "Aggiornamento database sicurezza stradale Europa"
+            -m "Aggiornamento database sicurezza stradale"
 
 
           git push
