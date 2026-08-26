@@ -140,7 +140,7 @@ jobs:
           except Exception as e:
             items=previous();status="fallback";err=str(e)
 
-          OUT.write_text(json.dumps({"version":8,"country":CODE,"countryName":NAME,"status":status,"error":err,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"items":items},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          OUT.write_text(json.dumps({"version":7,"country":CODE,"countryName":NAME,"status":status,"error":err,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"items":items},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
           print(CODE,status,len(items))
           PY
 
@@ -179,7 +179,7 @@ jobs:
 
           for f in files:
             d=json.loads(f.read_text(encoding="utf-8"));code=d["country"];name=d["countryName"];items=d.get("items",[]);status=d.get("status","unknown")
-            obj={"version":8,"country":code,"countryName":name,"status":status,"updatedAt":d.get("updatedAt"),"updatedAtIso":d.get("updatedAtIso"),"source":"OpenStreetMap / Overpass API","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera")},"items":items}
+            obj={"version":7,"country":code,"countryName":name,"status":status,"updatedAt":d.get("updatedAt"),"updatedAtIso":d.get("updatedAtIso"),"source":"OpenStreetMap / Overpass API","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera")},"items":items}
             (folder/f"{code}.json").write_text(json.dumps(obj,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
             countries.append({"code":code,"name":name,"records":len(items),"status":status})
             manifest.append({"code":code,"name":name,"file":f"./road_safety/{code}.json","records":len(items),"status":status})
@@ -187,7 +187,7 @@ jobs:
             all_items.extend(items)
 
           unique={f'{x.get("country","")}:{x.get("id","")}':x for x in all_items};items=list(unique.values())
-          result={"version":8,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"source":"OpenStreetMap / Overpass API","scope":"IT, CH, FR, DE, BE, LU, NL, AT, ES","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera"),"countries":len(countries),"updatedCountries":sum(1 for x in countries if x["status"]=="updated"),"fallbackCountries":len(failed)},"countries":countries,"failedCountries":failed,"items":items}
+          result={"version":7,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"source":"OpenStreetMap / Overpass API","scope":"IT, CH, FR, DE, BE, LU, NL, AT, ES","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera"),"countries":len(countries),"updatedCountries":sum(1 for x in countries if x["status"]=="updated"),"fallbackCountries":len(failed)},"countries":countries,"failedCountries":failed,"items":items}
           Path("road_safety.json").write_text(json.dumps(result,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
           (folder/"manifest.json").write_text(json.dumps({"version":1,"updatedAt":result["updatedAt"],"updatedAtIso":result["updatedAtIso"],"countries":manifest},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
           print(result["counts"])
