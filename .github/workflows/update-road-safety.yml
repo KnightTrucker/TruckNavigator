@@ -193,6 +193,31 @@ jobs:
           print(result["counts"])
           PY
 
+
+      - name: Validate Road Safety output
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob, json, os, sys
+          files=sorted(glob.glob("road_safety/*.json"))
+          if not files:
+              print("ERROR: no road_safety JSON generated")
+              sys.exit(1)
+          total=0
+          for f in files:
+              with open(f,encoding="utf-8") as h:
+                  o=json.load(h)
+              items=o.get("items") or []
+              cams=sum(1 for x in items if x.get("type")=="speed_camera")
+              hgv=sum(1 for x in items if x.get("type")=="hgv_restriction")
+              total += len(items)
+              print(f"{os.path.basename(f)}: total={len(items)} cameras={cams} hgv={hgv}")
+          print("TOTAL ROAD SAFETY ITEMS:",total)
+          if total==0:
+              print("ERROR: Road Safety database is EMPTY. Workflow aborted; no empty DB will be committed.")
+              sys.exit(1)
+          PY
+
       - name: Commit databases
         shell: bash
         run: |
