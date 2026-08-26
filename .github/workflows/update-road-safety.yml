@@ -91,9 +91,15 @@ jobs:
             nwr(area.country)["maxlength:conditional"];
             nwr(area.country)["maxaxleload"];
             nwr(area.country)["maxaxleload:conditional"];
+            way(area.country)["overtaking:hgv"];
+            way(area.country)["overtaking:hgv:conditional"];
+            way(area.country)["overtaking"];
+            way(area.country)["overtaking:conditional"];
+            way(area.country)["traffic_sign"];
+            way(area.country)["traffic_sign:hgv"];
             node(area.country)["highway"="speed_camera"];
           );
-          out center tags;
+          out center tags geom;
           '''
           payload=urllib.parse.urlencode({"data":query}).encode()
 
@@ -113,11 +119,13 @@ jobs:
             if lat is None:lat=c.get("lat")
             if lon is None:lon=c.get("lon")
             cam=t.get("highway")=="speed_camera"
-            rst=any(k in t for k in ("hgv","hgv:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional"))
+            rst=any(k in t for k in ("hgv","hgv:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional","overtaking:hgv","overtaking:hgv:conditional","overtaking","overtaking:conditional","traffic_sign","traffic_sign:hgv"))
             if not cam and not rst:return None
             x={"id":f"{typ}/{oid}","country":CODE,"countryName":NAME,"osmType":typ,"osmId":oid,"lat":lat,"lon":lon,"name":t.get("name") or t.get("ref") or "","road":t.get("name") or "","source":"OpenStreetMap","type":"speed_camera" if cam else "hgv_restriction","tags":{}}
-            for k in ("hgv","hgv:conditional","access","access:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional","traffic_sign","highway","ref","name"):
+            for k in ("hgv","hgv:conditional","access","access:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional","overtaking:hgv","overtaking:hgv:forward","overtaking:hgv:backward","overtaking:hgv:conditional","hgv:overtaking","hgv:overtaking:conditional","overtaking","overtaking:forward","overtaking:backward","overtaking:conditional","traffic_sign","traffic_sign:hgv","highway","ref","name"):
               if k in t:x["tags"][k]=t[k]
+            if el.get("geometry"):
+              x["geometry"]=[{"lat":p.get("lat"),"lon":p.get("lon")} for p in el["geometry"] if p.get("lat") is not None and p.get("lon") is not None]
             if "hgv" in t:
               h=str(t["hgv"]).lower();x["hgvRaw"]=t["hgv"];x["hgv"]=False if h in ("no","private") else True
             for k in ("maxheight","maxweight","maxwidth","maxlength","maxaxleload"):
@@ -132,7 +140,7 @@ jobs:
           except Exception as e:
             items=previous();status="fallback";err=str(e)
 
-          OUT.write_text(json.dumps({"version":7,"country":CODE,"countryName":NAME,"status":status,"error":err,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"items":items},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          OUT.write_text(json.dumps({"version":8,"country":CODE,"countryName":NAME,"status":status,"error":err,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"items":items},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
           print(CODE,status,len(items))
           PY
 
@@ -171,7 +179,7 @@ jobs:
 
           for f in files:
             d=json.loads(f.read_text(encoding="utf-8"));code=d["country"];name=d["countryName"];items=d.get("items",[]);status=d.get("status","unknown")
-            obj={"version":7,"country":code,"countryName":name,"status":status,"updatedAt":d.get("updatedAt"),"updatedAtIso":d.get("updatedAtIso"),"source":"OpenStreetMap / Overpass API","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera")},"items":items}
+            obj={"version":8,"country":code,"countryName":name,"status":status,"updatedAt":d.get("updatedAt"),"updatedAtIso":d.get("updatedAtIso"),"source":"OpenStreetMap / Overpass API","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera")},"items":items}
             (folder/f"{code}.json").write_text(json.dumps(obj,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
             countries.append({"code":code,"name":name,"records":len(items),"status":status})
             manifest.append({"code":code,"name":name,"file":f"./road_safety/{code}.json","records":len(items),"status":status})
@@ -179,7 +187,7 @@ jobs:
             all_items.extend(items)
 
           unique={f'{x.get("country","")}:{x.get("id","")}':x for x in all_items};items=list(unique.values())
-          result={"version":7,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"source":"OpenStreetMap / Overpass API","scope":"IT, CH, FR, DE, BE, LU, NL, AT, ES","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera"),"countries":len(countries),"updatedCountries":sum(1 for x in countries if x["status"]=="updated"),"fallbackCountries":len(failed)},"countries":countries,"failedCountries":failed,"items":items}
+          result={"version":8,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"source":"OpenStreetMap / Overpass API","scope":"IT, CH, FR, DE, BE, LU, NL, AT, ES","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera"),"countries":len(countries),"updatedCountries":sum(1 for x in countries if x["status"]=="updated"),"fallbackCountries":len(failed)},"countries":countries,"failedCountries":failed,"items":items}
           Path("road_safety.json").write_text(json.dumps(result,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
           (folder/"manifest.json").write_text(json.dumps({"version":1,"updatedAt":result["updatedAt"],"updatedAtIso":result["updatedAtIso"],"countries":manifest},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
           print(result["counts"])
