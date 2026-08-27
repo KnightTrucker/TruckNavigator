@@ -60,7 +60,7 @@ jobs:
 
           OUT = Path(f"country_{CODE}.json")
           OLD_SPLIT = Path("road_safety") / f"{CODE}.json"
-          OLD_MERGED = Path("road_safety.json")
+          # v8.1 uses only the per-country database as persistent fallback.
 
           ENDPOINTS = [
               "https://overpass-api.de/api/interpreter",
@@ -83,18 +83,13 @@ jobs:
                   return None
 
           def previous_items():
-              for p in (OLD_SPLIT, OLD_MERGED):
-                  if not p.exists():
-                      continue
-                  try:
-                      obj = json.loads(p.read_text(encoding="utf-8"))
-                      arr = obj.get("items", [])
-                      if p == OLD_SPLIT:
-                          return arr
-                      return [x for x in arr if x.get("country") == CODE]
-                  except Exception:
-                      pass
-              return []
+              if not OLD_SPLIT.exists():
+                  return []
+              try:
+                  obj = json.loads(OLD_SPLIT.read_text(encoding="utf-8"))
+                  return obj.get("items", [])
+              except Exception:
+                  return []
 
           PREVIOUS = previous_items()
 
@@ -198,7 +193,7 @@ jobs:
                   data=payload,
                   method="POST",
                   headers={
-                      "User-Agent": "KnightTruckerNavy-RoadSafety/8.0",
+                      "User-Agent": "KnightTruckerNavy-RoadSafety/8.1",
                       "Content-Type": "application/x-www-form-urlencoded",
                       "Accept": "application/json",
                   },
@@ -591,14 +586,16 @@ jobs:
               "items": items,
           }
 
-          Path("road_safety.json").write_text(
-              json.dumps(result, ensure_ascii=False, separators=(",", ":")),
-              encoding="utf-8",
-          )
+          # IMPORTANT v8.1:
+          # Do NOT create/commit a monolithic road_safety.json.
+          # The merged DB can exceed GitHub's 100 MB per-file limit.
+          # Runtime/update clients must use manifest.json + per-country files.
 
           (folder / "manifest.json").write_text(
               json.dumps({
-                  "version": 2,
+                  "version": 3,
+                  "storage": "split-country-files",
+                  "mergedFile": None,
                   "updatedAt": result["updatedAt"],
                   "updatedAtIso": result["updatedAtIso"],
                   "counts": result["counts"],
@@ -676,13 +673,18 @@ jobs:
       - name: Commit databases
         shell: bash
         run: |
-          if git diff --quiet -- road_safety.json road_safety/; then
+          # v8.1: split database only.
+          # Remove the legacy monolithic file so nobody can accidentally use stale data.
+          git rm -f --ignore-unmatch road_safety.json || true
+
+          if git diff --quiet -- road_safety/ road_safety.json; then
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add road_safety.json road_safety/
-          git commit -m "Aggiornamento database sicurezza stradale"
+          git add road_safety/
+          git add -u road_safety.json || true
+          git commit -m "Aggiornamento database sicurezza stradale v8.1 split"
           git push
