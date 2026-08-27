@@ -143,27 +143,29 @@ jobs:
           out center tags geom;
               ''',
 
-              "overtaking": f'''
-          [out:json][timeout:90];
+              "overtaking": f"""
+          [out:json][timeout:120];
           area["ISO3166-1"="{CODE}"][admin_level=2]->.country;
           (
+            /* Primary OSM tagging for truck overtaking restrictions.
+               Keep this query deliberately narrow: the old generic
+               traffic_sign:hgv and overtaking=* scans caused 502/504
+               responses on country-sized queries. */
             way(area.country)["overtaking:hgv"];
             way(area.country)["overtaking:hgv:forward"];
             way(area.country)["overtaking:hgv:backward"];
             way(area.country)["overtaking:hgv:conditional"];
             way(area.country)["hgv:overtaking"];
             way(area.country)["hgv:overtaking:conditional"];
-            way(area.country)["overtaking"];
-            way(area.country)["overtaking:forward"];
-            way(area.country)["overtaking:backward"];
-            way(area.country)["overtaking:conditional"];
-            node(area.country)["traffic_sign:hgv"];
-            node(area.country)["traffic_sign"~"(^|;|,)(DE:)?277($|;|,)",i];
-            node(area.country)["traffic_sign"~"(^|;|,)(FR:)?B3a($|;|,)",i];
+
+            /* Explicit traffic signs used by the countries where they
+               are commonly mapped in OSM. */
+            node(area.country)["traffic_sign"~"(^|;|,)(DE:)?277([.;]|$|;|,)",i];
+            node(area.country)["traffic_sign"~"(^|;|,)(FR:)?B3a([.;]|$|;|,)",i];
             node(area.country)["traffic_sign"~"no.?overtak",i];
           );
           out center tags geom;
-              ''',
+              """,
 
               "restrictions": f'''
           [out:json][timeout:90];
@@ -193,7 +195,7 @@ jobs:
                   data=payload,
                   method="POST",
                   headers={
-                      "User-Agent": "KnightTruckerNavy-RoadSafety/8.1",
+                      "User-Agent": "KnightTruckerNavy-RoadSafety/8.2",
                       "Content-Type": "application/x-www-form-urlencoded",
                       "Accept": "application/json",
                   },
@@ -361,6 +363,11 @@ jobs:
                       "records": len(converted),
                       "endpoint": result["endpoint"],
                       "attempts": result["attempts"],
+                      "diagnostic": (
+                          "query riuscita ma nessun record OSM trovato"
+                          if len(converted) == 0
+                          else "query riuscita"
+                      ),
                   }
                   all_items.extend(converted)
 
@@ -398,7 +405,7 @@ jobs:
 
           OUT.write_text(
               json.dumps({
-                  "version": 8,
+                  "version": 9,
                   "country": CODE,
                   "countryName": NAME,
                   "status": status,
@@ -496,7 +503,7 @@ jobs:
               }
 
               obj = {
-                  "version": 8,
+                  "version": 9,
                   "country": code,
                   "countryName": name,
                   "status": status,
@@ -548,7 +555,7 @@ jobs:
           items = list(unique.values())
 
           result = {
-              "version": 8,
+              "version": 9,
               "updatedAt": int(now.timestamp() * 1000),
               "updatedAtIso": now.isoformat().replace("+00:00", "Z"),
               "source": "OpenStreetMap / Overpass API",
