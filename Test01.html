@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test ORS HGV - KnightTruckerNavy</title>
+<style>
+body{margin:0;background:#080d14;color:#eef4ff;font-family:system-ui;padding:18px}
+main{max-width:720px;margin:auto}
+.card{background:#111927;border:1px solid #2c3a50;border-radius:18px;padding:18px}
+h1{font-size:22px;margin-top:0}
+button{width:100%;padding:16px;border:1px solid #22c55e;border-radius:12px;background:#103820;color:white;font-weight:900;font-size:16px}
+pre{white-space:pre-wrap;word-break:break-word;background:#080d14;border:1px solid #28364a;border-radius:12px;padding:14px;min-height:220px}
+.ok{color:#4ade80} .bad{color:#fb7185} .muted{color:#9caac0}
+</style>
+</head>
+<body><main><div class="card">
+<h1>Diagnostica ORS HGV</h1>
+<p class="muted">Test indipendente da KnightTruckerNavy. Usa lo stesso endpoint, la stessa chiave ORS e gli stessi parametri camion della 0.0.7.</p>
+<button id="go">ESEGUI TEST ORS</button>
+<pre id="out">Pronto.</pre>
+</div></main>
+<script>
+const ORS_KEY='eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZkYTk5MTIyYWQ5ZTRhM2VhZTBmZjRmNGE2OTYyYTZlIiwiaCI6Im11cm11cjY0In0=';
+const ENDPOINT='https://api.openrouteservice.org/v2/directions/driving-hgv/geojson';
+const out=document.getElementById('out');
+function log(s){out.textContent += s+'\n';}
+document.getElementById('go').onclick=async()=>{
+ out.textContent='';
+ log('Ora: '+new Date().toString());
+ log('Pagina: '+location.href);
+ log('Online browser: '+navigator.onLine);
+ log('Endpoint: '+ENDPOINT);
+ log('Test: coordinate fisse in Germania, per escludere GPS/geocoding/clienti.');
+ const body={
+   coordinates:[[8.6821,50.1109],[8.7410,50.1310]],
+   instructions:false,elevation:false,
+   options:{profile_params:{restrictions:{
+     height:4,width:2.55,length:18.75,weight:40,axleload:11.5
+   }}}
+ };
+ const started=performance.now();
+ try {
+   log('\nInvio POST...');
+   const r=await fetch(ENDPOINT,{
+     method:'POST',
+     headers:{'Content-Type':'application/json','Authorization':ORS_KEY},
+     body:JSON.stringify(body)
+   });
+   log('HTTP: '+r.status+' '+r.statusText);
+   log('Tempo: '+Math.round(performance.now()-started)+' ms');
+   log('Content-Type: '+(r.headers.get('content-type')||''));
+   const text=await r.text();
+   let data=null;
+   try{data=JSON.parse(text)}catch(e){}
+   if(r.ok && data && data.features && data.features[0]) {
+     const s=data.features[0].properties && data.features[0].properties.summary;
+     log('\nRISULTATO: ORS FUNZIONA');
+     if(s) {
+       log('Distanza: '+(s.distance/1000).toFixed(2)+' km');
+       log('Durata: '+Math.round(s.duration/60)+' min');
+     }
+   } else {
+     log('\nRISULTATO: ORS HA RISPOSTO MA CON ERRORE');
+     log(text.slice(0,2500));
+   }
+ } catch(e) {
+   log('\nRISULTATO: FETCH FALLITO PRIMA DI UNA RISPOSTA HTTP');
+   log('Nome errore: '+(e && e.name));
+   log('Messaggio: '+(e && e.message));
+   log('Tipo: '+Object.prototype.toString.call(e));
+   log('\nSe compare "Failed to fetch", il problema è esterno alla logica di calcolo del navigatore: rete/browser/CORS/raggiungibilità API.');
+ }
+};
+</script></body></html>
