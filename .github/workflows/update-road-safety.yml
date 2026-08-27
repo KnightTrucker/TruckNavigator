@@ -16,10 +16,11 @@ jobs:
   download-country:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
+
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 2
       matrix:
         include:
           - { code: IT, name: Italy }
@@ -34,6 +35,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -45,38 +47,131 @@ jobs:
           COUNTRY_NAME: ${{ matrix.name }}
         run: |
           python - <<'PY'
-          import json, os, time, urllib.parse, urllib.request
+          import json
+          import os
+          import time
+          import urllib.parse
+          import urllib.request
           from datetime import datetime, timezone
           from pathlib import Path
 
-          CODE=os.environ["COUNTRY_CODE"]; NAME=os.environ["COUNTRY_NAME"]
-          OUT=Path(f"country_{CODE}.json")
-          OLD_SPLIT=Path("road_safety")/f"{CODE}.json"
-          OLD_MERGED=Path("road_safety.json")
-          ENDPOINTS=[
-            "https://overpass-api.de/api/interpreter",
-            "https://overpass.kumi.systems/api/interpreter",
-            "https://overpass.nchc.org.tw/api/interpreter"
+          CODE = os.environ["COUNTRY_CODE"]
+          NAME = os.environ["COUNTRY_NAME"]
+
+          OUT = Path(f"country_{CODE}.json")
+          OLD_SPLIT = Path("road_safety") / f"{CODE}.json"
+          OLD_MERGED = Path("road_safety.json")
+
+          ENDPOINTS = [
+              "https://overpass-api.de/api/interpreter",
+              "https://overpass.kumi.systems/api/interpreter",
+              "https://overpass.private.coffee/api/interpreter",
           ]
 
           def num(v):
-            if v is None:return None
-            s=str(v).lower().replace(",",".")
-            for t in ("tonnes","tonne","tons","ton","meters","meter","metres","metre"):s=s.replace(t,"")
-            try:return float(s.strip())
-            except:return None
-
-          def previous():
-            for p in (OLD_SPLIT,OLD_MERGED):
-              if not p.exists():continue
+              if v is None:
+                  return None
+              s = str(v).lower().replace(",", ".")
+              for t in (
+                  "tonnes", "tonne", "tons", "ton",
+                  "meters", "meter", "metres", "metre"
+              ):
+                  s = s.replace(t, "")
               try:
-                o=json.loads(p.read_text(encoding="utf-8")); a=o.get("items",[])
-                return a if p==OLD_SPLIT else [x for x in a if x.get("country")==CODE]
-              except:pass
-            return []
+                  return float(s.strip())
+              except Exception:
+                  return None
 
-          query=f'''
-          [out:json][timeout:120];
+          def previous_items():
+              for p in (OLD_SPLIT, OLD_MERGED):
+                  if not p.exists():
+                      continue
+                  try:
+                      obj = json.loads(p.read_text(encoding="utf-8"))
+                      arr = obj.get("items", [])
+                      if p == OLD_SPLIT:
+                          return arr
+                      return [x for x in arr if x.get("country") == CODE]
+                  except Exception:
+                      pass
+              return []
+
+          PREVIOUS = previous_items()
+
+          def family_of_item(x):
+              if x.get("type") == "speed_camera":
+                  return "cameras"
+
+              tags = x.get("tags") or {}
+              overtaking_keys = (
+                  "overtaking:hgv",
+                  "overtaking:hgv:forward",
+                  "overtaking:hgv:backward",
+                  "overtaking:hgv:conditional",
+                  "hgv:overtaking",
+                  "hgv:overtaking:conditional",
+                  "overtaking",
+                  "overtaking:forward",
+                  "overtaking:backward",
+                  "overtaking:conditional",
+              )
+              if any(k in tags for k in overtaking_keys):
+                  return "overtaking"
+
+              sign = " ".join([
+                  str(tags.get("traffic_sign", "")),
+                  str(tags.get("traffic_sign:hgv", "")),
+              ]).lower()
+
+              if "277" in sign or "b3a" in sign or "no_overtaking" in sign:
+                  return "overtaking"
+
+              return "restrictions"
+
+          PREV_BY_FAMILY = {
+              "cameras": [x for x in PREVIOUS if family_of_item(x) == "cameras"],
+              "overtaking": [x for x in PREVIOUS if family_of_item(x) == "overtaking"],
+              "restrictions": [x for x in PREVIOUS if family_of_item(x) == "restrictions"],
+          }
+
+          QUERIES = {
+              "cameras": f'''
+          [out:json][timeout:90];
+          area["ISO3166-1"="{CODE}"][admin_level=2]->.country;
+          (
+            node(area.country)["highway"="speed_camera"];
+            way(area.country)["highway"="speed_camera"];
+            relation(area.country)["highway"="speed_camera"];
+            nwr(area.country)["enforcement"="maxspeed"];
+            relation(area.country)["type"="enforcement"]["enforcement"="maxspeed"];
+          );
+          out center tags geom;
+              ''',
+
+              "overtaking": f'''
+          [out:json][timeout:90];
+          area["ISO3166-1"="{CODE}"][admin_level=2]->.country;
+          (
+            way(area.country)["overtaking:hgv"];
+            way(area.country)["overtaking:hgv:forward"];
+            way(area.country)["overtaking:hgv:backward"];
+            way(area.country)["overtaking:hgv:conditional"];
+            way(area.country)["hgv:overtaking"];
+            way(area.country)["hgv:overtaking:conditional"];
+            way(area.country)["overtaking"];
+            way(area.country)["overtaking:forward"];
+            way(area.country)["overtaking:backward"];
+            way(area.country)["overtaking:conditional"];
+            node(area.country)["traffic_sign:hgv"];
+            node(area.country)["traffic_sign"~"(^|;|,)(DE:)?277($|;|,)",i];
+            node(area.country)["traffic_sign"~"(^|;|,)(FR:)?B3a($|;|,)",i];
+            node(area.country)["traffic_sign"~"no.?overtak",i];
+          );
+          out center tags geom;
+              ''',
+
+              "restrictions": f'''
+          [out:json][timeout:90];
           area["ISO3166-1"="{CODE}"][admin_level=2]->.country;
           (
             nwr(area.country)["hgv"];
@@ -91,57 +186,250 @@ jobs:
             nwr(area.country)["maxlength:conditional"];
             nwr(area.country)["maxaxleload"];
             nwr(area.country)["maxaxleload:conditional"];
-            way(area.country)["overtaking:hgv"];
-            way(area.country)["overtaking:hgv:conditional"];
-            way(area.country)["overtaking"];
-            way(area.country)["overtaking:conditional"];
-            way(area.country)["traffic_sign"];
-            way(area.country)["traffic_sign:hgv"];
-            node(area.country)["highway"="speed_camera"];
           );
           out center tags geom;
-          '''
-          payload=urllib.parse.urlencode({"data":query}).encode()
+              ''',
+          }
 
-          def download():
-            errs=[]
-            for ep in ENDPOINTS:
-              try:
-                req=urllib.request.Request(ep,data=payload,method="POST",headers={"User-Agent":"KnightTruckerNavy-RoadSafety/6.0","Content-Type":"application/x-www-form-urlencoded"})
-                with urllib.request.urlopen(req,timeout=150) as r:return json.loads(r.read().decode("utf-8"))
-              except Exception as e:errs.append(str(e));time.sleep(3)
-            raise RuntimeError(" | ".join(errs))
+          def request_once(endpoint, query):
+              payload = urllib.parse.urlencode({"data": query}).encode()
+              req = urllib.request.Request(
+                  endpoint,
+                  data=payload,
+                  method="POST",
+                  headers={
+                      "User-Agent": "KnightTruckerNavy-RoadSafety/8.0",
+                      "Content-Type": "application/x-www-form-urlencoded",
+                      "Accept": "application/json",
+                  },
+              )
+              started = time.time()
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  body = r.read().decode("utf-8")
+                  return json.loads(body), int((time.time() - started) * 1000)
 
-          def convert(el):
-            t=el.get("tags") or {}; typ=el.get("type"); oid=el.get("id")
-            if not typ or oid is None:return None
-            lat=el.get("lat"); lon=el.get("lon"); c=el.get("center") or {}
-            if lat is None:lat=c.get("lat")
-            if lon is None:lon=c.get("lon")
-            cam=t.get("highway")=="speed_camera"
-            rst=any(k in t for k in ("hgv","hgv:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional","overtaking:hgv","overtaking:hgv:conditional","overtaking","overtaking:conditional","traffic_sign","traffic_sign:hgv"))
-            if not cam and not rst:return None
-            x={"id":f"{typ}/{oid}","country":CODE,"countryName":NAME,"osmType":typ,"osmId":oid,"lat":lat,"lon":lon,"name":t.get("name") or t.get("ref") or "","road":t.get("name") or "","source":"OpenStreetMap","type":"speed_camera" if cam else "hgv_restriction","tags":{}}
-            for k in ("hgv","hgv:conditional","access","access:conditional","maxheight","maxheight:conditional","maxweight","maxweight:conditional","maxwidth","maxwidth:conditional","maxlength","maxlength:conditional","maxaxleload","maxaxleload:conditional","overtaking:hgv","overtaking:hgv:forward","overtaking:hgv:backward","overtaking:hgv:conditional","hgv:overtaking","hgv:overtaking:conditional","overtaking","overtaking:forward","overtaking:backward","overtaking:conditional","traffic_sign","traffic_sign:hgv","highway","ref","name"):
-              if k in t:x["tags"][k]=t[k]
-            if el.get("geometry"):
-              x["geometry"]=[{"lat":p.get("lat"),"lon":p.get("lon")} for p in el["geometry"] if p.get("lat") is not None and p.get("lon") is not None]
-            if "hgv" in t:
-              h=str(t["hgv"]).lower();x["hgvRaw"]=t["hgv"];x["hgv"]=False if h in ("no","private") else True
-            for k in ("maxheight","maxweight","maxwidth","maxlength","maxaxleload"):
-              n=num(t.get(k))
-              if n is not None:x[k]=n
-            return x
+          def download_family(family, query):
+              attempts = []
+              for endpoint in ENDPOINTS:
+                  try:
+                      raw, elapsed_ms = request_once(endpoint, query)
+                      attempts.append({
+                          "endpoint": endpoint,
+                          "ok": True,
+                          "elapsedMs": elapsed_ms,
+                          "elements": len(raw.get("elements", [])),
+                      })
+                      return {
+                          "ok": True,
+                          "raw": raw,
+                          "endpoint": endpoint,
+                          "attempts": attempts,
+                      }
+                  except Exception as e:
+                      attempts.append({
+                          "endpoint": endpoint,
+                          "ok": False,
+                          "error": str(e),
+                      })
+                      time.sleep(2)
 
-          now=datetime.now(timezone.utc)
-          try:
-            raw=download(); items=[convert(e) for e in raw.get("elements",[])];items=[x for x in items if x]
-            items=list({x["id"]:x for x in items}.values());status="updated";err=""
-          except Exception as e:
-            items=previous();status="fallback";err=str(e)
+              return {
+                  "ok": False,
+                  "error": " | ".join(
+                      f'{a["endpoint"]}: {a.get("error","errore")}'
+                      for a in attempts
+                  ),
+                  "attempts": attempts,
+              }
 
-          OUT.write_text(json.dumps({"version":7,"country":CODE,"countryName":NAME,"status":status,"error":err,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"items":items},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
-          print(CODE,status,len(items))
+          def convert(el, family):
+              t = el.get("tags") or {}
+              typ = el.get("type")
+              oid = el.get("id")
+
+              if not typ or oid is None:
+                  return None
+
+              lat = el.get("lat")
+              lon = el.get("lon")
+              center = el.get("center") or {}
+
+              if lat is None:
+                  lat = center.get("lat")
+              if lon is None:
+                  lon = center.get("lon")
+
+              if lat is None or lon is None:
+                  geom = el.get("geometry") or []
+                  if geom:
+                      mid = geom[len(geom) // 2]
+                      lat = mid.get("lat")
+                      lon = mid.get("lon")
+
+              if lat is None or lon is None:
+                  return None
+
+              is_camera = family == "cameras"
+
+              x = {
+                  "id": f"{typ}/{oid}",
+                  "country": CODE,
+                  "countryName": NAME,
+                  "osmType": typ,
+                  "osmId": oid,
+                  "lat": lat,
+                  "lon": lon,
+                  "name": t.get("name") or t.get("ref") or "",
+                  "road": t.get("name") or "",
+                  "source": "OpenStreetMap",
+                  "type": "speed_camera" if is_camera else "hgv_restriction",
+                  "family": family,
+                  "tags": {},
+              }
+
+              allowed_tags = (
+                  "hgv",
+                  "hgv:conditional",
+                  "access",
+                  "access:conditional",
+                  "maxheight",
+                  "maxheight:conditional",
+                  "maxweight",
+                  "maxweight:conditional",
+                  "maxwidth",
+                  "maxwidth:conditional",
+                  "maxlength",
+                  "maxlength:conditional",
+                  "maxaxleload",
+                  "maxaxleload:conditional",
+                  "overtaking:hgv",
+                  "overtaking:hgv:forward",
+                  "overtaking:hgv:backward",
+                  "overtaking:hgv:conditional",
+                  "hgv:overtaking",
+                  "hgv:overtaking:conditional",
+                  "overtaking",
+                  "overtaking:forward",
+                  "overtaking:backward",
+                  "overtaking:conditional",
+                  "traffic_sign",
+                  "traffic_sign:hgv",
+                  "highway",
+                  "enforcement",
+                  "type",
+                  "maxspeed",
+                  "direction",
+                  "ref",
+                  "name",
+              )
+
+              for k in allowed_tags:
+                  if k in t:
+                      x["tags"][k] = t[k]
+
+              if el.get("geometry"):
+                  x["geometry"] = [
+                      {"lat": p.get("lat"), "lon": p.get("lon")}
+                      for p in el["geometry"]
+                      if p.get("lat") is not None and p.get("lon") is not None
+                  ]
+
+              if "hgv" in t:
+                  h = str(t["hgv"]).lower()
+                  x["hgvRaw"] = t["hgv"]
+                  x["hgv"] = False if h in ("no", "private") else True
+
+              for k in ("maxheight", "maxweight", "maxwidth", "maxlength", "maxaxleload"):
+                  n = num(t.get(k))
+                  if n is not None:
+                      x[k] = n
+
+              return x
+
+          family_results = {}
+          all_items = []
+          errors = []
+
+          for family, query in QUERIES.items():
+              result = download_family(family, query)
+
+              if result["ok"]:
+                  converted = [
+                      convert(e, family)
+                      for e in result["raw"].get("elements", [])
+                  ]
+                  converted = [x for x in converted if x]
+                  converted = list({x["id"]: x for x in converted}.values())
+
+                  family_results[family] = {
+                      "status": "updated",
+                      "records": len(converted),
+                      "endpoint": result["endpoint"],
+                      "attempts": result["attempts"],
+                  }
+                  all_items.extend(converted)
+
+              else:
+                  previous = PREV_BY_FAMILY[family]
+
+                  family_results[family] = {
+                      "status": "fallback",
+                      "records": len(previous),
+                      "error": result["error"],
+                      "attempts": result["attempts"],
+                  }
+                  errors.append(f"{family}: {result['error']}")
+                  all_items.extend(previous)
+
+          unique = {
+              f'{x.get("family","")}:{x["id"]}': x
+              for x in all_items
+          }
+          items = list(unique.values())
+
+          updated_families = sum(
+              1 for x in family_results.values()
+              if x["status"] == "updated"
+          )
+
+          if updated_families == len(QUERIES):
+              status = "updated"
+          elif updated_families > 0:
+              status = "partial"
+          else:
+              status = "fallback"
+
+          now = datetime.now(timezone.utc)
+
+          OUT.write_text(
+              json.dumps({
+                  "version": 8,
+                  "country": CODE,
+                  "countryName": NAME,
+                  "status": status,
+                  "error": " | ".join(errors),
+                  "updatedAt": int(now.timestamp() * 1000),
+                  "updatedAtIso": now.isoformat().replace("+00:00", "Z"),
+                  "families": family_results,
+                  "counts": {
+                      "total": len(items),
+                      "cameras": sum(1 for x in items if x.get("family") == "cameras"),
+                      "overtaking": sum(1 for x in items if x.get("family") == "overtaking"),
+                      "restrictions": sum(1 for x in items if x.get("family") == "restrictions"),
+                  },
+                  "items": items,
+              }, ensure_ascii=False, separators=(",", ":")),
+              encoding="utf-8",
+          )
+
+          print(
+              CODE,
+              status,
+              "total=", len(items),
+              "cameras=", sum(1 for x in items if x.get("family") == "cameras"),
+              "overtaking=", sum(1 for x in items if x.get("family") == "overtaking"),
+              "restrictions=", sum(1 for x in items if x.get("family") == "restrictions"),
+          )
           PY
 
       - uses: actions/upload-artifact@v4
@@ -155,8 +443,10 @@ jobs:
     needs: [download-country]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: road-safety-*
@@ -171,59 +461,228 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
 
-          files=sorted(Path("country-data").glob("country_*.json"))
-          if not files:raise RuntimeError("Nessun database paese trovato")
-          folder=Path("road_safety");folder.mkdir(exist_ok=True)
-          all_items=[];countries=[];failed=[];manifest=[]
-          now=datetime.now(timezone.utc)
+          files = sorted(Path("country-data").glob("country_*.json"))
+          if not files:
+              raise RuntimeError("Nessun database paese trovato")
+
+          folder = Path("road_safety")
+          folder.mkdir(exist_ok=True)
+
+          all_items = []
+          countries = []
+          failed = []
+          manifest = []
+
+          now = datetime.now(timezone.utc)
 
           for f in files:
-            d=json.loads(f.read_text(encoding="utf-8"));code=d["country"];name=d["countryName"];items=d.get("items",[]);status=d.get("status","unknown")
-            obj={"version":7,"country":code,"countryName":name,"status":status,"updatedAt":d.get("updatedAt"),"updatedAtIso":d.get("updatedAtIso"),"source":"OpenStreetMap / Overpass API","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera")},"items":items}
-            (folder/f"{code}.json").write_text(json.dumps(obj,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
-            countries.append({"code":code,"name":name,"records":len(items),"status":status})
-            manifest.append({"code":code,"name":name,"file":f"./road_safety/{code}.json","records":len(items),"status":status})
-            if status!="updated":failed.append({"code":code,"name":name,"error":d.get("error",""),"previousRecordsKept":len(items)})
-            all_items.extend(items)
+              d = json.loads(f.read_text(encoding="utf-8"))
 
-          unique={f'{x.get("country","")}:{x.get("id","")}':x for x in all_items};items=list(unique.values())
-          result={"version":7,"updatedAt":int(now.timestamp()*1000),"updatedAtIso":now.isoformat().replace("+00:00","Z"),"source":"OpenStreetMap / Overpass API","scope":"IT, CH, FR, DE, BE, LU, NL, AT, ES","counts":{"total":len(items),"hgvRestrictions":sum(1 for x in items if x.get("type")=="hgv_restriction"),"speedCameras":sum(1 for x in items if x.get("type")=="speed_camera"),"countries":len(countries),"updatedCountries":sum(1 for x in countries if x["status"]=="updated"),"fallbackCountries":len(failed)},"countries":countries,"failedCountries":failed,"items":items}
-          Path("road_safety.json").write_text(json.dumps(result,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
-          (folder/"manifest.json").write_text(json.dumps({"version":1,"updatedAt":result["updatedAt"],"updatedAtIso":result["updatedAtIso"],"countries":manifest},ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+              code = d["country"]
+              name = d["countryName"]
+              items = d.get("items", [])
+              status = d.get("status", "unknown")
+              families = d.get("families", {})
+
+              counts = {
+                  "total": len(items),
+                  "speedCameras": sum(
+                      1 for x in items
+                      if x.get("family") == "cameras"
+                  ),
+                  "overtakingHgv": sum(
+                      1 for x in items
+                      if x.get("family") == "overtaking"
+                  ),
+                  "hgvRestrictions": sum(
+                      1 for x in items
+                      if x.get("family") == "restrictions"
+                  ),
+              }
+
+              obj = {
+                  "version": 8,
+                  "country": code,
+                  "countryName": name,
+                  "status": status,
+                  "updatedAt": d.get("updatedAt"),
+                  "updatedAtIso": d.get("updatedAtIso"),
+                  "source": "OpenStreetMap / Overpass API",
+                  "counts": counts,
+                  "families": families,
+                  "items": items,
+              }
+
+              (folder / f"{code}.json").write_text(
+                  json.dumps(obj, ensure_ascii=False, separators=(",", ":")),
+                  encoding="utf-8",
+              )
+
+              countries.append({
+                  "code": code,
+                  "name": name,
+                  "records": len(items),
+                  "status": status,
+                  "counts": counts,
+              })
+
+              manifest.append({
+                  "code": code,
+                  "name": name,
+                  "file": f"./road_safety/{code}.json",
+                  "records": len(items),
+                  "status": status,
+                  "counts": counts,
+              })
+
+              if status != "updated":
+                  failed.append({
+                      "code": code,
+                      "name": name,
+                      "status": status,
+                      "error": d.get("error", ""),
+                      "recordsKept": len(items),
+                  })
+
+              all_items.extend(items)
+
+          unique = {
+              f'{x.get("country","")}:{x.get("family","")}:{x.get("id","")}': x
+              for x in all_items
+          }
+          items = list(unique.values())
+
+          result = {
+              "version": 8,
+              "updatedAt": int(now.timestamp() * 1000),
+              "updatedAtIso": now.isoformat().replace("+00:00", "Z"),
+              "source": "OpenStreetMap / Overpass API",
+              "scope": "IT, CH, FR, DE, BE, LU, NL, AT, ES",
+              "counts": {
+                  "total": len(items),
+                  "speedCameras": sum(
+                      1 for x in items
+                      if x.get("family") == "cameras"
+                  ),
+                  "overtakingHgv": sum(
+                      1 for x in items
+                      if x.get("family") == "overtaking"
+                  ),
+                  "hgvRestrictions": sum(
+                      1 for x in items
+                      if x.get("family") == "restrictions"
+                  ),
+                  "countries": len(countries),
+                  "updatedCountries": sum(
+                      1 for x in countries
+                      if x["status"] == "updated"
+                  ),
+                  "partialCountries": sum(
+                      1 for x in countries
+                      if x["status"] == "partial"
+                  ),
+                  "fallbackCountries": sum(
+                      1 for x in countries
+                      if x["status"] == "fallback"
+                  ),
+              },
+              "countries": countries,
+              "failedCountries": failed,
+              "items": items,
+          }
+
+          Path("road_safety.json").write_text(
+              json.dumps(result, ensure_ascii=False, separators=(",", ":")),
+              encoding="utf-8",
+          )
+
+          (folder / "manifest.json").write_text(
+              json.dumps({
+                  "version": 2,
+                  "updatedAt": result["updatedAt"],
+                  "updatedAtIso": result["updatedAtIso"],
+                  "counts": result["counts"],
+                  "countries": manifest,
+              }, ensure_ascii=False, separators=(",", ":")),
+              encoding="utf-8",
+          )
+
           print(result["counts"])
           PY
-
 
       - name: Validate Road Safety output
         shell: bash
         run: |
           python - <<'PY'
-          import glob, json, os, sys
-          files=sorted(glob.glob("road_safety/*.json"))
+          import glob
+          import json
+          import os
+          import sys
+
+          files = sorted(
+              f for f in glob.glob("road_safety/*.json")
+              if not f.endswith("manifest.json")
+          )
+
           if not files:
-              print("ERROR: no road_safety JSON generated")
+              print("ERROR: no country road_safety JSON generated")
               sys.exit(1)
-          total=0
+
+          total = 0
+          invalid_countries = []
+
           for f in files:
-              with open(f,encoding="utf-8") as h:
-                  o=json.load(h)
-              items=o.get("items") or []
-              cams=sum(1 for x in items if x.get("type")=="speed_camera")
-              hgv=sum(1 for x in items if x.get("type")=="hgv_restriction")
+              with open(f, encoding="utf-8") as h:
+                  o = json.load(h)
+
+              items = o.get("items") or []
+              counts = o.get("counts") or {}
+              status = o.get("status", "unknown")
+
+              cams = counts.get("speedCameras", 0)
+              overtaking = counts.get("overtakingHgv", 0)
+              restrictions = counts.get("hgvRestrictions", 0)
+
               total += len(items)
-              print(f"{os.path.basename(f)}: total={len(items)} cameras={cams} hgv={hgv}")
-          print("TOTAL ROAD SAFETY ITEMS:",total)
-          if total==0:
-              print("ERROR: Road Safety database is EMPTY. Workflow aborted; no empty DB will be committed.")
+
+              print(
+                  f"{os.path.basename(f)}: "
+                  f"status={status} total={len(items)} "
+                  f"cameras={cams} overtaking={overtaking} "
+                  f"restrictions={restrictions}"
+              )
+
+              if status == "updated" and len(items) == 0:
+                  invalid_countries.append(
+                      f"{os.path.basename(f)} marked updated but EMPTY"
+                  )
+
+          print("TOTAL ROAD SAFETY ITEMS:", total)
+
+          if total == 0:
+              print(
+                  "ERROR: Road Safety database is EMPTY. "
+                  "Workflow aborted; no empty DB will be committed."
+              )
+              sys.exit(1)
+
+          if invalid_countries:
+              print("ERROR: invalid country outputs:")
+              for x in invalid_countries:
+                  print(" -", x)
               sys.exit(1)
           PY
 
       - name: Commit databases
         shell: bash
         run: |
-          if git diff --quiet -- road_safety.json road_safety/; then exit 0; fi
+          if git diff --quiet -- road_safety.json road_safety/; then
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add road_safety.json road_safety/
           git commit -m "Aggiornamento database sicurezza stradale"
           git push
