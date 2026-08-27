@@ -8551,9 +8551,14 @@ function ktn55CancelSearchChoice(){
     return fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':ORS_KEY},body:JSON.stringify(body)
     }).then(function(r){
-      if(!r.ok)return r.json().catch(function(){return{}}).then(function(e){
-        throw new Error(e&&e.error&&e.error.message?e.error.message:'Errore ORS '+r.status);
-      });
+      if(!r.ok){
+        return r.text().catch(function(){return''}).then(function(raw){
+          var detail='';
+          try{var e=raw?JSON.parse(raw):{};detail=(e&&e.error&&e.error.message)||e.message||''}catch(_e){detail=String(raw||'').trim().slice(0,220)}
+          var msg='ORS HTTP '+r.status+(detail?' — '+detail:'');
+          var err=new Error(msg);err.orsStatus=r.status;err.orsPreference=pref;err.orsBody=raw;throw err;
+        });
+      }
       return r.json();
     }).then(function(j){
       var f=j.features&&j.features[0];
@@ -8915,10 +8920,13 @@ function ktn55CancelSearchChoice(){
     currentCtx={from:from,to:to,stops:stops||[]};
     document.getElementById('routeResult').innerHTML='<div class="route-loading">Calcolo RAPIDO · BREVE · CONSIGLIATO con restrizioni HGV…</div>';
     Promise.all(['fastest','shortest','recommended'].map(function(p){
-      return fetchRoute(from,to,stops||[],p).catch(function(){return null});
+      return fetchRoute(from,to,stops||[],p).then(function(r){return {ok:true,route:r,pref:p}}).catch(function(e){return {ok:false,error:e,pref:p}});
     })).then(function(rows){
-      routes=rows.filter(Boolean);
-      if(!routes.length)throw new Error('Nessun percorso disponibile per questo veicolo.');
+      routes=rows.filter(function(x){return x.ok&&x.route}).map(function(x){return x.route});
+      if(!routes.length){
+        var errs=rows.filter(function(x){return !x.ok}).map(function(x){return x.pref+': '+(x.error&&x.error.message?x.error.message:String(x.error))});
+        throw new Error('Calcolo HGV fallito. '+(errs.length?errs.join(' | '):'ORS non ha restituito percorsi.'));
+      }
       var rec=routes.findIndex(function(r){return r.pref==='recommended'});
       selected=rec>=0?rec:0;
       renderStandard(currentCtx);drawAll();
@@ -8941,10 +8949,13 @@ function ktn55CancelSearchChoice(){
       var from=points[0],to=points[1];
       ktn53ShowLoading(true);
       return Promise.all(['fastest','shortest','recommended'].map(function(p){
-        return fetchRoute(from,to,[],p).catch(function(){return null});
+        return fetchRoute(from,to,[],p).then(function(r){return {ok:true,route:r,pref:p}}).catch(function(e){return {ok:false,error:e,pref:p}});
       })).then(function(rows){
-        routes=rows.filter(Boolean);
-        if(!routes.length)throw new Error('Nessun percorso HGV trovato.');
+        routes=rows.filter(function(x){return x.ok&&x.route}).map(function(x){return x.route});
+        if(!routes.length){
+          var errs=rows.filter(function(x){return !x.ok}).map(function(x){return x.pref+': '+(x.error&&x.error.message?x.error.message:String(x.error))});
+          throw new Error('Calcolo HGV fallito. '+(errs.length?errs.join(' | '):'ORS non ha restituito percorsi.'));
+        }
         var rec=routes.findIndex(function(r){return r.pref==='recommended'});selected=rec>=0?rec:0;
         var r=routes[selected],t=vehicle();
         window.ktn53QuickResolved={from:from,to:to,truck:t,distance:r.distance,duration:r.duration,feature:r.feature,pref:r.pref,access:r.access};
