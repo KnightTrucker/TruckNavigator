@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test ORS HeiGIT HGV</title>
+<style>
+body{margin:0;background:#080d14;color:#eef4ff;font-family:system-ui;padding:18px}main{max-width:720px;margin:auto}
+.card{background:#111927;border:1px solid #2c3a50;border-radius:18px;padding:18px}button{width:100%;padding:16px;border:1px solid #22c55e;border-radius:12px;background:#103820;color:#fff;font-weight:900;font-size:16px}
+pre{white-space:pre-wrap;word-break:break-word;background:#080d14;border:1px solid #28364a;border-radius:12px;padding:14px;min-height:220px}
+</style></head><body><main><div class="card"><h1>Test ORS HeiGIT HGV</h1>
+<p>Test del nuovo endpoint ufficiale HeiGIT con la configurazione ORS della 0.0.7.</p>
+<button id="go">ESEGUI TEST NUOVO ENDPOINT</button><pre id="out">Pronto.</pre></div></main>
+<script>
+const ORS_KEY='eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZkYTk5MTIyYWQ5ZTRhM2VhZTBmZjRmNGE2OTYyYTZlIiwiaCI6Im11cm11cjY0In0=';
+const ENDPOINT='https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson';
+const out=document.getElementById('out'); function log(x){out.textContent+=x+'\n';}
+document.getElementById('go').onclick=async()=>{
+out.textContent=''; log('Endpoint: '+ENDPOINT); log('Online: '+navigator.onLine);
+const body={coordinates:[[8.6821,50.1109],[8.7410,50.1310]],instructions:false,elevation:false,
+options:{profile_params:{restrictions:{height:4,width:2.55,length:18.75,weight:40,axleload:11.5}}}};
+try{
+ const t=performance.now();
+ const r=await fetch(ENDPOINT,{method:'POST',headers:{'Authorization':ORS_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const text=await r.text(); log('HTTP: '+r.status+' '+r.statusText); log('Tempo: '+Math.round(performance.now()-t)+' ms');
+ if(r.ok){let d=JSON.parse(text),s=d.features?.[0]?.properties?.summary;log('\nORS HEIGIT FUNZIONA');if(s){log('Distanza: '+(s.distance/1000).toFixed(2)+' km');log('Durata: '+Math.round(s.duration/60)+' min');}}
+ else{log('\nERRORE HTTP');log(text.slice(0,2500));}
+}catch(e){log('\nFETCH FALLITO');log(e.name+': '+e.message);}
+};
+</script></body></html>
