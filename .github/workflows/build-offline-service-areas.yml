@@ -1,61 +1,40 @@
 name: Build offline France service areas
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "41 3 * * 1"
 permissions:
   contents: write
-concurrency:
-  group: offline-service-areas-fr
-  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install pyosmium
-        run: python -m pip install --upgrade pip osmium
-      - name: Download A4 corridor regional extracts
-        shell: bash
+        with: {python-version: "3.12"}
+      - run: python -m pip install --upgrade pip osmium
+      - name: Download extracts
         run: |
-          set -euo pipefail
           mkdir -p .osm
-          base="https://download.geofabrik.de/europe/france"
-          for r in ile-de-france champagne-ardenne lorraine alsace; do
-            curl --fail --location --retry 4 --retry-delay 5 "$base/$r-latest.osm.pbf" -o ".osm/$r.osm.pbf"
-          done
-      - name: Build strict offline service/rest database
+          for r in ile-de-france champagne-ardenne lorraine alsace; do curl -fL --retry 4 "https://download.geofabrik.de/europe/france/$r-latest.osm.pbf" -o ".osm/$r.osm.pbf"; done
+      - name: Build database
         run: |
           mkdir -p offline/service_areas
-          python tools/offline_services/build_service_areas.py offline/service_areas/FR.json \
-            .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
-      - name: Link areas to motorway graph - phase 2C
+          python tools/offline_services/build_service_areas.py offline/service_areas/FR.json .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
+      - name: Link graph phase 2C optimized
         run: |
-          python tools/offline_services/build_service_graph.py offline/service_areas/FR.json offline/service_areas/FR.graph.json \
-            .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
-      - name: Validate A4 names and graph
-        run: |
-          python tools/offline_services/validate_a4.py offline/service_areas/FR.graph.json \
-            tools/offline_services/a4_baseline.json offline/service_areas/a4_report.json
-      - name: Write manifest
+          python tools/offline_services/build_service_graph.py offline/service_areas/FR.json offline/service_areas/FR.graph.json .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
+      - name: Validate A4
+        run: python tools/offline_services/validate_a4.py offline/service_areas/FR.graph.json tools/offline_services/a4_baseline.json offline/service_areas/a4_report.json
+      - name: Manifest
         run: |
           python - <<'PY'
           import json,hashlib,pathlib
-          p=pathlib.Path("offline/service_areas/FR.graph.json");d=json.loads(p.read_text(encoding="utf-8"))
-          m={"schemaVersion":d["schemaVersion"],"generatedAt":d["generatedAt"],"country":"FR","count":d["count"],
-             "sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"graphLinking":d["graphLinking"]}
-          pathlib.Path("offline/service_areas/manifest.json").write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding="utf-8")
+          p=pathlib.Path("offline/service_areas/FR.graph.json");d=json.loads(p.read_text())
+          pathlib.Path("offline/service_areas/manifest.json").write_text(json.dumps({"schemaVersion":d["schemaVersion"],"generatedAt":d["generatedAt"],"country":"FR","count":d["count"],"sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"graphLinking":d["graphLinking"]},indent=2))
           PY
-      - name: Commit generated database
+      - name: Commit
         run: |
-          set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add offline/service_areas/FR.json offline/service_areas/FR.graph.json offline/service_areas/manifest.json offline/service_areas/a4_report.json
-          if git diff --cached --quiet; then echo "No database changes."; exit 0; fi
-          git commit -m "Validate A4 offline service area graph phase 2C"
-          git push
+          git diff --cached --quiet || (git commit -m "Optimize offline service graph phase 2C" && git push)
