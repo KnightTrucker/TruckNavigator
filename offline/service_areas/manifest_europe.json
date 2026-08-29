@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-29T21:10:04.431147Z",
+  "graphRequired": false,
+  "countries": {
+    "IT": {
+      "file": "IT.json",
+      "count": 5019,
+      "sha256": "58b09aeda2b6e8504477196f8e5b69d6c6aeca6655cdb9fe87f783eb1dee1bb3",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T19:51:47.420092Z"
+    },
+    "FR": {
+      "file": "FR.json",
+      "count": 3081,
+      "sha256": "32e2ec538561cc48ae683eb3060b0adb03c18163fd8930b2309969e0eb741f9e",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T20:19:37.414323Z"
+    },
+    "DE": {
+      "file": "DE.json",
+      "count": 3756,
+      "sha256": "181a6b92b61377a6c1e41bbbf89334d3d76d594227ddf0282bf69d506940418e",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T20:41:18.407982Z"
+    },
+    "CH": {
+      "file": "CH.json",
+      "count": 255,
+      "sha256": "7bcfadc2b4399f4bb2b1d4f779b63e59fc6cd161c16f38c57096f4ee974745be",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T20:44:23.021116Z"
+    },
+    "AT": {
+      "file": "AT.json",
+      "count": 411,
+      "sha256": "5d10362a403c6af304adbde0792068d312848f3659fd767caa24af25e78e1e2f",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T20:49:07.601762Z"
+    },
+    "BE": {
+      "file": "BE.json",
+      "count": 220,
+      "sha256": "c8afa330c2868d0d2fd3ee72b9e0f98e824b0f4e5076a284c3c6cbb0bdfc6c64",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T20:53:07.202833Z"
+    },
+    "LU": {
+      "file": "LU.json",
+      "count": 164,
+      "sha256": "dded4be786afbfaa9163a567a645a570a3be32e904c264ec3067efb0b6b4febb",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T20:53:23.470953Z"
+    },
+    "NL": {
+      "file": "NL.json",
+      "count": 652,
+      "sha256": "af6140da9b9cc4d3daa3341a578e97b347027bbf1e8441991cabc3aa4d2d8e0b",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T21:00:43.149003Z"
+    },
+    "ES": {
+      "file": "ES.json",
+      "count": 2036,
+      "sha256": "b61c95c72a2e5987f8c61d8d777fa7bbdde68832ef1fbef5157c8ecf85f5b6d8",
+      "schemaVersion": 6,
+      "generatedAt": "2026-08-29T21:10:04.239009Z"
+    }
+  },
+  "totalAreas": 15594
+}
