@@ -29,8 +29,13 @@ jobs:
           python tools/offline_services/audit_a4_phase2d.py offline/service_areas/a4_report.json offline/service_areas/a4_certification.json
       - name: Orient A4 carriageways phase 2E
         run: |
-          python tools/offline_services/orient_a4_phase2e.py offline/service_areas/a4_report.json offline/service_areas/a4_direction_report.json unused \
-            .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
+          python tools/offline_services/orient_a4_phase2e.py \
+            offline/service_areas/a4_report.json \
+            offline/service_areas/a4_direction_report.json \
+            .osm/ile-de-france.osm.pbf \
+            .osm/champagne-ardenne.osm.pbf \
+            .osm/lorraine.osm.pbf \
+            .osm/alsace.osm.pbf
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
