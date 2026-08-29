@@ -1,1 +1,76 @@
-{}
+{
+  "route": "A4 Paris -> Strasbourg",
+  "source": "SANEF validation oracle",
+  "expected": [
+    [
+      "Aire de Ferrières",
+      "services",
+      27
+    ],
+    [
+      "Aire de Vaucourtois",
+      "rest_area",
+      45
+    ],
+    [
+      "Aire d’Ussy-sur-Marne",
+      "services",
+      56
+    ],
+    [
+      "Aire de La Fontenelle",
+      "rest_area",
+      76
+    ],
+    [
+      "Aire de Tardenois Sud",
+      "services",
+      97
+    ],
+    [
+      "Aire de Vrigny",
+      "services",
+      129
+    ],
+    [
+      "Aire de Reims Champagne Sud",
+      "services",
+      159
+    ],
+    [
+      "Aire de Valmy Orbeval",
+      "services",
+      206
+    ],
+    [
+      "Aire de Verdun Saint-Nicolas Sud",
+      "services",
+      261
+    ],
+    [
+      "Aire de Metz Saint-Privat",
+      "services",
+      304
+    ],
+    [
+      "Aire de Longeville-lès-Saint-Avold Sud",
+      "services",
+      358
+    ],
+    [
+      "Aire de Keskastel Ouest",
+      "services",
+      400
+    ],
+    [
+      "Aire de Saverne Monswiller",
+      "services",
+      437
+    ],
+    [
+      "Aire de Brumath Ouest",
+      "services",
+      465
+    ]
+  ]
+}
