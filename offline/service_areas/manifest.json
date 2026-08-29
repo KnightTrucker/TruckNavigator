@@ -1,8 +1,13 @@
 {
-  "schemaVersion": 1,
-  "generatedAt": "2026-08-29T08:20:54.161840Z",
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-29T08:38:42.237979Z",
   "country": "FR",
   "count": 499,
-  "sha256": "0360efa0d2fa515d0edeb227a59d679a15e98ab34f279dfb250bdb9062cd9b5f",
-  "graphLinking": "pending"
+  "sha256": "b9ee00189d4412c902f59bd74d9237bd7aaa0c9589c776973e341c7b201b7635",
+  "graphLinking": {
+    "status": "phase2a",
+    "linked": 7,
+    "total": 499,
+    "note": "Exact OSM node topology only; no coordinate-side direction guessing. Direction labels such as Paris/Strasbourg require route-orientation validation."
+  }
 }
