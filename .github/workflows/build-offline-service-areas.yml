@@ -27,18 +27,13 @@ jobs:
         run: |
           python tools/offline_services/validate_a4_phase2d.py offline/service_areas/FR.graph.json tools/offline_services/a4_baseline.json offline/service_areas/a4_report.json
           python tools/offline_services/audit_a4_phase2d.py offline/service_areas/a4_report.json offline/service_areas/a4_certification.json
-      - name: Manifest
+      - name: Orient A4 carriageways phase 2E
         run: |
-          python - <<'PY'
-          import json,hashlib,pathlib
-          p=pathlib.Path("offline/service_areas/FR.graph.json");d=json.loads(p.read_text())
-          cert=json.loads(pathlib.Path("offline/service_areas/a4_certification.json").read_text())
-          m={"schemaVersion":d["schemaVersion"],"generatedAt":d["generatedAt"],"country":"FR","count":d["count"],"sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"graphLinking":d["graphLinking"],"a4Certification":cert}
-          pathlib.Path("offline/service_areas/manifest.json").write_text(json.dumps(m,ensure_ascii=False,indent=2))
-          PY
+          python tools/offline_services/orient_a4_phase2e.py offline/service_areas/a4_report.json offline/service_areas/a4_direction_report.json unused \
+            .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add offline/service_areas/FR.json offline/service_areas/FR.graph.json offline/service_areas/manifest.json offline/service_areas/a4_report.json offline/service_areas/a4_certification.json
-          git diff --cached --quiet || (git commit -m "Certify A4 service areas phase 2D" && git push)
+          git add offline/service_areas/FR.json offline/service_areas/FR.graph.json offline/service_areas/a4_report.json offline/service_areas/a4_certification.json offline/service_areas/a4_direction_report.json
+          git diff --cached --quiet || (git commit -m "Orient A4 service areas phase 2E" && git push)
