@@ -1,4 +1,4 @@
-name: Build offline Europe service areas
+name: Build offline Europe service areas FINAL
 
 on:
   workflow_dispatch:
@@ -9,296 +9,289 @@ permissions:
   contents: write
 
 concurrency:
-  group: offline-europe-service-areas
+  group: offline-europe-service-areas-final
   cancel-in-progress: false
 
-env:
-  PYTHON_VERSION: "3.12"
-
 jobs:
-  # ============================================================
-  # FASE 1 - ESTRAZIONE
-  # Scarica una sola volta il PBF del Paese, estrae le aree di
-  # servizio e salva esclusivamente il database leggero CC.json.
-  # NON viene più costruito alcun *.graph.json.
-  # ============================================================
-  extract:
-    name: extract (${{ matrix.cc }}, ${{ matrix.slug }})
+  build:
+    name: Build Europe databases sequentially
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        include:
-          - {cc: IT, slug: italy}
-          - {cc: FR, slug: france}
-          - {cc: DE, slug: germany}
-          - {cc: CH, slug: switzerland}
-          - {cc: AT, slug: austria}
-          - {cc: BE, slug: belgium}
-          - {cc: LU, slug: luxembourg}
-          - {cc: NL, slug: netherlands}
-          - {cc: ES, slug: spain}
+    timeout-minutes: 180
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
+          fetch-depth: 0
 
-      - name: Install dependencies
+      - name: Install osmium Python module
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install osmium
+
+          echo "Python disponibile:"
+          python3 --version
+
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install osmium
+
+          echo "Verifica osmium:"
+          .venv/bin/python -c "import osmium; print('osmium OK')"
 
       - name: Prepare folders
         shell: bash
         run: |
           set -euo pipefail
+
           mkdir -p .osm
           mkdir -p offline/service_areas
 
-      - name: Download ${{ matrix.cc }}
+          # Elimina eventuali vecchi grafi: non sono più utilizzati.
+          find offline/service_areas \
+            -maxdepth 1 \
+            -type f \
+            -name "*.graph.json" \
+            -delete || true
+
+      - name: Build all countries
         shell: bash
         run: |
           set -euo pipefail
 
-          URL="https://download.geofabrik.de/europe/${{ matrix.slug }}-latest.osm.pbf"
-          OUT=".osm/${{ matrix.cc }}.osm.pbf"
+          build_country() {
+            CC="$1"
+            SLUG="$2"
 
-          echo "Download: $URL"
+            PBF=".osm/${CC}.osm.pbf"
+            JSON="offline/service_areas/${CC}.json"
+            URL="https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
 
-          curl \
-            --fail \
-            --location \
-            --retry 8 \
-            --retry-all-errors \
-            --retry-delay 10 \
-            --connect-timeout 30 \
-            "$URL" \
-            --output "$OUT"
+            echo
+            echo "=================================================="
+            echo "PAESE: ${CC}"
+            echo "URL:   ${URL}"
+            echo "=================================================="
 
-          test -s "$OUT"
-          ls -lh "$OUT"
+            rm -f "${PBF}"
 
-      - name: Extract strict service areas
-        shell: bash
-        run: |
-          set -euo pipefail
+            curl \
+              --fail \
+              --location \
+              --retry 8 \
+              --retry-all-errors \
+              --retry-delay 10 \
+              --connect-timeout 30 \
+              --output "${PBF}" \
+              "${URL}"
 
-          python tools/offline_services/build_service_areas_europe.py \
-            "${{ matrix.cc }}" \
-            "offline/service_areas/${{ matrix.cc }}.json" \
-            ".osm/${{ matrix.cc }}.osm.pbf"
+            if [ ! -s "${PBF}" ]; then
+              echo "ERRORE: PBF mancante o vuoto per ${CC}"
+              exit 1
+            fi
 
-          test -s "offline/service_areas/${{ matrix.cc }}.json"
+            ls -lh "${PBF}"
 
-      - name: Validate country JSON
-        shell: bash
-        run: |
-          set -euo pipefail
+            .venv/bin/python \
+              tools/offline_services/build_service_areas_europe.py \
+              "${CC}" \
+              "${PBF}" \
+              "${JSON}"
 
-          python - "offline/service_areas/${{ matrix.cc }}.json" "${{ matrix.cc }}" <<'PY'
+            if [ ! -s "${JSON}" ]; then
+              echo "ERRORE: JSON non creato per ${CC}"
+              exit 1
+            fi
+
+            .venv/bin/python - "${JSON}" "${CC}" <<'PY'
           import json
           import sys
 
-          path, cc = sys.argv[1], sys.argv[2]
+          path = sys.argv[1]
+          expected_country = sys.argv[2]
 
-          with open(path, "r", encoding="utf-8") as f:
-              data = json.load(f)
+          with open(path, "r", encoding="utf-8") as fh:
+              data = json.load(fh)
 
           if not isinstance(data, dict):
               raise SystemExit("JSON radice non valido")
 
-          if data.get("country") != cc:
+          if data.get("country") != expected_country:
               raise SystemExit(
-                  f"country non valido: {data.get('country')} != {cc}"
+                  f"country errato: {data.get('country')} != {expected_country}"
               )
 
           areas = data.get("areas")
+
           if not isinstance(areas, list):
-              raise SystemExit("Campo areas mancante o non valido")
+              raise SystemExit("Campo areas non valido")
 
           if not areas:
               raise SystemExit("Campo areas vuoto")
 
           if data.get("count") != len(areas):
               raise SystemExit(
-                  f"count non coerente: {data.get('count')} != {len(areas)}"
+                  f"count incoerente: {data.get('count')} != {len(areas)}"
               )
 
-          print("VALID:", path)
-          print("country =", cc)
-          print("count   =", len(areas))
+          print(
+              f"VALIDO {expected_country}: "
+              f"{len(areas)} aree di servizio"
+          )
           PY
 
-      - name: Save country database
-        uses: actions/upload-artifact@v4
-        with:
-          name: service-areas-${{ matrix.cc }}
-          path: offline/service_areas/${{ matrix.cc }}.json
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 6
+            # Il PBF non serve più: liberiamo subito spazio.
+            rm -f "${PBF}"
 
-      - name: Cleanup downloaded PBF
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          rm -f ".osm/${{ matrix.cc }}.osm.pbf" || true
+            echo "${CC} COMPLETATO"
+          }
 
-  # ============================================================
-  # FASE 2 - PUBBLICAZIONE
-  # Parte dal repository corrente, che contiene gli ultimi JSON
-  # validi. Sovrascrive solo i Paesi aggiornati con successo.
-  # Se un singolo Paese fallisce, il suo vecchio JSON resta.
-  # ============================================================
-  publish:
-    name: publish databases
-    needs: extract
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout current databases
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download completed country databases
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          pattern: service-areas-*
-          merge-multiple: true
-          path: offline/service_areas
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Validate all country databases before manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          expected = ["IT", "FR", "DE", "CH", "AT", "BE", "LU", "NL", "ES"]
-          root = Path("offline/service_areas")
-
-          errors = []
-
-          for cc in expected:
-              path = root / f"{cc}.json"
-
-              if not path.exists() or path.stat().st_size == 0:
-                  errors.append(f"{cc}: file mancante o vuoto")
-                  continue
-
-              try:
-                  data = json.loads(path.read_text(encoding="utf-8"))
-              except Exception as exc:
-                  errors.append(f"{cc}: JSON non leggibile: {exc}")
-                  continue
-
-              if data.get("country") != cc:
-                  errors.append(f"{cc}: country non coerente")
-                  continue
-
-              areas = data.get("areas")
-              if not isinstance(areas, list) or not areas:
-                  errors.append(f"{cc}: areas mancante o vuoto")
-                  continue
-
-              if data.get("count") != len(areas):
-                  errors.append(f"{cc}: count non coerente")
-                  continue
-
-              print(f"OK {cc}: {len(areas)} aree")
-
-          if errors:
-              print("\nERRORI:")
-              for error in errors:
-                  print(" -", error)
-              raise SystemExit("NON PUBBLICO: database Europa incompleto o non valido")
-
-          print("\nDatabase Paesi validi: 9/9")
-          PY
-
-      - name: Remove obsolete graph files
-        shell: bash
-        run: |
-          set -euo pipefail
-          find offline/service_areas -maxdepth 1 -type f -name "*.graph.json" -print -delete || true
+          build_country IT italy
+          build_country FR france
+          build_country DE germany
+          build_country CH switzerland
+          build_country AT austria
+          build_country BE belgium
+          build_country LU luxembourg
+          build_country NL netherlands
+          build_country ES spain
 
       - name: Build Europe manifest
         shell: bash
         run: |
           set -euo pipefail
-          python tools/offline_services/build_europe_manifest.py
+
+          .venv/bin/python \
+            tools/offline_services/build_europe_manifest.py
+
           test -s offline/service_areas/manifest_europe.json
 
-      - name: Validate Europe manifest
+      - name: Final validation
         shell: bash
         run: |
           set -euo pipefail
 
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           import json
           from pathlib import Path
 
-          expected = {"IT", "FR", "DE", "CH", "AT", "BE", "LU", "NL", "ES"}
-          path = Path("offline/service_areas/manifest_europe.json")
+          expected = [
+              "IT",
+              "FR",
+              "DE",
+              "CH",
+              "AT",
+              "BE",
+              "LU",
+              "NL",
+              "ES",
+          ]
 
-          if not path.exists() or path.stat().st_size == 0:
-              raise SystemExit("manifest_europe.json mancante o vuoto")
+          root = Path("offline/service_areas")
 
-          data = json.loads(path.read_text(encoding="utf-8"))
-          countries = data.get("countries")
+          total = 0
+
+          for cc in expected:
+              path = root / f"{cc}.json"
+
+              if not path.is_file():
+                  raise SystemExit(f"Manca {path}")
+
+              if path.stat().st_size == 0:
+                  raise SystemExit(f"File vuoto: {path}")
+
+              with path.open("r", encoding="utf-8") as fh:
+                  data = json.load(fh)
+
+              if data.get("country") != cc:
+                  raise SystemExit(
+                      f"Country errato in {path}"
+                  )
+
+              areas = data.get("areas")
+
+              if not isinstance(areas, list) or not areas:
+                  raise SystemExit(
+                      f"Areas non valide in {path}"
+                  )
+
+              if data.get("count") != len(areas):
+                  raise SystemExit(
+                      f"Count incoerente in {path}"
+                  )
+
+              total += len(areas)
+
+              print(
+                  f"OK {cc}: {len(areas)} aree"
+              )
+
+          manifest_path = root / "manifest_europe.json"
+
+          if not manifest_path.is_file():
+              raise SystemExit(
+                  "manifest_europe.json mancante"
+              )
+
+          with manifest_path.open(
+              "r",
+              encoding="utf-8"
+          ) as fh:
+              manifest = json.load(fh)
+
+          countries = manifest.get("countries")
 
           if not isinstance(countries, dict):
-              raise SystemExit("Campo countries del manifest non valido")
+              raise SystemExit(
+                  "Campo countries del manifest non valido"
+              )
 
-          found = set(countries.keys())
-          missing = sorted(expected - found)
-
-          print("Paesi nel manifest:", ", ".join(sorted(found)))
+          missing = [
+              cc
+              for cc in expected
+              if cc not in countries
+          ]
 
           if missing:
               raise SystemExit(
-                  "NON PUBBLICO: mancano database per: " + ", ".join(missing)
+                  "Paesi mancanti nel manifest: "
+                  + ", ".join(missing)
               )
 
-          print("Manifest completo: 9/9 paesi")
+          if manifest.get("graphRequired") is not False:
+              raise SystemExit(
+                  "Il manifest richiede ancora il graph"
+              )
+
+          print()
+          print("====================================")
+          print("DATABASE EUROPA COMPLETO")
+          print("Paesi: 9/9")
+          print(f"Aree totali: {total}")
+          print("Graph: NON RICHIESTO")
+          print("====================================")
           PY
 
-      - name: Show files to publish
+      - name: Show generated files
         shell: bash
         run: |
           set -euo pipefail
-          echo "File offline/service_areas pronti:"
-          find offline/service_areas -maxdepth 1 -type f -print | sort
+
+          echo "Database generati:"
+          ls -lh offline/service_areas/*.json
 
       - name: Commit databases
         shell: bash
         run: |
           set -euo pipefail
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config \
+            user.name \
+            "github-actions[bot]"
+
+          git config \
+            user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add -A offline/service_areas/
 
@@ -307,18 +300,24 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Update Europe offline service areas"
+          git commit \
+            -m "Update Europe offline service areas"
 
-          for ATTEMPT in 1 2 3; do
-            if git push origin HEAD:main; then
+          for ATTEMPT in 1 2 3
+          do
+            if git push origin HEAD:main
+            then
               echo "Push completato."
               exit 0
             fi
 
-            echo "Push fallito, tentativo $ATTEMPT/3. Riallineo main..."
+            echo \
+              "Push fallito - tentativo ${ATTEMPT}/3"
+
             git pull --rebase origin main
+
             sleep 10
           done
 
-          echo "Push fallito dopo 3 tentativi."
+          echo "ERRORE: push fallito dopo 3 tentativi."
           exit 1
