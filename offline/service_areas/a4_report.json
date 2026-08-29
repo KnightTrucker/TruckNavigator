@@ -1,0 +1,121 @@
+{
+  "route": "A4 Paris -> Strasbourg",
+  "generatedCount": 499,
+  "checks": [
+    {
+      "expected": "Aire de Ferrières",
+      "type": "services",
+      "km": 27,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Vaucourtois",
+      "type": "rest_area",
+      "km": 45,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire d’Ussy-sur-Marne",
+      "type": "services",
+      "km": 56,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de La Fontenelle",
+      "type": "rest_area",
+      "km": 76,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Tardenois Sud",
+      "type": "services",
+      "km": 97,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Vrigny",
+      "type": "services",
+      "km": 129,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Reims Champagne Sud",
+      "type": "services",
+      "km": 159,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Valmy Orbeval",
+      "type": "services",
+      "km": 206,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Verdun Saint-Nicolas Sud",
+      "type": "services",
+      "km": 261,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Metz Saint-Privat",
+      "type": "services",
+      "km": 304,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Longeville-lès-Saint-Avold Sud",
+      "type": "services",
+      "km": 358,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Keskastel Ouest",
+      "type": "services",
+      "km": 400,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Saverne Monswiller",
+      "type": "services",
+      "km": 437,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    },
+    {
+      "expected": "Aire de Brumath Ouest",
+      "type": "services",
+      "km": 465,
+      "found": true,
+      "match": "",
+      "osmId": "osm:node/1008161414"
+    }
+  ],
+  "found": 14,
+  "total": 14,
+  "coverage": 1.0
+}
