@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "route": "A4 Paris -> Strasbourg",
+  "status": "phase2d-a4-certification",
+  "certifiedA4": 12,
+  "total": 14,
+  "wrongMotorway": [
+    "Aire de La Fontenelle"
+  ],
+  "needsDirectionOrientation": true,
+  "note": "This phase certifies A4 topology and cleans duplicate ramp IDs. Paris/Strasbourg semantic direction is intentionally not guessed from coordinates."
+}

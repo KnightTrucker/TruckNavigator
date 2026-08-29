@@ -11,15 +11,13 @@
       "osmId": "osm:way/30772012",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/84985483",
       "entryWayIds": [
-        "osm:way/30764437",
-        "osm:way/30764437",
-        "osm:way/30764437",
-        "osm:way/30764437",
         "osm:way/30764437"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Vaucourtois",
@@ -30,14 +28,13 @@
       "osmId": "osm:way/683885513",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/683885512",
       "entryWayIds": [
-        "osm:way/910579243",
-        "osm:way/910579243",
-        "osm:way/910579243",
         "osm:way/910579243"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire d’Ussy-sur-Marne",
@@ -48,17 +45,13 @@
       "osmId": "osm:way/570976760",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/683373944",
       "entryWayIds": [
-        "osm:way/144929527",
-        "osm:way/144929527",
-        "osm:way/144929527",
-        "osm:way/144929527",
-        "osm:way/144929527",
-        "osm:way/144929527",
         "osm:way/144929527"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de La Fontenelle",
@@ -69,17 +62,13 @@
       "osmId": "osm:way/463933992",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 31",
+      "roadRefRaw": "A 31",
+      "roadRefNormalized": "A31",
       "roadWayId": "osm:way/153882208",
       "entryWayIds": [
-        "osm:way/128349031",
-        "osm:way/128349031",
-        "osm:way/128349031",
-        "osm:way/128349031",
-        "osm:way/128349031",
-        "osm:way/128349031",
         "osm:way/128349031"
-      ]
+      ],
+      "certifiedA4": false
     },
     {
       "expected": "Aire de Tardenois Sud",
@@ -88,11 +77,13 @@
       "found": false,
       "match": null,
       "osmId": null,
-      "score": 0.519,
+      "score": 0.583,
       "graphStatus": null,
-      "roadRef": null,
+      "roadRefRaw": null,
+      "roadRefNormalized": null,
       "roadWayId": null,
-      "entryWayIds": []
+      "entryWayIds": [],
+      "certifiedA4": false
     },
     {
       "expected": "Aire de Vrigny",
@@ -103,17 +94,13 @@
       "osmId": "osm:way/571247589",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/216839637",
       "entryWayIds": [
-        "osm:way/40392897",
-        "osm:way/40392897",
-        "osm:way/40392897",
-        "osm:way/40392897",
-        "osm:way/40392897",
-        "osm:way/40392897",
         "osm:way/40392897"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Reims Champagne Sud",
@@ -124,18 +111,14 @@
       "osmId": "osm:way/554982854",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/1418358923",
       "entryWayIds": [
         "osm:way/659766720",
-        "osm:way/659766720",
-        "osm:way/659766720",
-        "osm:way/180857109",
-        "osm:way/180857109",
-        "osm:way/180857109",
-        "osm:way/180857109",
         "osm:way/180857109"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Valmy Orbeval",
@@ -146,12 +129,13 @@
       "osmId": "osm:way/571221443",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/1309905568",
       "entryWayIds": [
-        "osm:way/744182651",
         "osm:way/744182651"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Verdun Saint-Nicolas Sud",
@@ -162,20 +146,13 @@
       "osmId": "osm:way/570978320",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/686669843",
       "entryWayIds": [
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
-        "osm:way/144929547",
         "osm:way/144929547"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Metz Saint-Privat",
@@ -186,17 +163,13 @@
       "osmId": "osm:way/235128616",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/691291800",
       "entryWayIds": [
-        "osm:way/15728827",
-        "osm:way/15728827",
-        "osm:way/15728827",
-        "osm:way/15728827",
-        "osm:way/15728827",
-        "osm:way/15728827",
         "osm:way/15728827"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Longeville-lès-Saint-Avold Sud",
@@ -205,16 +178,15 @@
       "found": true,
       "match": "Aire de Longeville-Sud",
       "osmId": "osm:way/497106286",
-      "score": 0.7,
+      "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/321174736",
       "entryWayIds": [
-        "osm:way/144929540",
-        "osm:way/144929540",
-        "osm:way/144929540",
         "osm:way/144929540"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Keskastel Ouest",
@@ -225,18 +197,13 @@
       "osmId": "osm:way/210441272",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/1351855688",
       "entryWayIds": [
-        "osm:way/210441287",
-        "osm:way/210441287",
-        "osm:way/210441287",
-        "osm:way/210441287",
-        "osm:way/210441287",
-        "osm:way/210441287",
-        "osm:way/210441287",
         "osm:way/210441287"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Saverne Monswiller",
@@ -247,15 +214,13 @@
       "osmId": "osm:way/570980486",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/47057445",
       "entryWayIds": [
-        "osm:way/175807124",
-        "osm:way/175807124",
-        "osm:way/175807124",
-        "osm:way/175807124",
         "osm:way/175807124"
-      ]
+      ],
+      "certifiedA4": true
     },
     {
       "expected": "Aire de Brumath Ouest",
@@ -266,36 +231,24 @@
       "osmId": "osm:way/495962417",
       "score": 1.0,
       "graphStatus": "carriageway_linked",
-      "roadRef": "A 4",
+      "roadRefRaw": "A 4",
+      "roadRefNormalized": "A4",
       "roadWayId": "osm:way/495962388",
       "entryWayIds": [
         "osm:way/1386534233",
-        "osm:way/1386534233",
-        "osm:way/1386534233",
-        "osm:way/1386534233",
-        "osm:way/1386534233",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
-        "osm:way/237594189",
         "osm:way/237594189",
         "osm:way/495962392"
-      ]
+      ],
+      "certifiedA4": true
     }
   ],
   "found": 13,
   "total": 14,
   "coverage": 0.929,
   "graphLinked": 13,
-  "a4GraphLinked": 0
+  "a4GraphLinked": 12,
+  "certifiedA4": 12,
+  "wrongMotorway": [
+    "Aire de La Fontenelle"
+  ]
 }
