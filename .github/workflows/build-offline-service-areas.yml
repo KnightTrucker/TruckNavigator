@@ -27,7 +27,7 @@ jobs:
         run: |
           python tools/offline_services/validate_a4_phase2d.py offline/service_areas/FR.graph.json tools/offline_services/a4_baseline.json offline/service_areas/a4_report.json
           python tools/offline_services/audit_a4_phase2d.py offline/service_areas/a4_report.json offline/service_areas/a4_certification.json
-      - name: Orient A4 carriageways phase 2E
+      - name: Orient A4 carriageways phase 2E-bis
         run: |
           python tools/offline_services/orient_a4_phase2e.py \
             offline/service_areas/a4_report.json \
@@ -41,4 +41,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add offline/service_areas/FR.json offline/service_areas/FR.graph.json offline/service_areas/a4_report.json offline/service_areas/a4_certification.json offline/service_areas/a4_direction_report.json
-          git diff --cached --quiet || (git commit -m "Orient A4 service areas phase 2E" && git push)
+          git diff --cached --quiet || (git commit -m "Orient A4 carriageways phase 2E-bis" && git push)
