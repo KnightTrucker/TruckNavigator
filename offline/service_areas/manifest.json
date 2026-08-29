@@ -1,16 +1,20 @@
 {
-  "schemaVersion": 3,
-  "generatedAt": "2026-08-29T08:51:21.370052Z",
+  "schemaVersion": 4,
+  "generatedAt": "2026-08-29T10:25:28.057089Z",
   "country": "FR",
   "count": 499,
-  "sha256": "73d94082a957e712c8eee4c8440ae4072ff08fcc84fd9e9c53f6de066a7ad8ea",
+  "sha256": "e13f4109dc747f22a02ef330c9c20e8ad3e93c6a1a96cd234e4aca07ccbe84c2",
   "graphLinking": {
-    "status": "phase2b",
-    "linked": 203,
+    "status": "phase2c-fast",
+    "linked": 204,
     "total": 499,
-    "areasWithServiceRoadSeed": 413,
-    "areasWithMotorwayLinkPath": 184,
-    "seedRadiusM": 220.0,
-    "note": "Nearby geometry is used only to seed the area's internal service-road network. The actual motorway association must then be reached through exact OSM service/motorway_link/motorway topology. No left/right carriageway guess is used."
+    "areasWithServiceRoadSeed": 445,
+    "areasWithMotorwayLinkPath": 189,
+    "seedRadiiM": [
+      220.0,
+      350.0,
+      500.0
+    ],
+    "spatialIndexCellDegrees": 0.005
   }
 }
