@@ -23,18 +23,22 @@ jobs:
       - name: Link graph phase 2C optimized
         run: |
           python tools/offline_services/build_service_graph.py offline/service_areas/FR.json offline/service_areas/FR.graph.json .osm/ile-de-france.osm.pbf .osm/champagne-ardenne.osm.pbf .osm/lorraine.osm.pbf .osm/alsace.osm.pbf
-      - name: Validate A4
-        run: python tools/offline_services/validate_a4.py offline/service_areas/FR.graph.json tools/offline_services/a4_baseline.json offline/service_areas/a4_report.json
+      - name: Certify A4 topology phase 2D
+        run: |
+          python tools/offline_services/validate_a4_phase2d.py offline/service_areas/FR.graph.json tools/offline_services/a4_baseline.json offline/service_areas/a4_report.json
+          python tools/offline_services/audit_a4_phase2d.py offline/service_areas/a4_report.json offline/service_areas/a4_certification.json
       - name: Manifest
         run: |
           python - <<'PY'
           import json,hashlib,pathlib
           p=pathlib.Path("offline/service_areas/FR.graph.json");d=json.loads(p.read_text())
-          pathlib.Path("offline/service_areas/manifest.json").write_text(json.dumps({"schemaVersion":d["schemaVersion"],"generatedAt":d["generatedAt"],"country":"FR","count":d["count"],"sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"graphLinking":d["graphLinking"]},indent=2))
+          cert=json.loads(pathlib.Path("offline/service_areas/a4_certification.json").read_text())
+          m={"schemaVersion":d["schemaVersion"],"generatedAt":d["generatedAt"],"country":"FR","count":d["count"],"sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"graphLinking":d["graphLinking"],"a4Certification":cert}
+          pathlib.Path("offline/service_areas/manifest.json").write_text(json.dumps(m,ensure_ascii=False,indent=2))
           PY
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add offline/service_areas/FR.json offline/service_areas/FR.graph.json offline/service_areas/manifest.json offline/service_areas/a4_report.json
-          git diff --cached --quiet || (git commit -m "Optimize offline service graph phase 2C" && git push)
+          git add offline/service_areas/FR.json offline/service_areas/FR.graph.json offline/service_areas/manifest.json offline/service_areas/a4_report.json offline/service_areas/a4_certification.json
+          git diff --cached --quiet || (git commit -m "Certify A4 service areas phase 2D" && git push)
