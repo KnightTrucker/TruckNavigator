@@ -1,13 +1,16 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-08-29T08:38:42.237979Z",
+  "schemaVersion": 3,
+  "generatedAt": "2026-08-29T08:51:21.370052Z",
   "country": "FR",
   "count": 499,
-  "sha256": "b9ee00189d4412c902f59bd74d9237bd7aaa0c9589c776973e341c7b201b7635",
+  "sha256": "73d94082a957e712c8eee4c8440ae4072ff08fcc84fd9e9c53f6de066a7ad8ea",
   "graphLinking": {
-    "status": "phase2a",
-    "linked": 7,
+    "status": "phase2b",
+    "linked": 203,
     "total": 499,
-    "note": "Exact OSM node topology only; no coordinate-side direction guessing. Direction labels such as Paris/Strasbourg require route-orientation validation."
+    "areasWithServiceRoadSeed": 413,
+    "areasWithMotorwayLinkPath": 184,
+    "seedRadiusM": 220.0,
+    "note": "Nearby geometry is used only to seed the area's internal service-road network. The actual motorway association must then be reached through exact OSM service/motorway_link/motorway topology. No left/right carriageway guess is used."
   }
 }
