@@ -1,0 +1,57 @@
+name: Build offline Europe service areas
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 2"
+permissions:
+  contents: write
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {cc: IT, slug: italy}
+          - {cc: FR, slug: france}
+          - {cc: DE, slug: germany}
+          - {cc: CH, slug: switzerland}
+          - {cc: AT, slug: austria}
+          - {cc: BE, slug: belgium}
+          - {cc: LU, slug: luxembourg}
+          - {cc: NL, slug: netherlands}
+          - {cc: ES, slug: spain}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install --upgrade pip osmium
+      - name: Download ${{ matrix.cc }}
+        run: |
+          mkdir -p .osm offline/service_areas
+          curl -fL --retry 5 "https://download.geofabrik.de/europe/${{ matrix.slug }}-latest.osm.pbf" -o ".osm/${{ matrix.cc }}.osm.pbf"
+      - name: Extract strict service areas
+        run: python tools/offline_services/build_service_areas_europe.py "${{ matrix.cc }}" "offline/service_areas/${{ matrix.cc }}.json" ".osm/${{ matrix.cc }}.osm.pbf"
+      - name: Link to motorway topology
+        run: python tools/offline_services/build_service_graph_europe.py "offline/service_areas/${{ matrix.cc }}.json" "offline/service_areas/${{ matrix.cc }}.graph.json" ".osm/${{ matrix.cc }}.osm.pbf"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service-areas-${{ matrix.cc }}
+          path: offline/service_areas/${{ matrix.cc }}*.json
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {pattern: service-areas-*, merge-multiple: true, path: offline/service_areas}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python tools/offline_services/build_europe_manifest.py
+      - name: Commit databases
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/service_areas/
+          git diff --cached --quiet || (git commit -m "Update Europe offline service areas" && git push)
