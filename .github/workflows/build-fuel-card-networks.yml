@@ -125,3 +125,257 @@ jobs:
           fi
           git commit -m "Update official DKV fuel-card network"
           git push
+
+  build-as24:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install browser and parsers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install playwright openpyxl
+          python -m playwright install --with-deps chromium
+
+      - name: Download official AS24 GPS export
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp_as24 offline/fuel_cards
+          cat > .tmp_as24/download_as24.py <<'PY'
+          import asyncio, os
+          from pathlib import Path
+          from playwright.async_api import async_playwright
+
+          URL="https://network.as24.com/stationfinder/en/stations"
+          OUT=Path(".tmp_as24")
+
+          async def main():
+              async with async_playwright() as p:
+                  browser=await p.chromium.launch(headless=True)
+                  page=await browser.new_page(accept_downloads=True)
+                  await page.goto(URL, wait_until="networkidle", timeout=120000)
+
+                  # Cookie banners vary by market; dismiss when present.
+                  for label in ["Accept all","Accept","I agree","Allow all"]:
+                      try:
+                          b=page.get_by_role("button", name=label, exact=False)
+                          if await b.count():
+                              await b.first.click(timeout=3000)
+                              break
+                      except Exception:
+                          pass
+
+                  candidates=[
+                      page.get_by_text("GPS COORDINATES", exact=False),
+                      page.get_by_text("COORDONNÉES GPS", exact=False),
+                      page.get_by_text("COORDINATES GPS", exact=False),
+                  ]
+                  download=None
+                  for locator in candidates:
+                      try:
+                          if not await locator.count():
+                              continue
+                          async with page.expect_download(timeout=30000) as di:
+                              await locator.first.click()
+                          download=await di.value
+                          break
+                      except Exception:
+                          pass
+
+                  if download is None:
+                      raise RuntimeError("AS24 official GPS export button did not produce a download")
+
+                  name=download.suggested_filename or "as24_export"
+                  path=OUT/name
+                  await download.save_as(path)
+                  print(path)
+                  await browser.close()
+
+          asyncio.run(main())
+          PY
+          python .tmp_as24/download_as24.py
+
+      - name: Build AS24 official network JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv, io, json, os, re, zipfile
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          from datetime import datetime, timezone
+          from openpyxl import load_workbook
+
+          ROOT=Path(".tmp_as24")
+          files=[p for p in ROOT.iterdir() if p.is_file() and p.name!="download_as24.py"]
+          if not files:
+              raise RuntimeError("No AS24 export downloaded")
+          p=max(files,key=lambda x:x.stat().st_size)
+          if p.stat().st_size < 1000:
+              raise RuntimeError("AS24 export unexpectedly small")
+
+          def norm(s):
+              return re.sub(r'[^a-z0-9]+','',str(s or '').lower())
+          def clean(s):
+              return re.sub(r'\s+',' ',str(s or '')).strip()
+          def num(v):
+              try:
+                  return float(str(v).replace(',','.').strip())
+              except Exception:
+                  return None
+          def findcol(headers, names):
+              nh=[norm(x) for x in headers]
+              for wanted in names:
+                  w=norm(wanted)
+                  for i,h in enumerate(nh):
+                      if h==w or w in h:
+                          return i
+              return None
+
+          rows=[]
+          suf=p.suffix.lower()
+
+          if suf in (".xlsx",".xlsm"):
+              wb=load_workbook(p, read_only=True, data_only=True)
+              ws=wb[wb.sheetnames[0]]
+              vals=list(ws.iter_rows(values_only=True))
+              if vals:
+                  headers=[clean(x) for x in vals[0]]
+                  rows=[dict(zip(headers,r)) for r in vals[1:]]
+
+          elif suf in (".csv",".txt"):
+              raw=p.read_bytes()
+              txt=None
+              for enc in ("utf-8-sig","utf-8","cp1252","latin1"):
+                  try:
+                      txt=raw.decode(enc); break
+                  except Exception:
+                      pass
+              if txt is None: raise RuntimeError("Cannot decode AS24 CSV")
+              sample=txt[:5000]
+              try: dialect=csv.Sniffer().sniff(sample, delimiters=";,|\t")
+              except Exception: dialect=csv.excel
+              rows=list(csv.DictReader(io.StringIO(txt), dialect=dialect))
+
+          elif suf in (".gpx",".xml",".kml"):
+              root=ET.fromstring(p.read_bytes())
+              def local(t): return t.rsplit('}',1)[-1].lower()
+              for el in root.iter():
+                  if local(el.tag) not in ("wpt","placemark"): continue
+                  lat=lon=None; name=""; desc=""
+                  if local(el.tag)=="wpt":
+                      lat=num(el.attrib.get("lat")); lon=num(el.attrib.get("lon"))
+                      for ch in el:
+                          if local(ch.tag)=="name" and ch.text: name=clean(ch.text)
+                          if local(ch.tag) in ("desc","cmt") and ch.text: desc=clean(ch.text)
+                  else:
+                      coord=""
+                      for ch in el.iter():
+                          if local(ch.tag)=="name" and ch.text and not name: name=clean(ch.text)
+                          if local(ch.tag)=="description" and ch.text: desc=clean(ch.text)
+                          if local(ch.tag)=="coordinates" and ch.text: coord=clean(ch.text)
+                      if coord:
+                          a=coord.split(",")
+                          if len(a)>=2: lon=num(a[0]); lat=num(a[1])
+                  if lat is not None and lon is not None:
+                      rows.append({"name":name,"address":desc,"latitude":lat,"longitude":lon})
+          else:
+              raise RuntimeError(f"Unsupported AS24 export format: {p.name}")
+
+          if not rows:
+              raise RuntimeError("AS24 export parsed zero rows")
+
+          headers=list(rows[0].keys())
+          latk=headers[findcol(headers,["latitude","lat"])] if findcol(headers,["latitude","lat"]) is not None else None
+          lonk=headers[findcol(headers,["longitude","lng","lon"])] if findcol(headers,["longitude","lng","lon"]) is not None else None
+          namei=findcol(headers,["station name","name","station","city","site"])
+          addri=findcol(headers,["address","adresse","street"])
+          idi=findcol(headers,["station no","station number","site id","id"])
+          countryi=findcol(headers,["country","pays"])
+          cityi=findcol(headers,["city","ville"])
+          service_cols=[h for h in headers if any(k in norm(h) for k in
+                        ["diesel","adblue","hvo","lng","gnl","cng","gnc","parking","wash","ord","takdrive"])]
+
+          if not latk or not lonk:
+              raise RuntimeError("Latitude/longitude columns not found in AS24 official export")
+
+          stations=[]; seen=set()
+          for n,r in enumerate(rows,1):
+              lat=num(r.get(latk)); lon=num(r.get(lonk))
+              if lat is None or lon is None or not (-90<=lat<=90 and -180<=lon<=180):
+                  continue
+              name=clean(r.get(headers[namei])) if namei is not None else "AS24"
+              addr=clean(r.get(headers[addri])) if addri is not None else ""
+              city=clean(r.get(headers[cityi])) if cityi is not None else ""
+              country=clean(r.get(headers[countryi])) if countryi is not None else ""
+              if city and city.lower() not in addr.lower(): addr=clean(addr+" "+city)
+              if country and country.lower() not in addr.lower(): addr=clean(addr+" "+country)
+              sid=clean(r.get(headers[idi])) if idi is not None else str(n)
+              key=(round(lat,6),round(lon,6),sid)
+              if key in seen: continue
+              seen.add(key)
+              services={}
+              for h in service_cols:
+                  v=clean(r.get(h))
+                  if v and v.lower() not in ("0","no","false","non","n/a","-"):
+                      services[norm(h)]=v
+              stations.append({
+                  "id":"as24-"+sid,
+                  "lat":lat,"lng":lon,
+                  "name":name or "AS24",
+                  "brand":"AS24",
+                  "address":addr,
+                  "cards":["as24"],
+                  "services":services,
+                  "source":"AS24 official Station Finder GPS export"
+              })
+
+          # Official finder currently exposes thousands of sites. Refuse suspicious partial exports.
+          if len(stations) < 1500:
+              raise RuntimeError(f"Only {len(stations)} AS24 points parsed; refusing to publish")
+
+          stations.sort(key=lambda x:(x["lat"],x["lng"],x["name"]))
+          now=datetime.now(timezone.utc).isoformat()
+          out={"schemaVersion":1,"network":"AS24","generatedAt":now,
+               "source":"https://network.as24.com/stationfinder/en/stations",
+               "count":len(stations),"stations":stations}
+          Path("offline/fuel_cards").mkdir(parents=True,exist_ok=True)
+          Path("offline/fuel_cards/as24.json").write_text(
+              json.dumps(out,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          print("AS24 stations:",len(stations))
+          PY
+
+      - name: Update fuel-card manifest and commit AS24
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime, timezone
+          base=Path("offline/fuel_cards")
+          mf=base/"manifest.json"
+          try: m=json.loads(mf.read_text(encoding="utf-8"))
+          except Exception: m={"schemaVersion":1,"networks":{}}
+          j=json.loads((base/"as24.json").read_text(encoding="utf-8"))
+          m["generatedAt"]=datetime.now(timezone.utc).isoformat()
+          m.setdefault("networks",{})["as24"]={
+              "count":j["count"],
+              "source":j["source"]
+          }
+          mf.write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/fuel_cards/as24.json offline/fuel_cards/manifest.json
+          if git diff --cached --quiet; then
+            echo "No AS24 changes"
+            exit 0
+          fi
+          git commit -m "Update official AS24 fuel-card network"
+          git push
+
