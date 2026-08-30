@@ -126,7 +126,7 @@ jobs:
           git commit -m "Update official DKV fuel-card network"
           git push
 
-build-as24:
+  build-as24:
     needs: build-dkv
     runs-on: ubuntu-latest
     steps:
