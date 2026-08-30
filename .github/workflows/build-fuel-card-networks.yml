@@ -1,0 +1,127 @@
+name: Build Fuel Card Networks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 2'
+
+permissions:
+  contents: write
+
+jobs:
+  build-dkv:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build DKV official network JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p offline/fuel_cards .tmp_dkv
+          python - <<'PY'
+          import io, json, os, re, urllib.request, zipfile
+          import xml.etree.ElementTree as ET
+          from datetime import datetime, timezone
+
+          URL = 'https://my.dkv-mobility.com/apidnext/geo-static-content-service/v1/station-network,zip/dkv_standard_gpx.zip'
+          req = urllib.request.Request(URL, headers={'User-Agent':'KnightTruckerNavy/0.0.60'})
+          with urllib.request.urlopen(req, timeout=90) as r:
+              payload = r.read()
+          if len(payload) < 1000:
+              raise RuntimeError('DKV download unexpectedly small')
+
+          z = zipfile.ZipFile(io.BytesIO(payload))
+          gpx_names = [n for n in z.namelist() if n.lower().endswith('.gpx')]
+          if not gpx_names:
+              raise RuntimeError('No GPX file in DKV ZIP')
+
+          def local(tag):
+              return tag.rsplit('}',1)[-1].lower()
+          def text_of(el, name):
+              for ch in list(el):
+                  if local(ch.tag)==name and ch.text:
+                      return ch.text.strip()
+              return ''
+          def all_text(el):
+              vals=[]
+              for ch in el.iter():
+                  if ch.text and ch.text.strip(): vals.append(ch.text.strip())
+              return ' | '.join(vals)
+          def compact_ws(s):
+              return re.sub(r'\s+',' ',s or '').strip()
+
+          seen=set(); stations=[]
+          for gn in gpx_names:
+              root=ET.fromstring(z.read(gn))
+              for w in root.iter():
+                  if local(w.tag)!='wpt':
+                      continue
+                  try:
+                      lat=float(w.attrib['lat']); lon=float(w.attrib['lon'])
+                  except Exception:
+                      continue
+                  name=compact_ws(text_of(w,'name')) or 'DKV station'
+                  desc=compact_ws(text_of(w,'desc'))
+                  cmt=compact_ws(text_of(w,'cmt'))
+                  full=compact_ws(' | '.join([name,desc,cmt,all_text(w)]))
+                  key=(round(lat,6),round(lon,6),name.lower())
+                  if key in seen: continue
+                  seen.add(key)
+
+                  # GPX exports differ slightly over time. Keep useful source text,
+                  # but never invent acceptance: every point in this file is DKV network data.
+                  address=''
+                  m=re.search(r'(?:address|adresse|indirizzo)\s*[:=-]\s*([^|]+)', full, re.I)
+                  if m: address=compact_ws(m.group(1))
+                  brand=''
+                  for b in ['TotalEnergies','Shell','Esso','BP','AS24','AVIA','Eni','Q8','Tamoil']:
+                      if re.search(r'\b'+re.escape(b)+r'\b', full, re.I):
+                          brand=b; break
+
+                  stations.append({
+                      'id': f'dkv-{len(stations)+1}',
+                      'lat': lat,
+                      'lng': lon,
+                      'name': name,
+                      'brand': brand,
+                      'address': address or desc or cmt,
+                      'cards': ['dkv'],
+                      'source': 'DKV Mobility official POI',
+                      'sourceText': full[:700]
+                  })
+
+          stations.sort(key=lambda x:(x['lat'],x['lng'],x['name']))
+          if len(stations) < 1000:
+              raise RuntimeError(f'Only {len(stations)} DKV points parsed; refusing to publish')
+
+          out={
+              'schemaVersion':1,
+              'network':'DKV',
+              'generatedAt':datetime.now(timezone.utc).isoformat(),
+              'source':URL,
+              'count':len(stations),
+              'stations':stations
+          }
+          os.makedirs('offline/fuel_cards', exist_ok=True)
+          with open('offline/fuel_cards/dkv.json','w',encoding='utf-8') as f:
+              json.dump(out,f,ensure_ascii=False,separators=(',',':'))
+          with open('offline/fuel_cards/manifest.json','w',encoding='utf-8') as f:
+              json.dump({'schemaVersion':1,'generatedAt':out['generatedAt'],'networks':{'dkv':{'count':len(stations),'source':URL}}},f,ensure_ascii=False,indent=2)
+          print('DKV stations:',len(stations))
+          PY
+
+      - name: Commit generated DKV data
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/fuel_cards/dkv.json offline/fuel_cards/manifest.json
+          if git diff --cached --quiet; then
+            echo "No DKV changes"
+            exit 0
+          fi
+          git commit -m "Update official DKV fuel-card network"
+          git push
