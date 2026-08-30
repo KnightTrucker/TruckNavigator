@@ -332,6 +332,10 @@ jobs:
 
           stations=[]; seen=set()
           for d,(lat,lon) in candidates:
+              # AS24 sometimes exposes real station records with missing GPS as 0,0.
+              # Never publish them: they would appear in the Gulf of Guinea and are unusable.
+              if abs(lat) < 1e-9 and abs(lon) < 1e-9:
+                  continue
               sid=first(d,ID_KEYS)
               name=first(d,NAME_KEYS) or "AS24"
               addr=first(d,ADDRESS_KEYS)
@@ -394,6 +398,7 @@ jobs:
           git commit -m "Update official AS24 fuel-card network"
           git push
 
+
   build-shell:
     needs: build-as24
     if: ${{ always() && needs.build-as24.result != 'cancelled' }}
@@ -407,146 +412,384 @@ jobs:
         with:
           ref: main
 
-      - name: Build official Shell Card / roaming network
+      - name: Install Shell collector
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      - name: Build verified Shell Card network
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p offline/fuel_cards
 
-          if [ -z "${SHELL_CLIENT_ID:-}" ] || [ -z "${SHELL_CLIENT_SECRET:-}" ]; then
-            echo "Shell API credentials not configured."
-            echo "Add repository secrets SHELL_CLIENT_ID and SHELL_CLIENT_SECRET to enable Shell."
-            exit 0
-          fi
-
           python - <<'PY'
           import json, os, re, time, uuid
           from pathlib import Path
           from datetime import datetime, timezone
-          from urllib.parse import urlencode
+          from urllib.parse import urlencode, urljoin, urlparse
           from urllib.request import Request, urlopen
 
-          CID=os.environ["SHELL_CLIENT_ID"]
-          SEC=os.environ["SHELL_CLIENT_SECRET"]
-          AUTH="https://api.shell.com/v2/oauth/token"
-          SITES="https://api.shell.com/locations/v1/fuel"
-          EUROPE={"IT","FR","DE","CH","AT","BE","LU","NL","ES"}
+          import requests
+          from bs4 import BeautifulSoup
 
-          def call(req, timeout=90):
-              with urlopen(req, timeout=timeout) as r:
-                  return json.loads(r.read().decode("utf-8"))
+          CID=os.environ.get("SHELL_CLIENT_ID","").strip()
+          SEC=os.environ.get("SHELL_CLIENT_SECRET","").strip()
 
-          body=urlencode({
-              "client_id":CID,
-              "client_secret":SEC,
-              "grant_type":"client_credentials"
-          }).encode()
-          tok=call(Request(AUTH,data=body,headers={
-              "Content-Type":"application/x-www-form-urlencoded",
-              "User-Agent":"KnightTruckerNavy/fuel-network"
-          }))
-          token=tok.get("access_token")
-          if not token: raise RuntimeError("Shell OAuth did not return access_token")
+          # Countries currently supported by TruckNavigator fuel-card filtering.
+          COUNTRIES={"it":"IT","fr":"FR","de":"DE","ch":"CH","at":"AT","be":"BE","lu":"LU","nl":"NL","es":"ES"}
 
-          def get_page(page):
-              u=f"{SITES}?page={page}&pageSize=250"
-              return call(Request(u,headers={
-                  "Authorization":"Bearer "+token,
-                  "RequestId":str(uuid.uuid4()),
-                  "Accept":"application/json",
+          def text(v):
+              return re.sub(r"\s+"," ",str(v or "")).strip()
+
+          def valid_coord(lat,lon):
+              try:
+                  lat=float(lat); lon=float(lon)
+              except Exception:
+                  return False
+              if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                  return False
+              if abs(lat) < 1e-9 and abs(lon) < 1e-9:
+                  return False
+              return True
+
+          # ------------------------------------------------------------------
+          # MODE A: complete official Shell B2B Mobility Sites API
+          # Used automatically when GitHub secrets are configured.
+          # ------------------------------------------------------------------
+          def build_from_api():
+              AUTH="https://api.shell.com/v2/oauth/token"
+              SITES="https://api.shell.com/locations/v1/fuel"
+              EUROPE=set(COUNTRIES.values())
+
+              def call(req, timeout=90):
+                  with urlopen(req, timeout=timeout) as r:
+                      return json.loads(r.read().decode("utf-8"))
+
+              body=urlencode({
+                  "client_id":CID,
+                  "client_secret":SEC,
+                  "grant_type":"client_credentials"
+              }).encode()
+              tok=call(Request(AUTH,data=body,headers={
+                  "Content-Type":"application/x-www-form-urlencoded",
                   "User-Agent":"KnightTruckerNavy/fuel-network"
               }))
+              token=tok.get("access_token")
+              if not token:
+                  raise RuntimeError("Shell OAuth did not return access_token")
 
-          def locate_list(obj):
-              # Official API nests result arrays under data; find the largest list of dicts.
-              found=[]
-              def walk(x):
-                  if isinstance(x,list) and x and isinstance(x[0],dict):
-                      found.append(x)
-                  if isinstance(x,dict):
-                      for v in x.values(): walk(v)
-                  elif isinstance(x,list):
-                      for v in x: walk(v)
-              walk(obj)
-              return max(found,key=len) if found else []
+              def get_page(page):
+                  u=f"{SITES}?page={page}&pageSize=250"
+                  return call(Request(u,headers={
+                      "Authorization":"Bearer "+token,
+                      "RequestId":str(uuid.uuid4()),
+                      "Accept":"application/json",
+                      "User-Agent":"KnightTruckerNavy/fuel-network"
+                  }))
 
-          def nk(s): return re.sub(r"[^a-z0-9]+","",str(s or "").lower())
-          def first(d,*names):
-              if not isinstance(d,dict): return None
-              m={nk(k):v for k,v in d.items()}
-              for n in names:
-                  if nk(n) in m and m[nk(n)] not in (None,""): return m[nk(n)]
-              return None
-          def num(v):
-              try:return float(v)
-              except:return None
-          def coords(d):
-              la=num(first(d,"latitude","lat")); lo=num(first(d,"longitude","lng","lon"))
-              if la is not None and lo is not None: return la,lo
-              for k in ("location","geoLocation","geolocation","coordinates","geometry"):
-                  g=first(d,k)
-                  if isinstance(g,dict):
-                      la=num(first(g,"latitude","lat")); lo=num(first(g,"longitude","lng","lon"))
-                      if la is not None and lo is not None:return la,lo
-                      c=first(g,"coordinates")
-                      if isinstance(c,list) and len(c)>=2:
-                          lo,la=num(c[0]),num(c[1])
-                          if la is not None and lo is not None:return la,lo
-              return None
-          def text(v): return re.sub(r"\s+"," ",str(v or "")).strip()
+              def locate_list(obj):
+                  found=[]
+                  def walk(x):
+                      if isinstance(x,list) and x and isinstance(x[0],dict):
+                          found.append(x)
+                      if isinstance(x,dict):
+                          for v in x.values(): walk(v)
+                      elif isinstance(x,list):
+                          for v in x: walk(v)
+                  walk(obj)
+                  return max(found,key=len) if found else []
 
-          allrows=[]
-          page=1
-          while True:
-              payload=get_page(page)
-              rows=locate_list(payload)
-              if not rows: break
-              allrows.extend(rows)
-              print("Shell page",page,"rows",len(rows))
-              if len(rows)<250: break
-              page+=1
-              if page>2000: raise RuntimeError("Shell pagination safety stop")
-              time.sleep(0.08)
+              def nk(s): return re.sub(r"[^a-z0-9]+","",str(s or "").lower())
+              def first(d,*names):
+                  if not isinstance(d,dict): return None
+                  m={nk(k):v for k,v in d.items()}
+                  for n in names:
+                      if nk(n) in m and m[nk(n)] not in (None,""):
+                          return m[nk(n)]
+                  return None
+              def num(v):
+                  try:return float(v)
+                  except:return None
+              def coords(d):
+                  la=num(first(d,"latitude","lat")); lo=num(first(d,"longitude","lng","lon"))
+                  if valid_coord(la,lo): return la,lo
+                  for k in ("location","geoLocation","geolocation","coordinates","geometry"):
+                      g=first(d,k)
+                      if isinstance(g,dict):
+                          la=num(first(g,"latitude","lat")); lo=num(first(g,"longitude","lng","lon"))
+                          if valid_coord(la,lo): return la,lo
+                          c=first(g,"coordinates")
+                          if isinstance(c,list) and len(c)>=2:
+                              lo,la=num(c[0]),num(c[1])
+                              if valid_coord(la,lo): return la,lo
+                  return None
 
-          stations=[]; seen=set()
-          for d in allrows:
-              c=coords(d)
-              if not c: continue
-              lat,lon=c
-              cc=text(first(d,"countryCode","country_code","country")).upper()
-              if cc and cc not in EUROPE: continue
-              sid=text(first(d,"siteId","site_id","id","stationId","station_id"))
-              name=text(first(d,"siteName","site_name","name","displayName")) or "Shell Card"
-              brand=text(first(d,"brand","brandName","networkName")) or "Shell"
-              addr=text(first(d,"address","formattedAddress","streetAddress"))
-              city=text(first(d,"city","town","locality"))
-              if city and city.lower() not in addr.lower(): addr=(addr+" "+city).strip()
-              key=(round(lat,6),round(lon,6),sid or name.lower())
-              if key in seen: continue
-              seen.add(key)
-              # B2B Mobility Sites explicitly includes Shell network and roaming partners.
-              stations.append({
-                  "id":"shell-"+(sid or str(len(stations)+1)),
-                  "lat":lat,"lng":lon,
-                  "name":name,
-                  "brand":brand,
+              allrows=[]
+              page=1
+              while True:
+                  payload=get_page(page)
+                  rows=locate_list(payload)
+                  if not rows: break
+                  allrows.extend(rows)
+                  print("Shell API page",page,"rows",len(rows))
+                  if len(rows)<250: break
+                  page+=1
+                  if page>2000: raise RuntimeError("Shell API pagination safety stop")
+                  time.sleep(0.08)
+
+              stations=[]; seen=set()
+              for d in allrows:
+                  c=coords(d)
+                  if not c: continue
+                  lat,lon=c
+                  cc=text(first(d,"countryCode","country_code","country")).upper()
+                  if cc and cc not in EUROPE: continue
+                  sid=text(first(d,"siteId","site_id","id","stationId","station_id"))
+                  name=text(first(d,"siteName","site_name","name","displayName")) or "Shell Card"
+                  brand=text(first(d,"brand","brandName","networkName")) or "Shell"
+                  addr=text(first(d,"address","formattedAddress","streetAddress"))
+                  city=text(first(d,"city","town","locality"))
+                  if city and city.lower() not in addr.lower(): addr=(addr+" "+city).strip()
+                  key=(round(lat,6),round(lon,6),sid or name.lower())
+                  if key in seen: continue
+                  seen.add(key)
+                  stations.append({
+                      "id":"shell-"+(sid or str(len(stations)+1)),
+                      "lat":lat,"lng":lon,
+                      "name":name,
+                      "brand":brand,
+                      "address":addr,
+                      "cards":["shell"],
+                      "country":cc,
+                      "cardAcceptance":"official-b2b-network",
+                      "source":"Shell B2B Mobility Sites official API"
+                  })
+
+              if len(stations)<100:
+                  raise RuntimeError(f"Only {len(stations)} Shell/roaming sites parsed from API; refusing to publish")
+              return stations, SITES, "official-api-complete"
+
+          # ------------------------------------------------------------------
+          # MODE B: official PUBLIC Shell Station Locator fallback.
+          # No credentials required.
+          #
+          # Important: a public Shell location is included ONLY when its own
+          # station page explicitly declares Shell Card/euroShell acceptance.
+          # This gives a verified subset. Roaming partner sites not exposed by
+          # the public Shell locator require Mode A.
+          # ------------------------------------------------------------------
+          CARD_MARKERS=[
+              "euroshell/shell card",
+              "shell fuel card acceptance",
+              "shell card (b2b)",
+              "smartpay - shell card (b2b)",
+              "shell card b2b",
+          ]
+
+          def extract_jsonld(soup):
+              objs=[]
+              for tag in soup.find_all("script", attrs={"type":"application/ld+json"}):
+                  raw=tag.string or tag.get_text() or ""
+                  try:
+                      v=json.loads(raw)
+                  except Exception:
+                      continue
+                  if isinstance(v,list): objs.extend(v)
+                  else: objs.append(v)
+              return objs
+
+          def walk_dicts(x):
+              if isinstance(x,dict):
+                  yield x
+                  for v in x.values(): yield from walk_dicts(v)
+              elif isinstance(x,list):
+                  for v in x: yield from walk_dicts(v)
+
+          def page_station(url, session, cc):
+              r=session.get(url,timeout=35,allow_redirects=True)
+              r.raise_for_status()
+              html=r.text
+              low=re.sub(r"\s+"," ",BeautifulSoup(html,"html.parser").get_text(" ",strip=True)).lower()
+              if not any(m in low for m in CARD_MARKERS):
+                  return None
+
+              soup=BeautifulSoup(html,"html.parser")
+              name=""
+              h1=soup.find("h1")
+              if h1: name=text(h1.get_text(" ",strip=True))
+
+              lat=lon=None
+              addr=""
+              for root in extract_jsonld(soup):
+                  for d in walk_dicts(root):
+                      geo=d.get("geo") if isinstance(d,dict) else None
+                      if isinstance(geo,dict):
+                          la=geo.get("latitude"); lo=geo.get("longitude")
+                          if valid_coord(la,lo):
+                              lat=float(la); lon=float(lo)
+                      if lat is None:
+                          la=d.get("latitude") if isinstance(d,dict) else None
+                          lo=d.get("longitude") if isinstance(d,dict) else None
+                          if valid_coord(la,lo):
+                              lat=float(la); lon=float(lo)
+                      if not name and isinstance(d,dict) and d.get("name"):
+                          name=text(d.get("name"))
+                      if not addr and isinstance(d,dict):
+                          a=d.get("address")
+                          if isinstance(a,dict):
+                              parts=[a.get("streetAddress"),a.get("postalCode"),a.get("addressLocality"),a.get("addressCountry")]
+                              addr=text(" ".join(text(x) for x in parts if x))
+                          elif isinstance(a,str):
+                              addr=text(a)
+
+              # Fallback coordinates from embedded page state.
+              if lat is None:
+                  pats=[
+                      r'"latitude"\s*:\s*"?(-?\d+(?:\.\d+)?)"?\s*,\s*"longitude"\s*:\s*"?(-?\d+(?:\.\d+)?)"?',
+                      r'"lat"\s*:\s*"?(-?\d+(?:\.\d+)?)"?\s*,\s*"(?:lng|lon)"\s*:\s*"?(-?\d+(?:\.\d+)?)"?',
+                  ]
+                  for p in pats:
+                      m=re.search(p,html,re.I)
+                      if m and valid_coord(m.group(1),m.group(2)):
+                          lat=float(m.group(1)); lon=float(m.group(2)); break
+
+              if not valid_coord(lat,lon):
+                  print("Shell locator station skipped: no valid coordinates",url)
+                  return None
+
+              # Location Details text fallback for address.
+              if not addr:
+                  heading=soup.find(lambda t: t.name in ("h2","h3") and "location details" in t.get_text(" ",strip=True).lower())
+                  if heading:
+                      nxt=heading.find_next()
+                      if nxt: addr=text(nxt.get_text(" ",strip=True))
+
+              sid=""
+              m=re.search(r"/fuel/(\d+)-",url)
+              if m: sid=m.group(1)
+
+              truck=any(s in low for s in [
+                  "truck friendly","accessible aux camions","lkw","camion","truck parking",
+                  "adblue pump truck","adblue pour camions"
+              ])
+
+              return {
+                  "id":"shell-"+(sid or str(abs(hash(url)))),
+                  "lat":float(lat),"lng":float(lon),
+                  "name":name or "Shell",
+                  "brand":"Shell",
                   "address":addr,
                   "cards":["shell"],
                   "country":cc,
-                  "source":"Shell B2B Mobility Sites official API"
+                  "hgv":truck,
+                  "cardAcceptance":"explicit-public-locator",
+                  "source":"Shell official public Station Locator",
+                  "sourceUrl":url
+              }
+
+          def build_from_public_locator():
+              s=requests.Session()
+              s.headers.update({
+                  "User-Agent":"KnightTruckerNavy/1.0 (+GitHub Actions fuel-card updater)",
+                  "Accept-Language":"en-US,en;q=0.8"
               })
+              station_urls=set()
 
-          if len(stations)<100:
-              raise RuntimeError(f"Only {len(stations)} Shell/roaming sites parsed; refusing to publish")
+              for country,cc in COUNTRIES.items():
+                  root=f"https://find.shell.com/{country}/fuel/locations/en_US"
+                  print("Shell public locator country:",country,root)
+                  try:
+                      r=s.get(root,timeout=40)
+                      r.raise_for_status()
+                  except Exception as e:
+                      print("Country index failed:",country,e)
+                      continue
+                  soup=BeautifulSoup(r.text,"html.parser")
 
-          stations.sort(key=lambda x:(x["lat"],x["lng"],x["name"]))
+                  # Country page -> city pages.
+                  city_urls=set()
+                  for a in soup.find_all("a",href=True):
+                      u=urljoin(root,a["href"]).split("#")[0]
+                      p=urlparse(u)
+                      if p.netloc=="find.shell.com" and f"/{country}/fuel/locations/" in p.path:
+                          city_urls.add(u)
+
+                  # Some markets may expose station links directly on country page.
+                  for a in soup.find_all("a",href=True):
+                      u=urljoin(root,a["href"]).split("#")[0]
+                      p=urlparse(u)
+                      if p.netloc=="find.shell.com" and re.search(fr"/{country}/fuel/\d+-",p.path):
+                          station_urls.add(u)
+
+                  print(country,"city pages",len(city_urls))
+                  for i,city_url in enumerate(sorted(city_urls),1):
+                      try:
+                          rr=s.get(city_url,timeout=35)
+                          rr.raise_for_status()
+                          ss=BeautifulSoup(rr.text,"html.parser")
+                          for a in ss.find_all("a",href=True):
+                              u=urljoin(city_url,a["href"]).split("#")[0]
+                              p=urlparse(u)
+                              if p.netloc=="find.shell.com" and re.search(fr"/{country}/fuel/\d+-",p.path):
+                                  # strip locale suffix so duplicates collapse
+                                  bits=p.path.split("/")
+                                  # keep through station slug
+                                  try:
+                                      fi=bits.index("fuel")
+                                      path="/".join(bits[:fi+2])
+                                      u=f"https://find.shell.com{path}"
+                                  except Exception:
+                                      pass
+                                  station_urls.add(u)
+                      except Exception as e:
+                          print("City page failed:",city_url,e)
+                      if i % 50 == 0:
+                          print(country,"city pages processed",i,"stations discovered",len(station_urls))
+                      time.sleep(0.03)
+
+              print("Shell station pages discovered:",len(station_urls))
+              if len(station_urls)<50:
+                  raise RuntimeError("Shell public locator discovery returned too few station pages")
+
+              stations=[]; seen=set()
+              for i,u in enumerate(sorted(station_urls),1):
+                  cc=COUNTRIES.get(urlparse(u).path.strip("/").split("/")[0],"")
+                  try:
+                      st=page_station(u,s,cc)
+                  except Exception as e:
+                      print("Station page failed:",u,e)
+                      st=None
+                  if st:
+                      key=(round(st["lat"],6),round(st["lng"],6),st["id"])
+                      if key not in seen:
+                          seen.add(key); stations.append(st)
+                  if i % 100 == 0:
+                      print("Shell pages checked",i,"verified Shell Card",len(stations))
+                  time.sleep(0.03)
+
+              if len(stations)<25:
+                  raise RuntimeError(f"Only {len(stations)} explicit Shell Card stations verified; refusing to publish")
+              return stations, "https://find.shell.com/", "official-public-locator-verified-subset"
+
+          if CID and SEC:
+              print("Shell mode: official authenticated B2B Mobility Sites API")
+              stations,source,coverage=build_from_api()
+          else:
+              print("Shell mode: official public Station Locator, explicit Shell Card acceptance only")
+              stations,source,coverage=build_from_public_locator()
+
+          stations.sort(key=lambda x:(x["country"],x["lat"],x["lng"],x["name"]))
           now=datetime.now(timezone.utc).isoformat()
           out={
               "schemaVersion":1,
               "network":"SHELL",
               "generatedAt":now,
-              "source":"https://api.shell.com/locations/v1/fuel",
-              "scopeCountries":sorted(EUROPE),
+              "source":source,
+              "coverage":coverage,
+              "scopeCountries":sorted(COUNTRIES.values()),
               "count":len(stations),
               "stations":stations
           }
@@ -557,19 +800,19 @@ jobs:
           try:m=json.loads(mf.read_text(encoding="utf-8"))
           except Exception:m={"schemaVersion":1,"networks":{}}
           m["generatedAt"]=now
-          m.setdefault("networks",{})["shell"]={"count":len(stations),"source":out["source"]}
+          m.setdefault("networks",{})["shell"]={
+              "count":len(stations),
+              "source":source,
+              "coverage":coverage
+          }
           mf.write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding="utf-8")
-          print("Shell Card/roaming stations:",len(stations))
+          print("Shell verified stations:",len(stations),"coverage:",coverage)
           PY
 
-      - name: Commit Shell data when generated
+      - name: Commit Shell data
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f offline/fuel_cards/shell.json ]; then
-            echo "Shell skipped: no credentials / no file generated."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add offline/fuel_cards/shell.json offline/fuel_cards/manifest.json
@@ -577,5 +820,5 @@ jobs:
             echo "No Shell changes"
             exit 0
           fi
-          git commit -m "Update official Shell fuel-card network"
+          git commit -m "Update verified Shell Card network"
           git push
