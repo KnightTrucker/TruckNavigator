@@ -1,14 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-30T13:27:01.308488+00:00",
+  "generatedAt": "2026-08-30T13:36:00.958483+00:00",
   "networks": {
     "dkv": {
       "count": 77073,
       "source": "https://my.dkv-mobility.com/apidnext/geo-static-content-service/v1/station-network,zip/dkv_standard_gpx.zip"
-    },
-    "as24": {
-      "count": 3997,
-      "source": "https://network.as24.com/stationfinder/en/stations"
     }
   }
 }
