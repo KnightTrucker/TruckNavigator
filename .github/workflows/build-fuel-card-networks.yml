@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build DKV official network JSON
         shell: bash
@@ -126,249 +126,264 @@ jobs:
           git commit -m "Update official DKV fuel-card network"
           git push
 
-  build-as24:
+build-as24:
+    needs: build-dkv
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout latest main
+        uses: actions/checkout@v5
+        with:
+          ref: main
 
-      - name: Install browser and parsers
+      - name: Install AS24 collector
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          pip install playwright openpyxl
+          pip install playwright
           python -m playwright install --with-deps chromium
 
-      - name: Download official AS24 GPS export
+      - name: Capture official AS24 Station Finder data
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .tmp_as24 offline/fuel_cards
-          cat > .tmp_as24/download_as24.py <<'PY'
-          import asyncio, os
+          cat > .tmp_as24/capture.py <<'PY'
+          import asyncio, json, re
           from pathlib import Path
           from playwright.async_api import async_playwright
 
           URL="https://network.as24.com/stationfinder/en/stations"
-          OUT=Path(".tmp_as24")
+          OUT=Path(".tmp_as24/responses")
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          def looks_json(ct, txt):
+              ct=(ct or "").lower()
+              t=(txt or "").lstrip()
+              return ("json" in ct) or t.startswith("{") or t.startswith("[")
 
           async def main():
+              saved=[]
               async with async_playwright() as p:
                   browser=await p.chromium.launch(headless=True)
-                  page=await browser.new_page(accept_downloads=True)
-                  await page.goto(URL, wait_until="networkidle", timeout=120000)
+                  page=await browser.new_page()
 
-                  # Cookie banners vary by market; dismiss when present.
+                  async def handle(resp):
+                      try:
+                          if resp.request.resource_type not in ("xhr","fetch","document"):
+                              return
+                          txt=await resp.text()
+                          if len(txt)<100 or not looks_json(resp.headers.get("content-type",""), txt):
+                              return
+                          # Save every official JSON/XHR response. The parser below decides
+                          # which payload actually contains the station collection.
+                          fn=OUT/f"{len(saved):04d}.json"
+                          fn.write_text(txt, encoding="utf-8")
+                          saved.append((str(fn), resp.url, len(txt)))
+                      except Exception:
+                          pass
+
+                  page.on("response", handle)
+                  await page.goto(URL, wait_until="domcontentloaded", timeout=120000)
+
                   for label in ["Accept all","Accept","I agree","Allow all"]:
                       try:
                           b=page.get_by_role("button", name=label, exact=False)
                           if await b.count():
-                              await b.first.click(timeout=3000)
+                              await b.first.click(timeout=2500)
                               break
                       except Exception:
                           pass
 
-                  candidates=[
-                      page.get_by_text("GPS COORDINATES", exact=False),
-                      page.get_by_text("COORDONNÉES GPS", exact=False),
-                      page.get_by_text("COORDINATES GPS", exact=False),
-                  ]
-                  download=None
-                  for locator in candidates:
-                      try:
-                          if not await locator.count():
-                              continue
-                          async with page.expect_download(timeout=30000) as di:
-                              await locator.first.click()
-                          download=await di.value
-                          break
-                      except Exception:
-                          pass
+                  # Give the map/list time to load its backing dataset.
+                  await page.wait_for_timeout(15000)
 
-                  if download is None:
-                      raise RuntimeError("AS24 official GPS export button did not produce a download")
+                  # Force a modest interaction so lazy-loaded station requests fire too.
+                  try:
+                      await page.mouse.wheel(0, 1800)
+                      await page.wait_for_timeout(5000)
+                  except Exception:
+                      pass
 
-                  name=download.suggested_filename or "as24_export"
-                  path=OUT/name
-                  await download.save_as(path)
-                  print(path)
+                  # Save embedded state as a second official source when present.
+                  try:
+                      state=await page.evaluate("""() => {
+                        const out={};
+                        for (const k of ['__NEXT_DATA__','__NUXT__']) {
+                          if (window[k]) out[k]=window[k];
+                        }
+                        return out;
+                      }""")
+                      if state:
+                          (OUT/"embedded-state.json").write_text(
+                              json.dumps(state, ensure_ascii=False), encoding="utf-8")
+                  except Exception:
+                      pass
+
+                  print("Captured official AS24 responses:", len(saved))
+                  for item in sorted(saved, key=lambda x:x[2], reverse=True)[:12]:
+                      print(item[2], item[1])
                   await browser.close()
 
           asyncio.run(main())
           PY
-          python .tmp_as24/download_as24.py
+          python .tmp_as24/capture.py
 
-      - name: Build AS24 official network JSON
+      - name: Build AS24 network JSON from captured official data
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import csv, io, json, os, re, zipfile
-          import xml.etree.ElementTree as ET
+          import json, math, re
           from pathlib import Path
           from datetime import datetime, timezone
-          from openpyxl import load_workbook
 
-          ROOT=Path(".tmp_as24")
-          files=[p for p in ROOT.iterdir() if p.is_file() and p.name!="download_as24.py"]
+          ROOT=Path(".tmp_as24/responses")
+          files=list(ROOT.glob("*.json"))
           if not files:
-              raise RuntimeError("No AS24 export downloaded")
-          p=max(files,key=lambda x:x.stat().st_size)
-          if p.stat().st_size < 1000:
-              raise RuntimeError("AS24 export unexpectedly small")
+              raise RuntimeError("AS24 Station Finder returned no JSON payloads")
 
-          def norm(s):
-              return re.sub(r'[^a-z0-9]+','',str(s or '').lower())
-          def clean(s):
-              return re.sub(r'\s+',' ',str(s or '')).strip()
-          def num(v):
+          LAT_KEYS=("lat","latitude","y")
+          LON_KEYS=("lng","lon","long","longitude","x")
+          NAME_KEYS=("name","stationname","station_name","title","label","commercialname","commercial_name")
+          ID_KEYS=("id","stationid","station_id","siteid","site_id","code","stationnumber","station_number")
+          ADDRESS_KEYS=("address","adresse","street","streetaddress","street_address","formattedaddress","formatted_address")
+          CITY_KEYS=("city","town","locality","ville")
+          COUNTRY_KEYS=("country","countrycode","country_code","pays")
+
+          def nk(s): return re.sub(r"[^a-z0-9]+","",str(s or "").lower())
+          def scalar(v):
+              return isinstance(v,(str,int,float,bool)) or v is None
+          def asnum(v):
               try:
-                  return float(str(v).replace(',','.').strip())
+                  if isinstance(v,str): v=v.strip().replace(",",".")
+                  return float(v)
               except Exception:
                   return None
-          def findcol(headers, names):
-              nh=[norm(x) for x in headers]
-              for wanted in names:
-                  w=norm(wanted)
-                  for i,h in enumerate(nh):
-                      if h==w or w in h:
-                          return i
+          def get_key(d, candidates):
+              if not isinstance(d,dict): return None
+              by={nk(k):k for k in d}
+              for c in candidates:
+                  nc=nk(c)
+                  if nc in by: return d[by[nc]]
               return None
+          def find_coords(d):
+              lat=get_key(d,LAT_KEYS); lon=get_key(d,LON_KEYS)
+              la,lo=asnum(lat),asnum(lon)
+              if la is not None and lo is not None and -90<=la<=90 and -180<=lo<=180:
+                  return la,lo
+              # common GeoJSON form
+              g=get_key(d,("geometry","location","position","coordinates"))
+              if isinstance(g,dict):
+                  c=get_key(g,("coordinates",))
+                  if isinstance(c,list) and len(c)>=2:
+                      lo,la=asnum(c[0]),asnum(c[1])
+                      if la is not None and lo is not None and -90<=la<=90 and -180<=lo<=180:
+                          return la,lo
+                  la=get_key(g,LAT_KEYS); lo=get_key(g,LON_KEYS)
+                  la,lo=asnum(la),asnum(lo)
+                  if la is not None and lo is not None and -90<=la<=90 and -180<=lo<=180:
+                      return la,lo
+              if isinstance(g,list) and len(g)>=2:
+                  lo,la=asnum(g[0]),asnum(g[1])
+                  if la is not None and lo is not None and -90<=la<=90 and -180<=lo<=180:
+                      return la,lo
+              return None
+          def walk(x):
+              if isinstance(x,dict):
+                  yield x
+                  for v in x.values():
+                      yield from walk(v)
+              elif isinstance(x,list):
+                  for v in x: yield from walk(v)
+          def txt(v):
+              if v is None: return ""
+              if scalar(v): return re.sub(r"\s+"," ",str(v)).strip()
+              return ""
+          def first(d, keys):
+              return txt(get_key(d,keys))
+          def flatten_service_hints(d):
+              hints={}
+              for k,v in d.items():
+                  kk=nk(k)
+                  if any(w in kk for w in ("diesel","adblue","hvo","lng","cng","parking","wash","shower","toilet","restaurant","wifi")):
+                      if scalar(v) and txt(v).lower() not in ("","0","false","no","none","null"):
+                          hints[kk]=txt(v)
+              return hints
 
-          rows=[]
-          suf=p.suffix.lower()
-
-          if suf in (".xlsx",".xlsm"):
-              wb=load_workbook(p, read_only=True, data_only=True)
-              ws=wb[wb.sheetnames[0]]
-              vals=list(ws.iter_rows(values_only=True))
-              if vals:
-                  headers=[clean(x) for x in vals[0]]
-                  rows=[dict(zip(headers,r)) for r in vals[1:]]
-
-          elif suf in (".csv",".txt"):
-              raw=p.read_bytes()
-              txt=None
-              for enc in ("utf-8-sig","utf-8","cp1252","latin1"):
-                  try:
-                      txt=raw.decode(enc); break
-                  except Exception:
-                      pass
-              if txt is None: raise RuntimeError("Cannot decode AS24 CSV")
-              sample=txt[:5000]
-              try: dialect=csv.Sniffer().sniff(sample, delimiters=";,|\t")
-              except Exception: dialect=csv.excel
-              rows=list(csv.DictReader(io.StringIO(txt), dialect=dialect))
-
-          elif suf in (".gpx",".xml",".kml"):
-              root=ET.fromstring(p.read_bytes())
-              def local(t): return t.rsplit('}',1)[-1].lower()
-              for el in root.iter():
-                  if local(el.tag) not in ("wpt","placemark"): continue
-                  lat=lon=None; name=""; desc=""
-                  if local(el.tag)=="wpt":
-                      lat=num(el.attrib.get("lat")); lon=num(el.attrib.get("lon"))
-                      for ch in el:
-                          if local(ch.tag)=="name" and ch.text: name=clean(ch.text)
-                          if local(ch.tag) in ("desc","cmt") and ch.text: desc=clean(ch.text)
-                  else:
-                      coord=""
-                      for ch in el.iter():
-                          if local(ch.tag)=="name" and ch.text and not name: name=clean(ch.text)
-                          if local(ch.tag)=="description" and ch.text: desc=clean(ch.text)
-                          if local(ch.tag)=="coordinates" and ch.text: coord=clean(ch.text)
-                      if coord:
-                          a=coord.split(",")
-                          if len(a)>=2: lon=num(a[0]); lat=num(a[1])
-                  if lat is not None and lon is not None:
-                      rows.append({"name":name,"address":desc,"latitude":lat,"longitude":lon})
-          else:
-              raise RuntimeError(f"Unsupported AS24 export format: {p.name}")
-
-          if not rows:
-              raise RuntimeError("AS24 export parsed zero rows")
-
-          headers=list(rows[0].keys())
-          latk=headers[findcol(headers,["latitude","lat"])] if findcol(headers,["latitude","lat"]) is not None else None
-          lonk=headers[findcol(headers,["longitude","lng","lon"])] if findcol(headers,["longitude","lng","lon"]) is not None else None
-          namei=findcol(headers,["station name","name","station","city","site"])
-          addri=findcol(headers,["address","adresse","street"])
-          idi=findcol(headers,["station no","station number","site id","id"])
-          countryi=findcol(headers,["country","pays"])
-          cityi=findcol(headers,["city","ville"])
-          service_cols=[h for h in headers if any(k in norm(h) for k in
-                        ["diesel","adblue","hvo","lng","gnl","cng","gnc","parking","wash","ord","takdrive"])]
-
-          if not latk or not lonk:
-              raise RuntimeError("Latitude/longitude columns not found in AS24 official export")
+          candidates=[]
+          for f in files:
+              try:
+                  data=json.loads(f.read_text(encoding="utf-8"))
+              except Exception:
+                  continue
+              for d in walk(data):
+                  c=find_coords(d)
+                  if not c: continue
+                  # Reject obvious map viewport/metadata objects by requiring at least
+                  # an identifier/name/address/city signal.
+                  name=first(d,NAME_KEYS)
+                  sid=first(d,ID_KEYS)
+                  addr=first(d,ADDRESS_KEYS)
+                  city=first(d,CITY_KEYS)
+                  if not (name or sid or addr or city):
+                      continue
+                  candidates.append((d,c))
 
           stations=[]; seen=set()
-          for n,r in enumerate(rows,1):
-              lat=num(r.get(latk)); lon=num(r.get(lonk))
-              if lat is None or lon is None or not (-90<=lat<=90 and -180<=lon<=180):
-                  continue
-              name=clean(r.get(headers[namei])) if namei is not None else "AS24"
-              addr=clean(r.get(headers[addri])) if addri is not None else ""
-              city=clean(r.get(headers[cityi])) if cityi is not None else ""
-              country=clean(r.get(headers[countryi])) if countryi is not None else ""
-              if city and city.lower() not in addr.lower(): addr=clean(addr+" "+city)
-              if country and country.lower() not in addr.lower(): addr=clean(addr+" "+country)
-              sid=clean(r.get(headers[idi])) if idi is not None else str(n)
-              key=(round(lat,6),round(lon,6),sid)
+          for d,(lat,lon) in candidates:
+              sid=first(d,ID_KEYS)
+              name=first(d,NAME_KEYS) or "AS24"
+              addr=first(d,ADDRESS_KEYS)
+              city=first(d,CITY_KEYS)
+              country=first(d,COUNTRY_KEYS)
+              if city and city.lower() not in addr.lower(): addr=(addr+" "+city).strip()
+              if country and country.lower() not in addr.lower(): addr=(addr+" "+country).strip()
+              key=(round(lat,6),round(lon,6), sid or name.lower())
               if key in seen: continue
               seen.add(key)
-              services={}
-              for h in service_cols:
-                  v=clean(r.get(h))
-                  if v and v.lower() not in ("0","no","false","non","n/a","-"):
-                      services[norm(h)]=v
               stations.append({
-                  "id":"as24-"+sid,
+                  "id":"as24-"+(sid or str(len(stations)+1)),
                   "lat":lat,"lng":lon,
-                  "name":name or "AS24",
+                  "name":name,
                   "brand":"AS24",
                   "address":addr,
                   "cards":["as24"],
-                  "services":services,
-                  "source":"AS24 official Station Finder GPS export"
+                  "services":flatten_service_hints(d),
+                  "source":"AS24 official Station Finder"
               })
 
-          # Official finder currently exposes thousands of sites. Refuse suspicious partial exports.
+          # AS24 has several thousand sites. If discovery starts returning only a
+          # partial page, stop rather than publish a deceptive database.
           if len(stations) < 1500:
-              raise RuntimeError(f"Only {len(stations)} AS24 points parsed; refusing to publish")
+              raise RuntimeError(f"Only {len(stations)} AS24 stations discovered; refusing to publish partial data")
 
           stations.sort(key=lambda x:(x["lat"],x["lng"],x["name"]))
           now=datetime.now(timezone.utc).isoformat()
-          out={"schemaVersion":1,"network":"AS24","generatedAt":now,
-               "source":"https://network.as24.com/stationfinder/en/stations",
-               "count":len(stations),"stations":stations}
-          Path("offline/fuel_cards").mkdir(parents=True,exist_ok=True)
-          Path("offline/fuel_cards/as24.json").write_text(
-              json.dumps(out,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+          out={
+              "schemaVersion":1,
+              "network":"AS24",
+              "generatedAt":now,
+              "source":"https://network.as24.com/stationfinder/en/stations",
+              "count":len(stations),
+              "stations":stations
+          }
+          p=Path("offline/fuel_cards/as24.json")
+          p.write_text(json.dumps(out,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+
+          mf=Path("offline/fuel_cards/manifest.json")
+          try: m=json.loads(mf.read_text(encoding="utf-8"))
+          except Exception: m={"schemaVersion":1,"networks":{}}
+          m["generatedAt"]=now
+          m.setdefault("networks",{})["as24"]={"count":len(stations),"source":out["source"]}
+          mf.write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding="utf-8")
           print("AS24 stations:",len(stations))
           PY
 
-      - name: Update fuel-card manifest and commit AS24
+      - name: Commit AS24 data
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from datetime import datetime, timezone
-          base=Path("offline/fuel_cards")
-          mf=base/"manifest.json"
-          try: m=json.loads(mf.read_text(encoding="utf-8"))
-          except Exception: m={"schemaVersion":1,"networks":{}}
-          j=json.loads((base/"as24.json").read_text(encoding="utf-8"))
-          m["generatedAt"]=datetime.now(timezone.utc).isoformat()
-          m.setdefault("networks",{})["as24"]={
-              "count":j["count"],
-              "source":j["source"]
-          }
-          mf.write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding="utf-8")
-          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add offline/fuel_cards/as24.json offline/fuel_cards/manifest.json
@@ -379,3 +394,188 @@ jobs:
           git commit -m "Update official AS24 fuel-card network"
           git push
 
+  build-shell:
+    needs: build-as24
+    if: ${{ always() && needs.build-as24.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    env:
+      SHELL_CLIENT_ID: ${{ secrets.SHELL_CLIENT_ID }}
+      SHELL_CLIENT_SECRET: ${{ secrets.SHELL_CLIENT_SECRET }}
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Build official Shell Card / roaming network
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p offline/fuel_cards
+
+          if [ -z "${SHELL_CLIENT_ID:-}" ] || [ -z "${SHELL_CLIENT_SECRET:-}" ]; then
+            echo "Shell API credentials not configured."
+            echo "Add repository secrets SHELL_CLIENT_ID and SHELL_CLIENT_SECRET to enable Shell."
+            exit 0
+          fi
+
+          python - <<'PY'
+          import json, os, re, time, uuid
+          from pathlib import Path
+          from datetime import datetime, timezone
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          CID=os.environ["SHELL_CLIENT_ID"]
+          SEC=os.environ["SHELL_CLIENT_SECRET"]
+          AUTH="https://api.shell.com/v2/oauth/token"
+          SITES="https://api.shell.com/locations/v1/fuel"
+          EUROPE={"IT","FR","DE","CH","AT","BE","LU","NL","ES"}
+
+          def call(req, timeout=90):
+              with urlopen(req, timeout=timeout) as r:
+                  return json.loads(r.read().decode("utf-8"))
+
+          body=urlencode({
+              "client_id":CID,
+              "client_secret":SEC,
+              "grant_type":"client_credentials"
+          }).encode()
+          tok=call(Request(AUTH,data=body,headers={
+              "Content-Type":"application/x-www-form-urlencoded",
+              "User-Agent":"KnightTruckerNavy/fuel-network"
+          }))
+          token=tok.get("access_token")
+          if not token: raise RuntimeError("Shell OAuth did not return access_token")
+
+          def get_page(page):
+              u=f"{SITES}?page={page}&pageSize=250"
+              return call(Request(u,headers={
+                  "Authorization":"Bearer "+token,
+                  "RequestId":str(uuid.uuid4()),
+                  "Accept":"application/json",
+                  "User-Agent":"KnightTruckerNavy/fuel-network"
+              }))
+
+          def locate_list(obj):
+              # Official API nests result arrays under data; find the largest list of dicts.
+              found=[]
+              def walk(x):
+                  if isinstance(x,list) and x and isinstance(x[0],dict):
+                      found.append(x)
+                  if isinstance(x,dict):
+                      for v in x.values(): walk(v)
+                  elif isinstance(x,list):
+                      for v in x: walk(v)
+              walk(obj)
+              return max(found,key=len) if found else []
+
+          def nk(s): return re.sub(r"[^a-z0-9]+","",str(s or "").lower())
+          def first(d,*names):
+              if not isinstance(d,dict): return None
+              m={nk(k):v for k,v in d.items()}
+              for n in names:
+                  if nk(n) in m and m[nk(n)] not in (None,""): return m[nk(n)]
+              return None
+          def num(v):
+              try:return float(v)
+              except:return None
+          def coords(d):
+              la=num(first(d,"latitude","lat")); lo=num(first(d,"longitude","lng","lon"))
+              if la is not None and lo is not None: return la,lo
+              for k in ("location","geoLocation","geolocation","coordinates","geometry"):
+                  g=first(d,k)
+                  if isinstance(g,dict):
+                      la=num(first(g,"latitude","lat")); lo=num(first(g,"longitude","lng","lon"))
+                      if la is not None and lo is not None:return la,lo
+                      c=first(g,"coordinates")
+                      if isinstance(c,list) and len(c)>=2:
+                          lo,la=num(c[0]),num(c[1])
+                          if la is not None and lo is not None:return la,lo
+              return None
+          def text(v): return re.sub(r"\s+"," ",str(v or "")).strip()
+
+          allrows=[]
+          page=1
+          while True:
+              payload=get_page(page)
+              rows=locate_list(payload)
+              if not rows: break
+              allrows.extend(rows)
+              print("Shell page",page,"rows",len(rows))
+              if len(rows)<250: break
+              page+=1
+              if page>2000: raise RuntimeError("Shell pagination safety stop")
+              time.sleep(0.08)
+
+          stations=[]; seen=set()
+          for d in allrows:
+              c=coords(d)
+              if not c: continue
+              lat,lon=c
+              cc=text(first(d,"countryCode","country_code","country")).upper()
+              if cc and cc not in EUROPE: continue
+              sid=text(first(d,"siteId","site_id","id","stationId","station_id"))
+              name=text(first(d,"siteName","site_name","name","displayName")) or "Shell Card"
+              brand=text(first(d,"brand","brandName","networkName")) or "Shell"
+              addr=text(first(d,"address","formattedAddress","streetAddress"))
+              city=text(first(d,"city","town","locality"))
+              if city and city.lower() not in addr.lower(): addr=(addr+" "+city).strip()
+              key=(round(lat,6),round(lon,6),sid or name.lower())
+              if key in seen: continue
+              seen.add(key)
+              # B2B Mobility Sites explicitly includes Shell network and roaming partners.
+              stations.append({
+                  "id":"shell-"+(sid or str(len(stations)+1)),
+                  "lat":lat,"lng":lon,
+                  "name":name,
+                  "brand":brand,
+                  "address":addr,
+                  "cards":["shell"],
+                  "country":cc,
+                  "source":"Shell B2B Mobility Sites official API"
+              })
+
+          if len(stations)<100:
+              raise RuntimeError(f"Only {len(stations)} Shell/roaming sites parsed; refusing to publish")
+
+          stations.sort(key=lambda x:(x["lat"],x["lng"],x["name"]))
+          now=datetime.now(timezone.utc).isoformat()
+          out={
+              "schemaVersion":1,
+              "network":"SHELL",
+              "generatedAt":now,
+              "source":"https://api.shell.com/locations/v1/fuel",
+              "scopeCountries":sorted(EUROPE),
+              "count":len(stations),
+              "stations":stations
+          }
+          Path("offline/fuel_cards/shell.json").write_text(
+              json.dumps(out,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
+
+          mf=Path("offline/fuel_cards/manifest.json")
+          try:m=json.loads(mf.read_text(encoding="utf-8"))
+          except Exception:m={"schemaVersion":1,"networks":{}}
+          m["generatedAt"]=now
+          m.setdefault("networks",{})["shell"]={"count":len(stations),"source":out["source"]}
+          mf.write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding="utf-8")
+          print("Shell Card/roaming stations:",len(stations))
+          PY
+
+      - name: Commit Shell data when generated
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f offline/fuel_cards/shell.json ]; then
+            echo "Shell skipped: no credentials / no file generated."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/fuel_cards/shell.json offline/fuel_cards/manifest.json
+          if git diff --cached --quiet; then
+            echo "No Shell changes"
+            exit 0
+          fi
+          git commit -m "Update official Shell fuel-card network"
+          git push
