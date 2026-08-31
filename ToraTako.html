@@ -75,7 +75,6 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <div class="card metric"><div class="label">Estensioni guida 10h · F9A0</div><div id="extensions" class="value">N/D</div><div class="note">Numero comunicato dal DTCO</div></div>
 <div class="card metric"><div class="label">Durata attività corrente · F927</div><div id="currentDuration" class="value">N/D</div><div class="note">Attività attuale</div></div>
 <div class="card metric"><div class="label">Pausa cumulativa · F925</div><div id="cumulativeBreak" class="value">N/D</div><div class="note">Non usata come calcolo 15+30</div></div>
-<div class="card metric"><div class="label">Guida residua alle 4h30 · F923</div><div id="continuousRemainingField" class="value value-green">N/D</div><div class="note">Tempo prima della pausa obbligatoria</div></div>
 </div>
 <div class="section-title">STATO DID</div><div class="card" id="didList"></div>
 <div class="section-title">DIAGNOSTICA BLE / ITS</div><div class="actions"><button id="clearLogBtn" class="btn">Pulisci log</button></div><div id="log" class="diag">ToraTako pronto.</div>
@@ -108,16 +107,31 @@ function render(){
   const dailyRemaining=daily==null?null:Math.max(0,dailyLimit-daily);
   const effectiveRemaining=dailyRemaining==null?null:
     (commitment==null?dailyRemaining:Math.max(0,Math.min(dailyRemaining,commitment)));
+  // F923 è il contatore reale DTCO della guida continua dall'ultimo
+  // azzeramento valido per pausa/riposo. Non dipende dall'avvio dell'app.
   const remaining430=continuous==null?null:Math.max(0,270-continuous);
+
+  // "Prossima pausa" deve indicare il PRIMO limite che verrà raggiunto:
+  // 1) limite 4h30 di guida continua (F923)
+  // 2) guida giornaliera residua effettiva
+  // 3) impegno residuo
+  const nextPauseCandidates=[
+    remaining430,
+    effectiveRemaining,
+    commitment
+  ].filter(v=>v!=null && Number.isFinite(v));
+
+  const nextPause=nextPauseCandidates.length
+    ? Math.max(0,Math.min(...nextPauseCandidates))
+    : null;
 
   $('dailyLimitLabel').textContent='/ '+(dailyLimit===600?'10h':'9h');
   $('dailyBig').textContent=daily==null?'N/D':fmt(daily).replace('h ',':').replace('m','');
   $('remainingDaily').textContent=fmt(effectiveRemaining);
   $('remainingDailyNote').textContent=dailyRemaining==null?'Limite giornaliero + impegno residuo':
     'Teorico '+fmt(dailyRemaining)+' · limitato dall’impegno';
-  $('remaining430').textContent=fmt(remaining430);
+  $('remaining430').textContent=fmt(nextPause);
   $('commitmentRemaining').textContent=fmt(commitment);
-  $('continuousRemainingField').textContent=fmt(remaining430);
 
   $('currentDuration').textContent=fmt(values[0xF927]);
   $('activityDuration').textContent='Durata attività: '+fmt(values[0xF927]);
