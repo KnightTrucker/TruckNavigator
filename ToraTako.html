@@ -71,6 +71,7 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <div class="grid">
 <div class="card metric"><div class="label">Guida giornaliera · F99A</div><div id="daily" class="value">N/D</div><div class="note">Valore letto dal tachigrafo</div></div>
 <div class="card metric"><div class="label">Guida settimanale · F99B</div><div id="weekly" class="value">N/D</div><div class="note">Valore letto dal tachigrafo</div></div>
+<div class="card metric"><div class="label">Guida bisettimanale · F938</div><div id="biweekly" class="value">N/D</div><div id="biweeklyNote" class="note">Test DID F938 · settimana precedente + corrente</div></div>
 <div class="card metric"><div class="label">Tempo fino al riposo giornaliero · F99C</div><div id="untilDailyRest" class="value value-amber">N/D</div><div class="note">Tempo residuo segnalato dal DTCO</div></div>
 <div class="card metric"><div class="label">Estensioni guida 10h · F9A0</div><div id="extensions" class="value">N/D</div><div class="note">Numero comunicato dal DTCO</div></div>
 <div class="card metric"><div class="label">Durata attività corrente · F927</div><div id="currentDuration" class="value">N/D</div><div class="note">Attività attuale</div></div>
@@ -83,8 +84,8 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <script>
 (()=>{'use strict';
 const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a67-99bc052a1b13',CRED='e168d1a6-304f-42b4-ab96-4cd1d4efebd9';
-const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h'};
-const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF925];
+const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h',0xF938:'Guida bisettimanale'};
+const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925];
 let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
 const values={},ok=new Set(),$=id=>document.getElementById(id),logEl=$('log');
 function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
@@ -138,13 +139,18 @@ function render(){
   $('cumulativeBreak').textContent=fmt(values[0xF925]);
   $('daily').textContent=fmt(daily);
   $('weekly').textContent=fmt(values[0xF99B]);
+  const biweekly=values[0xF938];
+  $('biweekly').textContent=fmt(biweekly);
+  $('biweeklyNote').textContent=biweekly==null
+    ? 'Test DID F938 · in attesa risposta'
+    : 'Residuo 90h: '+fmt(Math.max(0,5400-biweekly));
   $('untilDailyRest').textContent=fmt(commitment);
   $('extensions').textContent=extUsed==null?'N/D':extUsed;
   didList();
 }
 function u16(d){return d.length<2?null:(d[0]<<8)|d[1]}
-function decode(did,d){let v=did===0xF903?(d.length?d[0]&3:null):did===0xF9A0?(d.length?d[0]:null):u16(d);if(v!=null){values[did]=v;ok.add(did);render();log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${v}`);if(diagRunning&&diagCurrent===did)finishDiagReply('SUPPORTATO',v)}}
-function complete(){const m=buf.slice();expected=received=0;buf=[];if(timeout){clearTimeout(timeout);timeout=null}busy=false;log('ITS APP RX: '+hex(m));if(m.length>=3&&m[0]===0x62)decode((m[1]<<8)|m[2],m.slice(3));else if(m.length>=3&&m[0]===0x7F){log(`UDS negativo SID ${m[1].toString(16)} NRC ${m[2].toString(16)}`);if(diagRunning&&diagCurrent!=null)finishDiagReply(m[2]===0x31?'NON SUPPORTATO':'ERRORE NRC '+m[2].toString(16).toUpperCase(),null)}}
+function decode(did,d){let v=did===0xF903?(d.length?d[0]&3:null):did===0xF9A0?(d.length?d[0]:null):u16(d);if(v!=null){values[did]=v;ok.add(did);render();log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${v}`);if(diagActive&&diagIndex>=0&&diagDids[diagIndex][0]===did)diagFinishCurrent('SUPPORTATO · '+(did===0xF9AB?v:fmt(v)))}}
+function complete(){const m=buf.slice();expected=received=0;buf=[];if(timeout){clearTimeout(timeout);timeout=null}busy=false;log('ITS APP RX: '+hex(m));if(m.length>=3&&m[0]===0x62)decode((m[1]<<8)|m[2],m.slice(3));else if(m.length>=3&&m[0]===0x7F){log(`UDS negativo SID ${m[1].toString(16)} NRC ${m[2].toString(16)}`);if(diagActive&&diagIndex>=0)diagFinishCurrent(m[2]===0x31?'NON SUPPORTATO (NRC 31)':'ERRORE NRC '+m[2].toString(16).toUpperCase())}}
 async function write(ch,data){if(ch.writeValueWithoutResponse){try{await ch.writeValueWithoutResponse(data);return}catch(e){}}if(ch.writeValueWithResponse){try{await ch.writeValueWithResponse(data);return}catch(e){}}if(ch.writeValue){await ch.writeValue(data);return}throw Error('Caratteristica non scrivibile')}
 async function fifoRx(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(a.length<2)return;log('FIFO RX: '+hex(a));try{await write(credits,new Uint8Array([1]))}catch(err){log('ACK credito RX fallito: '+err.message)}const total=a[0],num=a[1];if(num===1){expected=total;received=1;buf=Array.from(a.slice(2));if(expected<=1)complete();return}if(expected>1&&num===received+1){received++;buf.push(...a.slice(2));if(received>=expected)complete()}}
 function credRx(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(!a.length)return;const v=a[0];if(v===255){txCredits=0;log('Canale ITS rifiutato (FF)');return}txCredits+=v;log(`CREDITS RX ${hex(a)} → ${txCredits}`)}
@@ -154,7 +160,7 @@ function stop(){if(timer){clearInterval(timer);timer=null}if(timeout){clearTimeo
 async function connect(){if(!navigator.bluetooth){$('compat').innerHTML='<b>Web Bluetooth non disponibile.</b> Usa Chrome Android via HTTPS.';return}try{log('Apro selettore Bluetooth...');device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE]});device.addEventListener('gattserverdisconnected',disc);log(`Scelto: ${device.name||'senza nome'}`);server=await device.gatt.connect();const service=await server.getPrimaryService(SERVICE);fifo=await service.getCharacteristic(FIFO);credits=await service.getCharacteristic(CRED);fifo.addEventListener('characteristicvaluechanged',fifoRx);credits.addEventListener('characteristicvaluechanged',credRx);await fifo.startNotifications();await credits.startNotifications();txCredits=0;await write(credits,new Uint8Array([8]));log('Crediti iniziali inviati: 8');setConn(true,'CONNESSO');start()}catch(e){log('Connessione fallita: '+(e.message||e));setConn(false,'SCOLLEGATO')}}
 function disc(){stop();txCredits=0;fifo=credits=server=null;setConn(false,'SCOLLEGATO');log('DTCO disconnesso')}
 
-const DIAG_DIDS=[
+const diagDids=[
  [0xF9A2,'F9A2','Riposo ininterrotto cumulato'],
  [0xF9A3,'F9A3','Riposo giornaliero minimo'],
  [0xF9A5,'F9A5','Periodo giornaliero massimo'],
@@ -168,54 +174,55 @@ const DIAG_DIDS=[
  [0xF9C0,'F9C0','Residuo pausa/riposo corrente'],
  [0xF9C2,'F9C2','Tempo fino a prossima pausa/riposo']
 ];
-let diagRunning=false,diagCurrent=null,diagResolve=null,diagResults={};
+let diagActive=false,diagIndex=-1,diagTimer=null,diagMap={};
 
-function renderDiag(){
- const root=$('didDiagnosticResults'); if(!root)return;
- root.innerHTML=DIAG_DIDS.map(([did,h,n])=>{
-  const r=diagResults[did], s=r?r.state:'DA TESTARE';
-  const val=r&&r.value!=null?' · '+(did===0xF9AB?r.value:fmt(r.value)):'';
-  return `<div style="padding:10px 12px;border:1px solid rgba(70,160,255,.30);border-radius:12px">
-   <b>${h} · ${n}</b><div style="margin-top:4px">${s}${val}</div></div>`;
+function drawDiag(){
+ const root=$('diagResults'); if(!root)return;
+ root.innerHTML=diagDids.map(([did,h,n])=>{
+   const r=diagMap[did];
+   return `<div style="padding:10px 12px;border:1px solid rgba(70,160,255,.30);border-radius:12px">
+     <b>${h} · ${n}</b>
+     <div style="margin-top:4px">${r?r:'DA TESTARE'}</div>
+   </div>`;
  }).join('');
 }
-function finishDiagReply(state,value){
- if(!diagResolve)return;
- const r=diagResolve; diagResolve=null; r({state,value});
+function diagFinishCurrent(text){
+ if(!diagActive||diagIndex<0)return;
+ const did=diagDids[diagIndex][0];
+ diagMap[did]=text;
+ if(diagTimer){clearTimeout(diagTimer);diagTimer=null}
+ drawDiag();
+ setTimeout(diagNext,700);
 }
-function waitDiag(ms=5000){
- return new Promise(resolve=>{
-  diagResolve=resolve;
-  setTimeout(()=>{if(diagResolve===resolve){diagResolve=null;resolve({state:'ERRORE / TIMEOUT',value:null})}},ms);
- });
-}
-async function runDiag(){
- if(diagRunning)return;
- if(!device?.gatt?.connected){$('didDiagnosticStatus').textContent='COLLEGA PRIMA IL DTCO';return}
- diagRunning=true; diagResults={}; renderDiag(); $('startDidDiagnostic').disabled=true;
- stop(); // separa completamente il test dal polling normale
+async function diagNext(){
+ if(!diagActive)return;
+ diagIndex++;
+ if(diagIndex>=diagDids.length){
+   diagActive=false; diagIndex=-1;
+   $('diagStatus').textContent='TEST COMPLETATO';
+   $('diagBtn').disabled=false;
+   return;
+ }
+ const [did,h]=diagDids[diagIndex];
+ $('diagStatus').textContent=`TEST IN CORSO ${diagIndex+1}/${diagDids.length} · ${h}`;
  try{
-  for(let i=0;i<DIAG_DIDS.length;i++){
-   const [did,h]=DIAG_DIDS[i]; diagCurrent=did;
-   $('didDiagnosticStatus').textContent=`TEST IN CORSO ${i+1}/${DIAG_DIDS.length} · ${h}`;
-   while(busy) await new Promise(r=>setTimeout(r,100));
-   while(txCredits<=0) await new Promise(r=>setTimeout(r,100));
-   const waiting=waitDiag(5000);
+   // Aspetta che una eventuale lettura normale già avviata termini.
+   let guard=0;
+   while(busy && guard++<50) await new Promise(r=>setTimeout(r,100));
    await sendDid(did);
-   diagResults[did]=await waiting;
-   renderDiag();
-   await new Promise(r=>setTimeout(r,600));
-  }
-  $('didDiagnosticStatus').textContent='TEST COMPLETATO';
+   diagTimer=setTimeout(()=>diagFinishCurrent('ERRORE / TIMEOUT'),5500);
  }catch(e){
-  $('didDiagnosticStatus').textContent='TEST INTERROTTO · '+(e.message||e);
- }finally{
-  diagCurrent=null;diagResolve=null;diagRunning=false;$('startDidDiagnostic').disabled=false;
-  start(); // ripristina il ciclo normale
+   diagFinishCurrent('ERRORE');
  }
 }
-$('startDidDiagnostic').onclick=runDiag;
-renderDiag();
+function startDiag(){
+ if(diagActive)return;
+ if(!device?.gatt?.connected){$('diagStatus').textContent='COLLEGA PRIMA IL DTCO';return}
+ diagMap={};diagIndex=-1;diagActive=true;
+ $('diagBtn').disabled=true;drawDiag();diagNext();
+}
+$('diagBtn').onclick=startDiag;
+drawDiag();
 
 $('connectBtn').onclick=connect;$('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disc();$('clearLogBtn').onclick=()=>logEl.textContent='Log pulito.';render();setConn(false,'SCOLLEGATO');if(!navigator.bluetooth)$('compat').innerHTML='<b>Web Bluetooth non disponibile in questo browser.</b> Usa Chrome Android tramite HTTPS.';
 })();
@@ -223,10 +230,10 @@ $('connectBtn').onclick=connect;$('disconnectBtn').onclick=()=>device?.gatt?.con
 
 <section class="card" style="margin-top:18px">
   <div class="label" style="font-size:18px;margin-bottom:8px">DIAGNOSTICA DID AVANZATI</div>
-  <div class="note" style="margin-bottom:12px">Test separato, un DID alla volta. Il polling normale viene fermato durante la prova.</div>
-  <button id="startDidDiagnostic" type="button">AVVIA TEST DID</button>
-  <div id="didDiagnosticStatus" style="margin:14px 0;font-weight:800">PRONTO</div>
-  <div id="didDiagnosticResults" style="display:grid;gap:8px"></div>
+  <div class="note" style="margin-bottom:12px">Test manuale separato, un DID alla volta.</div>
+  <button id="diagBtn" type="button">AVVIA TEST DID</button>
+  <div id="diagStatus" style="margin:14px 0;font-weight:800">PRONTO</div>
+  <div id="diagResults" style="display:grid;gap:8px"></div>
 </section>
 
 </body>
