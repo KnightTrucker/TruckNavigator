@@ -40,6 +40,11 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 .section-title{border-left:5px solid #168CFF;padding-left:9px}
 .actions .primary{box-shadow:0 0 18px rgba(22,183,255,.12)}
 @media(max-width:460px){.logo{width:54px;height:54px}h1{font-size:27px}}
+
+.split-info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.split-info>div{background:#071723;border:1px solid #174B70;border-radius:12px;padding:9px 7px}
+.split-info span{display:block;font-size:9px;color:#8FA4B3;letter-spacing:.7px;margin-bottom:4px}
+.split-info strong{display:block;font-size:18px;color:#3FC7FF}
 </style>
 </head>
 <body>
@@ -50,7 +55,17 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <div class="section-title">PANORAMICA ATTIVITÀ</div>
 <div class="hero">
 <div class="card activity-card"><h2>ATTIVITÀ CORRENTE</h2><div id="activity" class="big value-green">N/D</div><div class="activity-icon">◉</div><div id="activityDuration" class="small">Durata attività: N/D</div></div>
-<div class="card drive-card"><h2>GUIDA CONTINUA</h2><div class="gauge"><div id="continuousGauge" class="gauge-fill"></div><div class="gauge-center"><div id="continuousBig">N/D</div><small>/ 4h30</small></div></div><div class="small">RESIDUO</div><div id="remaining" class="big value-green">N/D</div><div id="continuous" class="small">Guida continua: N/D</div></div>
+<div class="card drive-card">
+<h2>GUIDA RESIDUA OGGI</h2>
+<div class="gauge"><div id="dailyGauge" class="gauge-fill"></div><div class="gauge-center"><div id="dailyBig">N/D</div><small id="dailyLimitLabel">/ 9h</small></div></div>
+<div class="small">RESIDUO EFFETTIVO</div>
+<div id="remainingDaily" class="big value-green">N/D</div>
+<div id="remainingDailyNote" class="small">Limite giornaliero + impegno residuo</div>
+<div class="split-info">
+  <div><span>PROSSIMA PAUSA</span><strong id="remaining430">N/D</strong></div>
+  <div><span>IMPEGNO RESIDUO</span><strong id="commitmentRemaining">N/D</strong></div>
+</div>
+</div>
 </div>
 <div class="section-title">TEMPI LETTI DAL DTCO</div>
 <div class="grid">
@@ -60,6 +75,7 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <div class="card metric"><div class="label">Estensioni guida 10h · F9A0</div><div id="extensions" class="value">N/D</div><div class="note">Numero comunicato dal DTCO</div></div>
 <div class="card metric"><div class="label">Durata attività corrente · F927</div><div id="currentDuration" class="value">N/D</div><div class="note">Attività attuale</div></div>
 <div class="card metric"><div class="label">Pausa cumulativa · F925</div><div id="cumulativeBreak" class="value">N/D</div><div class="note">Non usata come calcolo 15+30</div></div>
+<div class="card metric"><div class="label">Guida residua alle 4h30 · F923</div><div id="continuousRemainingField" class="value value-green">N/D</div><div class="note">Tempo prima della pausa obbligatoria</div></div>
 </div>
 <div class="section-title">STATO DID</div><div class="card" id="didList"></div>
 <div class="section-title">DIAGNOSTICA BLE / ITS</div><div class="actions"><button id="clearLogBtn" class="btn">Pulisci log</button></div><div id="log" class="diag">ToraTako pronto.</div>
@@ -77,7 +93,41 @@ function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpp
 function fmt(m){if(m==null||!Number.isFinite(m))return'N/D';m=Math.max(0,Math.round(m));return`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`}
 function setConn(v,t){$('connPill').textContent=t;$('connPill').classList.toggle('ok',v);$('connectBtn').disabled=v;$('disconnectBtn').disabled=!v}
 function didList(){$('didList').innerHTML=Object.entries(DIDS).map(([k,n])=>{const d=Number(k);return`<div class="did-row"><span>0x${d.toString(16).toUpperCase()} · ${n}</span><span class="did-state ${ok.has(d)?'ok':''}">${ok.has(d)?'✓ LETTO':'— IN ATTESA'}</span></div>`}).join('')}
-function render(){const s=values[0xF903],map={0:'RIPOSO',1:'DISPONIBILITÀ',2:'LAVORO',3:'GUIDA'};$('activity').textContent=s==null?'N/D':(map[s]||`STATO ${s}`);const c=values[0xF923];$('continuous').textContent='Guida continua: '+fmt(c);$('remaining').textContent=c==null?'N/D':fmt(270-c);$('continuousBig').textContent=c==null?'N/D':fmt(c).replace('h ',':').replace('m','');$('currentDuration').textContent=fmt(values[0xF927]);$('activityDuration').textContent='Durata attività: '+fmt(values[0xF927]);$('cumulativeBreak').textContent=fmt(values[0xF925]);$('daily').textContent=fmt(values[0xF99A]);$('weekly').textContent=fmt(values[0xF99B]);$('untilDailyRest').textContent=fmt(values[0xF99C]);$('extensions').textContent=values[0xF9A0]==null?'N/D':values[0xF9A0];didList()}
+function render(){
+  const s=values[0xF903],map={0:'RIPOSO',1:'DISPONIBILITÀ',2:'LAVORO',3:'GUIDA'};
+  $('activity').textContent=s==null?'N/D':(map[s]||`STATO ${s}`);
+
+  const continuous=values[0xF923];
+  const daily=values[0xF99A];
+  const commitment=values[0xF99C];
+  const extUsed=values[0xF9A0];
+
+  // Se sono ancora disponibili estensioni settimanali, il massimo potenziale
+  // giornaliero è 10h; altrimenti 9h.
+  const dailyLimit=(extUsed!=null && extUsed<2)?600:540;
+  const dailyRemaining=daily==null?null:Math.max(0,dailyLimit-daily);
+  const effectiveRemaining=dailyRemaining==null?null:
+    (commitment==null?dailyRemaining:Math.max(0,Math.min(dailyRemaining,commitment)));
+  const remaining430=continuous==null?null:Math.max(0,270-continuous);
+
+  $('dailyLimitLabel').textContent='/ '+(dailyLimit===600?'10h':'9h');
+  $('dailyBig').textContent=daily==null?'N/D':fmt(daily).replace('h ',':').replace('m','');
+  $('remainingDaily').textContent=fmt(effectiveRemaining);
+  $('remainingDailyNote').textContent=dailyRemaining==null?'Limite giornaliero + impegno residuo':
+    'Teorico '+fmt(dailyRemaining)+' · limitato dall’impegno';
+  $('remaining430').textContent=fmt(remaining430);
+  $('commitmentRemaining').textContent=fmt(commitment);
+  $('continuousRemainingField').textContent=fmt(remaining430);
+
+  $('currentDuration').textContent=fmt(values[0xF927]);
+  $('activityDuration').textContent='Durata attività: '+fmt(values[0xF927]);
+  $('cumulativeBreak').textContent=fmt(values[0xF925]);
+  $('daily').textContent=fmt(daily);
+  $('weekly').textContent=fmt(values[0xF99B]);
+  $('untilDailyRest').textContent=fmt(commitment);
+  $('extensions').textContent=extUsed==null?'N/D':extUsed;
+  didList();
+}
 function u16(d){return d.length<2?null:(d[0]<<8)|d[1]}
 function decode(did,d){let v=did===0xF903?(d.length?d[0]&3:null):did===0xF9A0?(d.length?d[0]:null):u16(d);if(v!=null){values[did]=v;ok.add(did);render();log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${v}`)}}
 function complete(){const m=buf.slice();expected=received=0;buf=[];if(timeout){clearTimeout(timeout);timeout=null}busy=false;log('ITS APP RX: '+hex(m));if(m.length>=3&&m[0]===0x62)decode((m[1]<<8)|m[2],m.slice(3));else if(m.length>=3&&m[0]===0x7F)log(`UDS negativo SID ${m[1].toString(16)} NRC ${m[2].toString(16)}`)}
