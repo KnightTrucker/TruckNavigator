@@ -87,7 +87,7 @@ const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a
 const DIDS={0xF190:'VIN',0xF19B:'Data calibrazione',0xF902:'Velocità tachigrafo',0xF903:'Attività conducente 1',0xF904:'Attività conducente 2',0xF905:'Veicolo in movimento',0xF906:'Stati temporali conducente 1',0xF909:'Stati temporali conducente 2',0xF907:'Carta conducente slot 1',0xF90A:'Carta conducente slot 2',0xF908:'Overspeed',0xF90B:'Data/ora DTCO',0xF912:'Km totali alta risoluzione',0xF913:'Trip alta risoluzione',0xF914:'Identificazione componente',0xF915:'Service calendario',0xF916:'Identificazione conducente 1',0xF917:'Identificazione conducente 2',0xF922:'Prossima calibrazione',0xF923:'Guida continua conducente 1',0xF924:'Guida continua conducente 2',0xF925:'Pausa cumulativa conducente 1',0xF926:'Pausa cumulativa conducente 2',0xF927:'Durata attività conducente 1',0xF928:'Durata attività conducente 2',0xF92C:'Velocità autorizzata',0xF930:'Stato carta slot 1',0xF933:'Stato carta slot 2',0xF931:'Nome conducente 1',0xF932:'Nome conducente 2',0xF936:'Out of Scope',0xF937:'Modo operativo',0xF938:'Guida bisettimanale conducente 1',0xF939:'Guida bisettimanale conducente 2',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h'};
 const SEQ=[0xF903,0xF923,0xF927,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925,0xF190,0xF19B,0xF902,0xF904,0xF905,0xF906,0xF909,0xF907,0xF90A,0xF908,0xF90B,0xF912,0xF913,0xF914,0xF915,0xF916,0xF917,0xF922,0xF924,0xF926,0xF928,0xF92C,0xF930,0xF933,0xF931,0xF932,0xF936,0xF937,0xF939];
 let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
-const values={},rawValues={},ok=new Set(),unsupported=new Set(),sent=new Set(),timedOut=new Set();let activeDid=null;const $=id=>document.getElementById(id),logEl=$('log');
+const values={},rawValues={},decodedValues={},ok=new Set(),unsupported=new Set(),sent=new Set(),timedOut=new Set();let activeDid=null;const $=id=>document.getElementById(id),logEl=$('log');
 function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
 function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
 function fmt(m){if(m==null||!Number.isFinite(m))return'N/D';m=Math.max(0,Math.round(m));return`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`}
@@ -100,8 +100,9 @@ function didList(){
    else if(unsupported.has(d))state='✕ NON SUPPORTATO';
    else if(timedOut.has(d))state='… NESSUNA RISPOSTA';
    else if(sent.has(d))state='… INTERROGATO';
-   const raw=rawValues[d]?`<div style="font-size:11px;opacity:.55;margin-top:2px">RX ${rawValues[d]}</div>`:'';
-   return `<div class="did-row"><span>0x${d.toString(16).toUpperCase()} · ${n}${raw}</span><span class="did-state ${cls}">${state}</span></div>`;
+   const dec=decodedValues[d]!=null?`<div style="font-size:13px;font-weight:800;color:#eaf6ff;margin-top:4px">${esc(String(decodedValues[d]))}</div>`:'';
+   const raw=rawValues[d]?`<div style="font-size:10px;opacity:.42;margin-top:2px">RX ${rawValues[d]}</div>`:'';
+   return `<div class="did-row"><span>0x${d.toString(16).toUpperCase()} · ${n}${dec}${raw}</span><span class="did-state ${cls}">${state}</span></div>`;
  }).join('')
 }
 function render(){
@@ -153,22 +154,111 @@ function render(){
   const biweekly=values[0xF938];
   $('biweekly').textContent=fmt(biweekly);
   $('biweeklyNote').textContent=biweekly==null
-    ? 'Test DID F938 · in attesa risposta'
+    ? 'F938 · in attesa risposta'
     : 'Residuo 90h: '+fmt(Math.max(0,5400-biweekly));
   $('untilDailyRest').textContent=fmt(commitment);
   $('extensions').textContent=extUsed==null?'N/D':extUsed;
   didList();
 }
 function u16(d){return d.length<2?null:(d[0]<<8)|d[1]}
+function u32(d){return d.length<4?null:((d[0]*0x1000000)+(d[1]<<16)+(d[2]<<8)+d[3])>>>0}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function ascii(d){return Array.from(d).map(b=>(b>=32&&b<=126)?String.fromCharCode(b):'').join('').replace(/\0/g,'').trim()}
+function latin(d){return Array.from(d).map(b=>(b>=32&&b!==255)?String.fromCharCode(b):'').join('').replace(/\0/g,'').trim()}
+function stateAct(v){return ['RIPOSO','DISPONIBILITÀ','LAVORO','GUIDA'][v&7]||`RISERVATO (${v&7})`}
+function yesNo(v,a,b){return (v&3)===1?a:b}
+function timeWarn(v,driver=1){
+ const x=v&15;
+ const d1={0:'Nessun avviso tempi',1:'Preavviso 4h30 (15 min)',2:'Limite 4h30 raggiunto',
+ 3:'Preavviso limite guida giornaliera',4:'Limite guida giornaliera raggiunto',
+ 5:'Preavviso riposo giornaliero/settimanale',6:'Limite riposo giornaliero/settimanale',
+ 7:'Preavviso limite guida settimanale',8:'Limite guida settimanale',
+ 9:'Preavviso limite guida 2 settimane',10:'Limite guida 2 settimane',
+ 11:`Scadenza carta conducente ${driver}`,12:`Download carta conducente ${driver} richiesto`,13:'Altro avviso'};
+ const d2={0:'Nessun avviso tempi',5:'Preavviso riposo giornaliero/settimanale',
+ 6:'Limite riposo giornaliero/settimanale',11:'Scadenza carta conducente 2',
+ 12:'Download carta conducente 2 richiesto',13:'Altro avviso'};
+ return (driver===1?d1:d2)[x]||`Stato riservato (${x})`
+}
+function cardType(v){return ({0:'Nessuna carta / non riconosciuta',1:'Carta conducente',2:'Carta officina',3:'Carta controllo',4:'Carta azienda'})[v]||`Tipo ${v}`}
+function mode(v){return ({0:'OPERATIVO',1:'CONTROLLO',2:'CALIBRAZIONE',3:'AZIENDA'})[v]||`Modo ${v}`}
+function isoDate3(d){
+ if(d.length<3)return null;
+ // ISO 16844: giorno a quarti, mese, anno+1985.
+ const day=Math.floor((d[0]+3)/4), mon=d[1], yr=1985+d[2];
+ if(day>=1&&day<=31&&mon>=1&&mon<=12)return `${String(day).padStart(2,'0')}/${String(mon).padStart(2,'0')}/${yr}`;
+ // Compatibilità Appendix 8: mese, giorno a quarti, anno.
+ const day2=Math.floor((d[1]+3)/4), mon2=d[0];
+ if(day2>=1&&day2<=31&&mon2>=1&&mon2<=12)return `${String(day2).padStart(2,'0')}/${String(mon2).padStart(2,'0')}/${yr}`;
+ return `Data: ${hex(d)}`
+}
+function isoTimeDate(d){
+ if(d.length<6)return null;
+ const sec=(d[0]*.25).toFixed(d[0]%4?2:0),min=d[1],hr=d[2];
+ let day=Math.floor((d[3]+3)/4),mon=d[4],yr=1985+d[5];
+ if(!(day>=1&&day<=31&&mon>=1&&mon<=12)){mon=d[3];day=Math.floor((d[4]+3)/4)}
+ return `${String(day).padStart(2,'0')}/${String(mon).padStart(2,'0')}/${yr} ${String(hr).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+}
+function driverId(d){
+ if(d.length<19)return ascii(d)||hex(d);
+ const issuer=ascii(d.slice(0,3)),num=ascii(d.slice(3,19));
+ return `${issuer}${issuer&&num?' · ':''}${num}`
+}
+function driverName(d){
+ if(d.length<72)return latin(d)||hex(d);
+ const surname=latin(d.slice(1,36)),first=latin(d.slice(37,72));
+ return [surname,first].filter(Boolean).join(' ')||'N/D'
+}
+function serviceComponent(v){
+ const m={0:'Controllo generale veicolo',16:'Controllo generale regolamentare',17:'Controllo freni',
+ 18:'Controllo intermedio',19:'Controllo tachigrafo di viaggio',20:'Controllo emissioni',
+ 21:'Controllo limitatore velocità',32:'Olio motore 1',33:'Olio motore 2',35:'Olio sterzo',
+ 37:'Olio trasmissione 1',38:'Olio trasmissione 2',40:'Olio trasmissione intermedia',
+ 42:'Olio asse anteriore',43:'Olio asse posteriore',48:'Pneumatici',49:'Filtro aria motore',
+ 50:'Filtro olio motore',61:'Tachigrafo',62:'Carta conducente 1',63:'Carta conducente 2',
+ 253:'Nessuna azione',254:'Errore',255:'Non disponibile'};
+ return m[v]||`Componente ${v}`
+}
+function decodeISO(did,d){
+ if(!d.length)return 'N/D';
+ switch(did){
+  case 0xF190:return ascii(d)||'N/D';
+  case 0xF19B:return ascii(d)||`Data calibrazione RAW ${hex(d)}`; // ISO 14229 manufacturer/date format
+  case 0xF902:{const v=u16(d);return v==null?'N/D':`${(v/256).toFixed(1)} km/h`}
+  case 0xF903:case 0xF904:return stateAct(d[0]);
+  case 0xF905:return yesNo(d[0],'VEICOLO IN MOVIMENTO','Veicolo fermo');
+  case 0xF906:return timeWarn(d[0],1);
+  case 0xF909:return timeWarn(d[0],2);
+  case 0xF907:return yesNo(d[0],'Carta conducente presente','Carta conducente non presente');
+  case 0xF90A:return yesNo(d[0],'Carta conducente presente','Carta conducente non presente');
+  case 0xF908:return yesNo(d[0],'OVERSPEED','Nessun overspeed');
+  case 0xF90B:return isoTimeDate(d)||hex(d);
+  case 0xF912:case 0xF913:{const v=u32(d);return v==null?'N/D':`${(v*0.005).toFixed(3)} km`}
+  case 0xF914:return serviceComponent(d[0]);
+  case 0xF915:return `${d[0]-125} settimane al service`;
+  case 0xF916:case 0xF917:return driverId(d);
+  case 0xF922:return isoDate3(d)||hex(d);
+  case 0xF923:case 0xF924:case 0xF925:case 0xF926:case 0xF927:case 0xF928:
+  case 0xF938:case 0xF939:case 0xF99A:case 0xF99B:case 0xF99C:{const v=u16(d);return v==null?'N/D':fmt(v)}
+  case 0xF92C:{const v=u16(d);return v==null?'N/D':`${(v/256).toFixed(1)} km/h`}
+  case 0xF930:case 0xF933:return cardType(d[0]);
+  case 0xF931:case 0xF932:return driverName(d);
+  case 0xF936:return d[0]===1?'OUT OF SCOPE ATTIVO':'Out of Scope non attivo';
+  case 0xF937:return mode(d[0]);
+  case 0xF9A0:return `${d[0]} estensioni a 10h`;
+  default:return ascii(d)||hex(d)
+ }
+}
 function decode(did,d){
  rawValues[did]=hex(d);ok.add(did);unsupported.delete(did);timedOut.delete(did);
+ decodedValues[did]=decodeISO(did,d);
  let v=null;
- if(did===0xF903)v=d.length?(d[0]&3):null;
+ if(did===0xF903)v=d.length?(d[0]&7):null;
  else if(did===0xF9A0)v=d.length?d[0]:null;
  else if([0xF923,0xF925,0xF927,0xF938,0xF99A,0xF99B,0xF99C].includes(did))v=u16(d);
  if(v!=null)values[did]=v;
  render();
- log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)}${v!=null?' → '+v:' → LETTO'}`)
+ log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${decodedValues[did]}`)
 }
 function complete(){
  const m=buf.slice();expected=received=0;buf=[];
