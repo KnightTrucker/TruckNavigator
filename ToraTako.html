@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06101A">
+<title>ToraTako</title>
+<style>
+:root{--bg:#06101A;--panel:#0B1D29;--panel2:#0D2432;--line:#17394D;--text:#F4F8FB;--muted:#8FA4B3;--cyan:#16B7FF;--green:#65E58C;--amber:#FFC857;--red:#FF6B6B}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{min-height:100vh}.app{max-width:760px;margin:0 auto;padding:0 14px 32px}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(6,16,26,.96);backdrop-filter:blur(10px);border-bottom:1px solid #102C3D;margin:0 -14px 14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px}.logo{width:44px;height:44px;border-radius:14px;border:1px solid var(--cyan);display:grid;place-items:center;background:#082238;font-size:24px}
+h1{font-size:20px;margin:0}.sub{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:1.2px}
+.status-pill{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:7px 10px;border-radius:999px;font-size:11px;font-weight:800}.status-pill.ok{color:var(--green);border-color:#1D6544}
+.hero,.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hero{margin-bottom:10px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:14px}
+.card h2{font-size:11px;margin:0 0 8px;color:var(--muted);letter-spacing:1.1px}.big{font-size:32px;font-weight:900;line-height:1.05}
+.small{font-size:12px;color:var(--muted);line-height:1.4}.value-cyan{color:var(--cyan)}.value-green{color:var(--green)}.value-amber{color:var(--amber)}
+.metric{min-height:112px}.metric .label{font-size:11px;color:var(--muted);margin-bottom:10px}.metric .value{font-size:24px;font-weight:900}.metric .note{font-size:11px;color:var(--muted);margin-top:6px}
+.section-title{font-size:13px;font-weight:900;margin:18px 2px 8px}.actions{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:#0A2435;color:white;border-radius:12px;padding:11px 14px;font-weight:850}.btn.primary{background:#0C4162;border-color:#1477A8}.btn.danger{background:#321519;border-color:#6A2D36}.btn:disabled{opacity:.45}
+.diag{white-space:pre-wrap;word-break:break-word;font:11px/1.45 ui-monospace,Consolas,monospace;color:#8DFFAD;max-height:330px;overflow:auto;background:#06141D;border-radius:12px;padding:12px;border:1px solid #123244}
+.did-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #123244;font-size:12px}.did-row:last-child{border-bottom:none}.did-state{font-weight:850;color:var(--muted)}.did-state.ok{color:var(--green)}
+.notice{font-size:12px;color:#BDD0DB;line-height:1.45}.footer{font-size:10px;color:#718896;text-align:center;margin-top:18px}
+@media(max-width:460px){.hero,.grid{grid-template-columns:1fr}.big{font-size:29px}.metric{min-height:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="topbar"><div class="brand"><div class="logo">🐾</div><div><h1>ToraTako</h1><div class="sub">DTCO ITS · WEB BLUETOOTH</div></div></div><div id="connPill" class="status-pill">SCOLLEGATO</div></div>
+<div class="actions"><button id="connectBtn" class="btn primary">Connetti DTCO</button><button id="disconnectBtn" class="btn danger" disabled>Disconnetti</button></div>
+<div id="compat" class="card notice">Premi <b>Connetti DTCO</b> e scegli il tachigrafo nel selettore Bluetooth di Chrome. La pagina deve essere aperta in HTTPS o da localhost. Nessun download carta viene eseguito.</div>
+<div class="hero">
+<div class="card"><h2>ATTIVITÀ CONDUCENTE</h2><div id="activity" class="big value-cyan">N/D</div><div id="activityDuration" class="small">Durata attività: N/D</div></div>
+<div class="card"><h2>GUIDA RESIDUA ALLE 4H30</h2><div id="remaining" class="big value-green">N/D</div><div id="continuous" class="small">Guida continua: N/D</div></div>
+</div>
+<div class="section-title">TEMPI LETTI DAL DTCO</div>
+<div class="grid">
+<div class="card metric"><div class="label">Guida giornaliera · F99A</div><div id="daily" class="value">N/D</div><div class="note">Valore letto dal tachigrafo</div></div>
+<div class="card metric"><div class="label">Guida settimanale · F99B</div><div id="weekly" class="value">N/D</div><div class="note">Valore letto dal tachigrafo</div></div>
+<div class="card metric"><div class="label">Tempo fino al riposo giornaliero · F99C</div><div id="untilDailyRest" class="value value-amber">N/D</div><div class="note">Tempo residuo segnalato dal DTCO</div></div>
+<div class="card metric"><div class="label">Estensioni guida 10h · F9A0</div><div id="extensions" class="value">N/D</div><div class="note">Numero comunicato dal DTCO</div></div>
+<div class="card metric"><div class="label">Durata attività corrente · F927</div><div id="currentDuration" class="value">N/D</div><div class="note">Attività attuale</div></div>
+<div class="card metric"><div class="label">Pausa cumulativa · F925</div><div id="cumulativeBreak" class="value">N/D</div><div class="note">Non usata come calcolo 15+30</div></div>
+</div>
+<div class="section-title">STATO DID</div><div class="card" id="didList"></div>
+<div class="section-title">DIAGNOSTICA BLE / ITS</div><div class="actions"><button id="clearLogBtn" class="btn">Pulisci log</button></div><div id="log" class="diag">ToraTako pronto.</div>
+<div class="footer">ToraTako · lettura ITS real-time · nessun Remote Download</div>
+</div>
+<script>
+(()=>{'use strict';
+const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a67-99bc052a1b13',CRED='e168d1a6-304f-42b4-ab96-4cd1d4efebd9';
+const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h'};
+const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF925];
+let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
+const values={},ok=new Set(),$=id=>document.getElementById(id),logEl=$('log');
+function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
+function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
+function fmt(m){if(m==null||!Number.isFinite(m))return'N/D';m=Math.max(0,Math.round(m));return`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`}
+function setConn(v,t){$('connPill').textContent=t;$('connPill').classList.toggle('ok',v);$('connectBtn').disabled=v;$('disconnectBtn').disabled=!v}
+function didList(){$('didList').innerHTML=Object.entries(DIDS).map(([k,n])=>{const d=Number(k);return`<div class="did-row"><span>0x${d.toString(16).toUpperCase()} · ${n}</span><span class="did-state ${ok.has(d)?'ok':''}">${ok.has(d)?'✓ LETTO':'— IN ATTESA'}</span></div>`}).join('')}
+function render(){const s=values[0xF903],map={0:'RIPOSO',1:'DISPONIBILITÀ',2:'LAVORO',3:'GUIDA'};$('activity').textContent=s==null?'N/D':(map[s]||`STATO ${s}`);const c=values[0xF923];$('continuous').textContent='Guida continua: '+fmt(c);$('remaining').textContent=c==null?'N/D':fmt(270-c);$('currentDuration').textContent=fmt(values[0xF927]);$('activityDuration').textContent='Durata attività: '+fmt(values[0xF927]);$('cumulativeBreak').textContent=fmt(values[0xF925]);$('daily').textContent=fmt(values[0xF99A]);$('weekly').textContent=fmt(values[0xF99B]);$('untilDailyRest').textContent=fmt(values[0xF99C]);$('extensions').textContent=values[0xF9A0]==null?'N/D':values[0xF9A0];didList()}
+function u16(d){return d.length<2?null:(d[0]<<8)|d[1]}
+function decode(did,d){let v=did===0xF903?(d.length?d[0]&3:null):did===0xF9A0?(d.length?d[0]:null):u16(d);if(v!=null){values[did]=v;ok.add(did);render();log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${v}`)}}
+function complete(){const m=buf.slice();expected=received=0;buf=[];if(timeout){clearTimeout(timeout);timeout=null}busy=false;log('ITS APP RX: '+hex(m));if(m.length>=3&&m[0]===0x62)decode((m[1]<<8)|m[2],m.slice(3));else if(m.length>=3&&m[0]===0x7F)log(`UDS negativo SID ${m[1].toString(16)} NRC ${m[2].toString(16)}`)}
+async function write(ch,data){if(ch.writeValueWithoutResponse){try{await ch.writeValueWithoutResponse(data);return}catch(e){}}if(ch.writeValueWithResponse){try{await ch.writeValueWithResponse(data);return}catch(e){}}if(ch.writeValue){await ch.writeValue(data);return}throw Error('Caratteristica non scrivibile')}
+async function fifoRx(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(a.length<2)return;log('FIFO RX: '+hex(a));try{await write(credits,new Uint8Array([1]))}catch(err){log('ACK credito RX fallito: '+err.message)}const total=a[0],num=a[1];if(num===1){expected=total;received=1;buf=Array.from(a.slice(2));if(expected<=1)complete();return}if(expected>1&&num===received+1){received++;buf.push(...a.slice(2));if(received>=expected)complete()}}
+function credRx(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(!a.length)return;const v=a[0];if(v===255){txCredits=0;log('Canale ITS rifiutato (FF)');return}txCredits+=v;log(`CREDITS RX ${hex(a)} → ${txCredits}`)}
+async function sendDid(did){if(!fifo||!device?.gatt?.connected||busy||txCredits<=0)return;const app=new Uint8Array([0x22,(did>>8)&255,did&255]),p=new Uint8Array([1,1,...app]);busy=true;try{log(`FIFO TX 0x${did.toString(16).toUpperCase()}: ${hex(p)}`);await write(fifo,p);txCredits--;timeout=setTimeout(()=>{log(`TIMEOUT DID 0x${did.toString(16).toUpperCase()}`);busy=false},3500)}catch(e){busy=false;log('Errore TX: '+e.message)}}
+function start(){stop();timer=setInterval(()=>{if(!busy&&device?.gatt?.connected)sendDid(SEQ[idx++%SEQ.length])},1600)}
+function stop(){if(timer){clearInterval(timer);timer=null}if(timeout){clearTimeout(timeout);timeout=null}busy=false}
+async function connect(){if(!navigator.bluetooth){$('compat').innerHTML='<b>Web Bluetooth non disponibile.</b> Usa Chrome Android via HTTPS.';return}try{log('Apro selettore Bluetooth...');device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE]});device.addEventListener('gattserverdisconnected',disc);log(`Scelto: ${device.name||'senza nome'}`);server=await device.gatt.connect();const service=await server.getPrimaryService(SERVICE);fifo=await service.getCharacteristic(FIFO);credits=await service.getCharacteristic(CRED);fifo.addEventListener('characteristicvaluechanged',fifoRx);credits.addEventListener('characteristicvaluechanged',credRx);await fifo.startNotifications();await credits.startNotifications();txCredits=0;await write(credits,new Uint8Array([8]));log('Crediti iniziali inviati: 8');setConn(true,'CONNESSO');start()}catch(e){log('Connessione fallita: '+(e.message||e));setConn(false,'SCOLLEGATO')}}
+function disc(){stop();txCredits=0;fifo=credits=server=null;setConn(false,'SCOLLEGATO');log('DTCO disconnesso')}
+$('connectBtn').onclick=connect;$('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disc();$('clearLogBtn').onclick=()=>logEl.textContent='Log pulito.';render();setConn(false,'SCOLLEGATO');if(!navigator.bluetooth)$('compat').innerHTML='<b>Web Bluetooth non disponibile in questo browser.</b> Usa Chrome Android tramite HTTPS.';
+})();
+</script>
+</body>
+</html>
