@@ -77,22 +77,33 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <div class="card metric"><div class="label">Durata attività corrente · F927</div><div id="currentDuration" class="value">N/D</div><div class="note">Attività attuale</div></div>
 <div class="card metric"><div class="label">Pausa cumulativa · F925</div><div id="cumulativeBreak" class="value">N/D</div><div class="note">Non usata come calcolo 15+30</div></div>
 </div>
-<div class="section-title">STATO DID</div><div class="card" id="didList"></div>
+<div class="section-title">STATO DID ISO / ITS</div><div class="card" id="didList"></div>
 <div class="section-title">DIAGNOSTICA BLE / ITS</div><div class="actions"><button id="clearLogBtn" class="btn">Pulisci log</button></div><div id="log" class="diag">ToraTako pronto.</div>
 <div class="footer">ToraTako · lettura ITS real-time · nessun Remote Download</div>
 </div>
 <script>
 (()=>{'use strict';
 const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a67-99bc052a1b13',CRED='e168d1a6-304f-42b4-ab96-4cd1d4efebd9';
-const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h',0xF938:'Guida bisettimanale',0xF9A3:'Riposo giornaliero minimo',0xF9A5:'Periodo giornaliero massimo',0xF9AB:'Riposi giornalieri ridotti usati',0xF9AF:'Guida residua nel turno',0xF9B9:'Durata prossima pausa/riposo',0xF9C2:'Tempo fino a prossima pausa/riposo'};
-const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925,0xF9A3,0xF9A5,0xF9AB,0xF9AF,0xF9B9,0xF9C2];
+const DIDS={0xF190:'VIN',0xF19B:'Data calibrazione',0xF902:'Velocità tachigrafo',0xF903:'Attività conducente 1',0xF904:'Attività conducente 2',0xF905:'Veicolo in movimento',0xF906:'Stati temporali conducente 1',0xF909:'Stati temporali conducente 2',0xF907:'Carta conducente slot 1',0xF90A:'Carta conducente slot 2',0xF908:'Overspeed',0xF90B:'Data/ora DTCO',0xF912:'Km totali alta risoluzione',0xF913:'Trip alta risoluzione',0xF914:'Identificazione componente',0xF915:'Service calendario',0xF916:'Identificazione conducente 1',0xF917:'Identificazione conducente 2',0xF922:'Prossima calibrazione',0xF923:'Guida continua conducente 1',0xF924:'Guida continua conducente 2',0xF925:'Pausa cumulativa conducente 1',0xF926:'Pausa cumulativa conducente 2',0xF927:'Durata attività conducente 1',0xF928:'Durata attività conducente 2',0xF92C:'Velocità autorizzata',0xF930:'Stato carta slot 1',0xF933:'Stato carta slot 2',0xF931:'Nome conducente 1',0xF932:'Nome conducente 2',0xF936:'Out of Scope',0xF937:'Modo operativo',0xF938:'Guida bisettimanale conducente 1',0xF939:'Guida bisettimanale conducente 2',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h'};
+const SEQ=[0xF903,0xF923,0xF927,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925,0xF190,0xF19B,0xF902,0xF904,0xF905,0xF906,0xF909,0xF907,0xF90A,0xF908,0xF90B,0xF912,0xF913,0xF914,0xF915,0xF916,0xF917,0xF922,0xF924,0xF926,0xF928,0xF92C,0xF930,0xF933,0xF931,0xF932,0xF936,0xF937,0xF939];
 let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
-const values={},ok=new Set(),$=id=>document.getElementById(id),logEl=$('log');
+const values={},rawValues={},ok=new Set(),unsupported=new Set(),sent=new Set(),timedOut=new Set();let activeDid=null;$=id=>document.getElementById(id),logEl=$('log');
 function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
 function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
 function fmt(m){if(m==null||!Number.isFinite(m))return'N/D';m=Math.max(0,Math.round(m));return`${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`}
 function setConn(v,t){$('connPill').textContent=t;$('connPill').classList.toggle('ok',v);$('connectBtn').disabled=v;$('disconnectBtn').disabled=!v}
-function didList(){$('didList').innerHTML=Object.entries(DIDS).map(([k,n])=>{const d=Number(k);return`<div class="did-row"><span>0x${d.toString(16).toUpperCase()} · ${n}</span><span class="did-state ${ok.has(d)?'ok':''}">${ok.has(d)?'✓ LETTO':'— IN ATTESA'}</span></div>`}).join('')}
+function didList(){
+ $('didList').innerHTML=Object.entries(DIDS).map(([k,n])=>{
+   const d=Number(k);
+   let state='— IN ATTESA',cls='';
+   if(ok.has(d)){state='✓ LETTO';cls='ok'}
+   else if(unsupported.has(d))state='✕ NON SUPPORTATO';
+   else if(timedOut.has(d))state='… NESSUNA RISPOSTA';
+   else if(sent.has(d))state='… INTERROGATO';
+   const raw=rawValues[d]?`<div style="font-size:11px;opacity:.55;margin-top:2px">RX ${rawValues[d]}</div>`:'';
+   return `<div class="did-row"><span>0x${d.toString(16).toUpperCase()} · ${n}${raw}</span><span class="did-state ${cls}">${state}</span></div>`;
+ }).join('')
+}
 function render(){
   const s=values[0xF903],map={0:'RIPOSO',1:'DISPONIBILITÀ',2:'LAVORO',3:'GUIDA'};
   $('activity').textContent=s==null?'N/D':(map[s]||`STATO ${s}`);
@@ -149,20 +160,55 @@ function render(){
   didList();
 }
 function u16(d){return d.length<2?null:(d[0]<<8)|d[1]}
-function decode(did,d){let v=did===0xF903?(d.length?d[0]&3:null):did===0xF9A0?(d.length?d[0]:null):u16(d);if(v!=null){values[did]=v;ok.add(did);render();log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${v}`)}}
-function complete(){const m=buf.slice();expected=received=0;buf=[];if(timeout){clearTimeout(timeout);timeout=null}busy=false;log('ITS APP RX: '+hex(m));if(m.length>=3&&m[0]===0x62)decode((m[1]<<8)|m[2],m.slice(3));else if(m.length>=3&&m[0]===0x7F)log(`UDS negativo SID ${m[1].toString(16)} NRC ${m[2].toString(16)}`)}
+function decode(did,d){
+ rawValues[did]=hex(d);ok.add(did);unsupported.delete(did);timedOut.delete(did);
+ let v=null;
+ if(did===0xF903)v=d.length?(d[0]&3):null;
+ else if(did===0xF9A0)v=d.length?d[0]:null;
+ else if([0xF923,0xF925,0xF927,0xF938,0xF99A,0xF99B,0xF99C].includes(did))v=u16(d);
+ if(v!=null)values[did]=v;
+ render();
+ log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)}${v!=null?' → '+v:' → LETTO'}`)
+}
+function complete(){
+ const m=buf.slice();expected=received=0;buf=[];
+ if(timeout){clearTimeout(timeout);timeout=null}
+ busy=false;
+ log('ITS APP RX: '+hex(m));
+ if(m.length>=3&&m[0]===0x62)decode((m[1]<<8)|m[2],m.slice(3));
+ else if(m.length>=3&&m[0]===0x7F){
+   log(`UDS negativo SID ${m[1].toString(16)} NRC ${m[2].toString(16)}`);
+   if(activeDid!=null){
+     if(m[2]===0x31)unsupported.add(activeDid);
+     render();
+   }
+ }
+ activeDid=null;
+}
 async function write(ch,data){if(ch.writeValueWithoutResponse){try{await ch.writeValueWithoutResponse(data);return}catch(e){}}if(ch.writeValueWithResponse){try{await ch.writeValueWithResponse(data);return}catch(e){}}if(ch.writeValue){await ch.writeValue(data);return}throw Error('Caratteristica non scrivibile')}
 async function fifoRx(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(a.length<2)return;log('FIFO RX: '+hex(a));try{await write(credits,new Uint8Array([1]))}catch(err){log('ACK credito RX fallito: '+err.message)}const total=a[0],num=a[1];if(num===1){expected=total;received=1;buf=Array.from(a.slice(2));if(expected<=1)complete();return}if(expected>1&&num===received+1){received++;buf.push(...a.slice(2));if(received>=expected)complete()}}
 function credRx(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(!a.length)return;const v=a[0];if(v===255){txCredits=0;log('Canale ITS rifiutato (FF)');return}txCredits+=v;log(`CREDITS RX ${hex(a)} → ${txCredits}`)}
-async function sendDid(did){if(!fifo||!device?.gatt?.connected||busy||txCredits<=0)return;const app=new Uint8Array([0x22,(did>>8)&255,did&255]),p=new Uint8Array([1,1,...app]);busy=true;try{log(`FIFO TX 0x${did.toString(16).toUpperCase()}: ${hex(p)}`);await write(fifo,p);txCredits--;timeout=setTimeout(()=>{log(`TIMEOUT DID 0x${did.toString(16).toUpperCase()}`);busy=false},3500)}catch(e){busy=false;log('Errore TX: '+e.message)}}
+async function sendDid(did){
+ if(!fifo||!device?.gatt?.connected||busy||txCredits<=0)return;
+ const app=new Uint8Array([0x22,(did>>8)&255,did&255]),p=new Uint8Array([1,1,...app]);
+ busy=true;activeDid=did;sent.add(did);render();
+ try{
+   log(`FIFO TX 0x${did.toString(16).toUpperCase()}: ${hex(p)}`);
+   await write(fifo,p);txCredits--;
+   timeout=setTimeout(()=>{
+     log(`TIMEOUT DID 0x${did.toString(16).toUpperCase()}`);
+     timedOut.add(did);busy=false;activeDid=null;render()
+   },3500)
+ }catch(e){
+   busy=false;activeDid=null;log('Errore TX: '+e.message)
+ }
+}
 function start(){stop();timer=setInterval(()=>{if(!busy&&device?.gatt?.connected)sendDid(SEQ[idx++%SEQ.length])},1600)}
 function stop(){if(timer){clearInterval(timer);timer=null}if(timeout){clearTimeout(timeout);timeout=null}busy=false}
 async function connect(){if(!navigator.bluetooth){$('compat').innerHTML='<b>Web Bluetooth non disponibile.</b> Usa Chrome Android via HTTPS.';return}try{log('Apro selettore Bluetooth...');device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE]});device.addEventListener('gattserverdisconnected',disc);log(`Scelto: ${device.name||'senza nome'}`);server=await device.gatt.connect();const service=await server.getPrimaryService(SERVICE);fifo=await service.getCharacteristic(FIFO);credits=await service.getCharacteristic(CRED);fifo.addEventListener('characteristicvaluechanged',fifoRx);credits.addEventListener('characteristicvaluechanged',credRx);await fifo.startNotifications();await credits.startNotifications();txCredits=0;await write(credits,new Uint8Array([8]));log('Crediti iniziali inviati: 8');setConn(true,'CONNESSO');start()}catch(e){log('Connessione fallita: '+(e.message||e));setConn(false,'SCOLLEGATO')}}
 function disc(){stop();txCredits=0;fifo=credits=server=null;setConn(false,'SCOLLEGATO');log('DTCO disconnesso')}
 $('connectBtn').onclick=connect;$('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disc();$('clearLogBtn').onclick=()=>logEl.textContent='Log pulito.';render();setConn(false,'SCOLLEGATO');if(!navigator.bluetooth)$('compat').innerHTML='<b>Web Bluetooth non disponibile in questo browser.</b> Usa Chrome Android tramite HTTPS.';
 })();
-
 </script>
-
 </body>
 </html>
