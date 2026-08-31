@@ -71,6 +71,7 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <div class="grid">
 <div class="card metric"><div class="label">Guida giornaliera · F99A</div><div id="daily" class="value">N/D</div><div class="note">Valore letto dal tachigrafo</div></div>
 <div class="card metric"><div class="label">Guida settimanale · F99B</div><div id="weekly" class="value">N/D</div><div class="note">Valore letto dal tachigrafo</div></div>
+<div class="card metric"><div class="label">Guida bisettimanale · F938</div><div id="biweekly" class="value">N/D</div><div id="biweeklyNote" class="note">Test DID F938 · settimana precedente + corrente</div></div>
 <div class="card metric"><div class="label">Tempo fino al riposo giornaliero · F99C</div><div id="untilDailyRest" class="value value-amber">N/D</div><div class="note">Tempo residuo segnalato dal DTCO</div></div>
 <div class="card metric"><div class="label">Estensioni guida 10h · F9A0</div><div id="extensions" class="value">N/D</div><div class="note">Numero comunicato dal DTCO</div></div>
 <div class="card metric"><div class="label">Durata attività corrente · F927</div><div id="currentDuration" class="value">N/D</div><div class="note">Attività attuale</div></div>
@@ -83,8 +84,8 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <script>
 (()=>{'use strict';
 const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a67-99bc052a1b13',CRED='e168d1a6-304f-42b4-ab96-4cd1d4efebd9';
-const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h'};
-const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF925];
+const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h',0xF938:'Guida bisettimanale'};
+const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925];
 let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
 const values={},ok=new Set(),$=id=>document.getElementById(id),logEl=$('log');
 function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
@@ -138,6 +139,11 @@ function render(){
   $('cumulativeBreak').textContent=fmt(values[0xF925]);
   $('daily').textContent=fmt(daily);
   $('weekly').textContent=fmt(values[0xF99B]);
+  const biweekly=values[0xF938];
+  $('biweekly').textContent=fmt(biweekly);
+  $('biweeklyNote').textContent=biweekly==null
+    ? 'Test DID F938 · in attesa risposta'
+    : 'Residuo 90h: '+fmt(Math.max(0,5400-biweekly));
   $('untilDailyRest').textContent=fmt(commitment);
   $('extensions').textContent=extUsed==null?'N/D':extUsed;
   didList();
