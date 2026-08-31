@@ -221,8 +221,11 @@ function startDiag(){
  diagMap={};diagIndex=-1;diagActive=true;
  $('diagBtn').disabled=true;drawDiag();diagNext();
 }
-$('diagBtn').onclick=startDiag;
-drawDiag();
+document.addEventListener('DOMContentLoaded',()=>{
+  const b=$('diagBtn');
+  if(b) b.onclick=startDiag;
+  drawDiag();
+});
 
 $('connectBtn').onclick=connect;$('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disc();$('clearLogBtn').onclick=()=>logEl.textContent='Log pulito.';render();setConn(false,'SCOLLEGATO');if(!navigator.bluetooth)$('compat').innerHTML='<b>Web Bluetooth non disponibile in questo browser.</b> Usa Chrome Android tramite HTTPS.';
 })();
