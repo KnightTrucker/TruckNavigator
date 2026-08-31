@@ -84,8 +84,22 @@ h1{font-size:30px;margin:0;font-weight:950;font-style:italic;letter-spacing:.4px
 <script>
 (()=>{'use strict';
 const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a67-99bc052a1b13',CRED='e168d1a6-304f-42b4-ab96-4cd1d4efebd9';
-const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h',0xF938:'Guida bisettimanale'};
-const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925];
+const DIDS={0xF903:'Attività conducente',0xF923:'Guida continua',0xF925:'Pausa cumulativa',0xF927:'Durata attività',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h',0xF938:'Guida bisettimanale',
+0xF9A2:'Riposo ininterrotto cumulato',
+0xF9A3:'Riposo giornaliero minimo',
+0xF9A5:'Periodo giornaliero massimo',
+0xF9A6:'Guida giornaliera massima',
+0xF9AB:'Riposi giornalieri ridotti usati',
+0xF9AD:'Guida corrente residua',
+0xF9AF:'Guida residua nel turno',
+0xF9B1:'Guida residua settimana',
+0xF9B3:'Guida residua due settimane',
+0xF9B9:'Durata prossima pausa/riposo',
+0xF9C0:'Residuo pausa/riposo corrente',
+0xF9C2:'Tempo fino a prossima pausa/riposo'};
+const SEQ=[0xF903,0xF923,0xF927,0xF903,0xF923,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925,
+0xF9A2,0xF9A3,0xF9A5,0xF9A6,0xF9AB,0xF9AD,0xF9AF,
+0xF9B1,0xF9B3,0xF9B9,0xF9C0,0xF9C2];
 let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
 const values={},ok=new Set(),$=id=>document.getElementById(id),logEl=$('log');
 function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
@@ -144,6 +158,7 @@ function render(){
   $('biweeklyNote').textContent=biweekly==null
     ? 'Test DID F938 · in attesa risposta'
     : 'Residuo 90h: '+fmt(Math.max(0,5400-biweekly));
+  renderAdvancedDids();
   $('untilDailyRest').textContent=fmt(commitment);
   $('extensions').textContent=extUsed==null?'N/D':extUsed;
   didList();
@@ -161,6 +176,46 @@ async function connect(){if(!navigator.bluetooth){$('compat').innerHTML='<b>Web 
 function disc(){stop();txCredits=0;fifo=credits=server=null;setConn(false,'SCOLLEGATO');log('DTCO disconnesso')}
 $('connectBtn').onclick=connect;$('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disc();$('clearLogBtn').onclick=()=>logEl.textContent='Log pulito.';render();setConn(false,'SCOLLEGATO');if(!navigator.bluetooth)$('compat').innerHTML='<b>Web Bluetooth non disponibile in questo browser.</b> Usa Chrome Android tramite HTTPS.';
 })();
+
+const ADVANCED_DIDS = [
+  [0xF9A2,'F9A2','Riposo ininterrotto cumulato','time'],
+  [0xF9A3,'F9A3','Riposo giornaliero minimo','time'],
+  [0xF9A5,'F9A5','Periodo giornaliero massimo','time'],
+  [0xF9A6,'F9A6','Guida giornaliera massima','time'],
+  [0xF9AB,'F9AB','Riposi giornalieri ridotti usati','count'],
+  [0xF9AD,'F9AD','Guida corrente residua','time'],
+  [0xF9AF,'F9AF','Guida residua nel turno','time'],
+  [0xF9B1,'F9B1','Guida residua settimana','time'],
+  [0xF9B3,'F9B3','Guida residua due settimane','time'],
+  [0xF9B9,'F9B9','Durata prossima pausa/riposo','time'],
+  [0xF9C0,'F9C0','Residuo pausa/riposo corrente','time'],
+  [0xF9C2,'F9C2','Tempo fino a prossima pausa/riposo','time']
+];
+
+function renderAdvancedDids(){
+  const root=document.getElementById('advancedDidGrid');
+  if(!root) return;
+  root.innerHTML=ADVANCED_DIDS.map(([did,hexId,label,kind])=>{
+    const v=values[did];
+    const shown=v==null?'N/D':(kind==='time'?fmt(v):String(v));
+    const state=v==null?'NON SUPPORTATO / IN ATTESA':'RISPOSTA OK';
+    return `<div style="padding:12px 14px;border:1px solid rgba(70,160,255,.35);border-radius:14px;background:rgba(6,28,45,.55)">
+      <div style="font-size:13px;opacity:.75">${hexId} · ${label}</div>
+      <div style="font-size:25px;font-weight:800;margin-top:5px">${shown}</div>
+      <div style="font-size:11px;opacity:.6;margin-top:3px">${state}</div>
+    </div>`;
+  }).join('');
+}
+
 </script>
+
+<section class="card" style="margin-top:18px">
+  <div class="label" style="font-size:18px;margin-bottom:12px">TEST DID AVANZATI ITS</div>
+  <div class="note" style="margin-bottom:12px">
+    Solo lettura UDS 0x22. I DID non supportati restano N/D.
+  </div>
+  <div id="advancedDidGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px"></div>
+</section>
+
 </body>
 </html>
