@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8.1</title>
+<title>Stampa · v1.8.2</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -15,7 +15,12 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;color:var(--muted);font-size:13px;font-weight:800;margin-bottom:6px}.field input,.field select{width:100%;background:#061d2d;color:#fff;border:1px solid #27506d;border-radius:9px;padding:12px;font-size:16px}
 .status{font-size:17px;font-weight:800}.ok{color:var(--green)}.warn{color:var(--yellow)}.err{color:var(--red)}
 .steps{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.step{border:1px solid #23445c;border-radius:9px;padding:9px;text-align:center;color:#8397a8;font-size:12px}.step.on{color:#fff;border-color:#2389ff;background:#08233a}.step.done{color:var(--green);border-color:#34752a}
-.print{background:#fff;color:#111;border-radius:8px;padding:22px;min-height:320px}.print h2{margin:0 0 8px;text-align:center}.print .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:2px solid #111;border-bottom:2px solid #111;padding:8px 0;margin:10px 0}.print table{width:100%;border-collapse:collapse;font-size:14px}.print th,.print td{border-bottom:1px solid #aaa;padding:7px;text-align:left}
+.print{background:#fff;color:#111;border-radius:8px;padding:22px;min-height:320px}.print h2{margin:0 0 8px;text-align:center}.print .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:2px solid #111;border-bottom:2px solid #111;padding:8px 0;margin:10px 0}.print table{width:100%;border-collapse:collapse;font-size:14px}.print th,.print td{border-bottom:1px solid #aaa;padding:7px;text-align:left;vertical-align:top}
+.print h2{font-size:22px;line-height:1.15}
+.printScroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.print table{min-width:620px}
+.print td:first-child,.print th:first-child{white-space:nowrap}
+
 .raw{background:#04131e;border:1px solid #173b55;border-radius:10px;padding:12px;min-height:180px;max-height:380px;overflow:auto;white-space:pre-wrap;color:#7fe88d;font:12px ui-monospace,Consolas,monospace}
 .small{color:var(--muted);font-size:12px;line-height:1.4}
 .archiveState{display:none;margin-top:10px;border:1px solid #8b6b00;background:#2b2100;color:#ffd84a;border-radius:10px;padding:11px;font-weight:900}
@@ -31,7 +36,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.1</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.2</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -76,31 +81,27 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   
 
 
-  <section class="panel">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-      <div><div class="small">GIORNO</div><div id="pDay" style="font-size:24px;font-weight:900">—</div></div>
-      <div style="text-align:right"><div class="small">CONDUCENTE</div><div id="pDriver" style="font-size:18px;font-weight:900">—</div></div>
+  <section class="print" id="printArea">
+    <div class="meta">
+      <div><div style="font-size:12px;font-weight:800">GIORNO</div><div id="pDay" style="font-size:24px;font-weight:900">—</div></div>
+      <div style="text-align:right"><div style="font-size:12px;font-weight:800">CONDUCENTE</div><div id="pDriver" style="font-size:18px;font-weight:900">—</div></div>
     </div>
-  </section>
 
-  <section class="panel">
-    <h2 style="margin-top:0">DETTAGLIO ATTIVITÀ</h2>
-    <div style="overflow:auto"><table><thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Stato</th></tr></thead><tbody id="rows"><tr><td colspan="4">Apri un BIN per visualizzare la giornata.</td></tr></tbody></table></div>
-  </section>
+    <h2>DETTAGLIO ATTIVITÀ</h2>
+    <div class="printScroll"><table><thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Stato</th></tr></thead><tbody id="rows"><tr><td colspan="4">Apri un BIN per visualizzare la giornata.</td></tr></tbody></table></div>
 
-  <section class="panel">
-    <h2 style="margin-top:0">APERTURE · CAMBI NAZIONE · CHIUSURE</h2>
-    <div style="overflow:auto"><table><thead><tr><th>Ora</th><th>Evento</th><th>Nazione / posizione</th><th>Km</th></tr></thead><tbody id="journeyRows"><tr><td colspan="4">Apri un BIN per visualizzare i dati.</td></tr></tbody></table></div>
+    <h2 style="margin-top:24px">APERTURE · CAMBI NAZIONE · CHIUSURE</h2>
+    <div class="printScroll"><table><thead><tr><th>Ora</th><th>Evento</th><th>Nazione / posizione</th><th>Km</th></tr></thead><tbody id="journeyRows"><tr><td colspan="4">Apri un BIN per visualizzare i dati.</td></tr></tbody></table></div>
   </section>
 
   <section class="panel" id="dirtyCard">
-    <button id="dirtyBtn" class="primary" style="width:100%;font-size:18px">SCHEDA SPORCA?</button>
+    <button id="dirtyBtn" class="btn primary" style="width:100%;font-size:18px">SCHEDA SPORCA?</button>
     <div class="small" style="margin-top:8px"><b>Controllo automatico degli ultimi 53 giorni rispetto al giorno della verifica.</b> È indipendente dalla data scelta per la stampa giornaliera.</div>
     <div id="dirtyResult" style="display:none;margin-top:14px"></div>
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.1 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.2 pronta.</div>
   </details>
 </div>
 
@@ -237,7 +238,7 @@ async function importCardFile(file){
    const buf=await file.arrayBuffer();
    cardBytes=Array.from(new Uint8Array(buf));
    if(!cardBytes.length)throw Error('File vuoto');
-   cardComplete=true; partialUpdate=false; baseCardBytes=[]; cardSource=file.name; openedFileName=file.name;
+   cardComplete=true; partialUpdate=false; baseCardBytes=Array.from(cardBytes); cardSource=file.name; openedFileName=file.name;
    driverName=guessDriverFromFileName(file.name);
    setExportReady(true);
    setArchiveDirty(false,`✓ Archivio aperto: ${file.name} · ${cardBytes.length} byte.`);
@@ -1037,7 +1038,13 @@ function renderAcquisition(data){
    const ch=rec.changes.filter(x=>x.minute<=1439).sort((a,b)=>a.minute-b.minute);
    const activityRows=[];
    for(let i=0;i<ch.length;i++){
-     const cur=ch[i],next=ch[i+1],end=next?next.minute:1440;
+     const cur=ch[i],next=ch[i+1];
+     let end=next?next.minute:1440;
+     // Se è la giornata corrente, l'ultima attività termina "adesso", non a mezzanotte.
+     const nowSec=Math.floor(Date.now()/1000);
+     if(!next && nowSec>=rec.dateSec && nowSec<rec.dateSec+86400){
+       end=Math.max(cur.minute,Math.min(1440,(nowSec-rec.dateSec)/60));
+     }
      const st=romeTimeForActivity(rec.dateSec,cur.minute);
      const en=romeTimeForActivity(rec.dateSec,end);
      activityRows.push(`<tr><td>${st.time}–${en.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(Math.max(0,end-cur.minute))}</td><td>${cur.cardOut?'Carta non inserita':'Carta inserita'}${cur.crew?' · equipaggio':''}</td></tr>`)
