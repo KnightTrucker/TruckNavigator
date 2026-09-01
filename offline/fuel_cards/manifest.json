@@ -1,10 +1,15 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-01T08:41:09.793348+00:00",
+  "generatedAt": "2026-09-01T08:44:05.298272+00:00",
   "networks": {
     "dkv": {
       "count": 77003,
       "source": "https://my.dkv-mobility.com/apidnext/geo-static-content-service/v1/station-network,zip/dkv_standard_gpx.zip"
+    },
+    "shell": {
+      "count": 3392,
+      "source": "https://shellretaillocator.geoapp.me/api/v2/locations/within_bounds",
+      "coverage": "official-public-shell-network"
     }
   }
 }
