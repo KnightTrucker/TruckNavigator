@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v0.8</title>
+<title>Stampa · v0.9</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -24,7 +24,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.8</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.9</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -35,7 +35,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
       <button id="readBtn" class="btn" disabled>SCARICA CARTA COMPLETA</button>
     </div>
     <div class="actions" style="margin-top:8px;grid-template-columns:1fr">
-      <button id="updateArchiveBtn" class="btn primary" disabled>AGGIORNA ATTIVITÀ DAL DTCO</button>
+      <button id="updateArchiveBtn" class="btn primary" disabled>AGGIORNA STAMPA DAL DTCO</button>
     </div>
     <div class="actions" style="margin-top:8px;grid-template-columns:1fr 1fr">
       <button id="importCardBtn" class="btn primary">APRI DATI CARTA (.BIN)</button>
@@ -62,19 +62,19 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <section class="panel">
-    <div class="small">Per l'uso normale apri il .BIN già salvato. Con AGGIORNA ATTIVITÀ DAL DTCO il programma avvia il trasferimento, acquisisce il nuovo EF Driver_Activity_Data 0504 completo e chiude appena quel file è disponibile; poi sostituisce il vecchio 0504 nell'archivio in memoria.</div>
+    <div class="small">Per l'uso normale apri il .BIN già salvato. Con AGGIORNA STAMPA DAL DTCO il programma avvia il trasferimento, acquisisce il nuovo EF Driver_Activity_Data 0504 completo e chiude appena quel file è disponibile; poi sostituisce il vecchio 0504 nell'archivio in memoria.</div>
   </section>
 
   <section class="panel">
     <div id="paper" class="print">
       <h2>ATTIVITÀ GIORNALIERA CONDUCENTE</h2>
       <div class="meta"><div><b>Data:</b> <span id="pDay">—</span></div><div><b>Conducente:</b> <span id="pDriver">—</span></div></div>
-      <table><thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Origine</th></tr></thead><tbody id="rows"><tr><td colspan="4">Nessun dato acquisito.</td></tr></tbody></table>
+      <table><thead><tr><th>Ora</th><th>Evento / attività</th><th>Durata</th><th>Origine</th></tr></thead><tbody id="rows"><tr><td colspan="4">Nessun dato acquisito.</td></tr></tbody></table>
     </div>
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.8 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.9 pronta.</div>
   </details>
 </div>
 
@@ -90,7 +90,7 @@ const DL_CRED='db9c4128-bff3-41fe-a306-fb6f9a8aeb2d';
 let device,server;
 let dfifo,dcred,dtx=0,dBusy=false,dExp=0,dGot=0,dBuf=[],dWait=null;
 let lfifo,lcred,ltx=0,lBusy=false,lExp=0,lGot=0,lBuf=[],lWait=null;
-let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1,cardComplete=false,cardStartedAt=0,cardSource='',partialUpdate=false,baseCardBytes=[],streamScanFrom=0,updatedActivity=false;
+let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1,cardComplete=false,cardStartedAt=0,cardSource='',partialUpdate=false,baseCardBytes=[],streamScanFrom=0,updatedActivity=false,updatedEFs=new Set(),partialLastRelevantSeen=false;
 const $=id=>document.getElementById(id);
 function log(m){$('raw').textContent+=`\n[${new Date().toLocaleTimeString('it-IT')}] ${m}`;$('raw').scrollTop=$('raw').scrollHeight}
 function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
@@ -313,13 +313,13 @@ async function handleFrame(frame){
      downloadData.push(...tail)
    }
 
-   if(partialUpdate&&!updatedActivity){
+   if(partialUpdate){
      if(scanPartialActivity())return;
-     // Se 0504 non è stato trovato, non distruggere il BIN base.
      cardBytes=Array.from(baseCardBytes);
-     cardComplete=true;partialUpdate=false;
-     setExportReady(true);setTransferUi(false);
-     setStatus('Download terminato ma EF 0504 aggiornato non individuato: archivio originale conservato.','err');
+     cardComplete=true;cardSource=updatedActivity?'BIN + aggiornamento DTCO':'BIN originale';
+     setExportReady(true);
+     if(updatedActivity){setStatus(`Aggiornamento completato · ${updatedEFs.size} sezioni aggiornate.`,'ok');renderLoadedDay()}
+     else setStatus('EF attività non individuato: archivio originale conservato.','err');
      stage='exit';
      return next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit'),150)
    }
@@ -396,78 +396,162 @@ function parseDailyRecords(payload){
  return {oldest,newest,ringLength:ring.length,records:out}
 }
 
-function findActivityEFWithBounds(data){
- const ef=findActivityEF(data);
- if(!ef)return null;
- return {...ef,totalLength:5+ef.len}
+function findEF(data,fid,preferType=null){
+ let fallback=null;
+ const hi=(fid>>8)&255,lo=fid&255;
+ for(let i=0;i+5<=data.length;i++){
+   if(data[i]!==hi||data[i+1]!==lo)continue;
+   const typ=data[i+2],len=be16(data,i+3),end=i+5+len;
+   if(len<=0||end>data.length)continue;
+   const hit={pos:i,type:typ,len,start:i+5,end,totalLength:5+len,payload:data.slice(i+5,end)};
+   if(preferType!==null&&typ===preferType)return hit;
+   if(!fallback)fallback=hit
+ }
+ return fallback
 }
-function replaceActivityEF(base,newEFBytes){
- const old=findActivityEFWithBounds(base);
- if(!old)throw Error('Nel BIN base non trovo EF 0504');
- const before=Array.from(base.slice(0,old.pos));
- const after=Array.from(base.slice(old.pos+old.totalLength));
- return new Uint8Array([...before,...newEFBytes,...after])
+function replaceEF(base,fid,newEFBytes){
+ const old=findEF(base,fid,newEFBytes[2]);
+ if(!old) return base; // se il vecchio BIN non aveva questo EF, non rischiamo di alterare il layout firmato
+ return new Uint8Array([...base.slice(0,old.pos),...newEFBytes,...base.slice(old.pos+old.totalLength)])
 }
+const UPDATE_FIDS=new Set([0x0504,0x0506,0x0507,0x0522,0x0528,0x0529,0x0530]);
 function scanPartialActivity(){
- if(!partialUpdate||updatedActivity)return false;
+ if(!partialUpdate)return false;
  const a=new Uint8Array(downloadData);
- // Cerca un EF 0504 completo già arrivato nel flusso TLV.
  for(let i=Math.max(0,streamScanFrom-8);i+5<=a.length;i++){
-   if(a[i]!==0x05||a[i+1]!==0x04)continue;
+   const fid=(a[i]<<8)|a[i+1];
+   if(!UPDATE_FIDS.has(fid))continue;
    const len=be16(a,i+3),end=i+5+len;
-   if(len<16)continue;
+   if(len<1)continue;
    if(end>a.length){streamScanFrom=i;return false}
+   const key=fid.toString(16).padStart(4,'0')+':'+a[i+2];
+   if(updatedEFs.has(key)){i=end-1;continue}
    const efBytes=a.slice(i,end);
-   const merged=replaceActivityEF(new Uint8Array(baseCardBytes),efBytes);
-   cardBytes=Array.from(merged);
-   cardComplete=true;updatedActivity=true;cardSource='BIN + aggiornamento DTCO';
-   setExportReady(true);
-   log(`EF 0504 AGGIORNATO · ${len} byte · posizione stream ${i}`);
-   setStatus('Attività aggiornate. Interrompo il resto del download…','ok');
-   renderLoadedDay();
-   stage='exit';
-   next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit anticipato dopo EF 0504'),120);
-   return true
+   let merged=new Uint8Array(baseCardBytes);
+   merged=replaceEF(merged,fid,efBytes);
+   baseCardBytes=Array.from(merged);
+   updatedEFs.add(key);
+   if(fid===0x0504)updatedActivity=true;
+   if(fid===0x0530)partialLastRelevantSeen=true;
+   log(`EF ${fid.toString(16).padStart(4,'0')} aggiornato · tipo ${a[i+2].toString(16).padStart(2,'0')} · ${len} byte`);
+   i=end-1
  }
  streamScanFrom=Math.max(0,a.length-8);
+
+ // Gen2 v2: 0530 è l'ultimo EF giornaliero che ci serve. A quel punto chiudiamo.
+ // Per carte più vecchie il trasferimento terminerà normalmente e conserveremo gli EF trovati.
+ if(partialLastRelevantSeen&&updatedActivity){
+   cardBytes=Array.from(baseCardBytes);cardComplete=true;cardSource='BIN + aggiornamento DTCO';
+   setExportReady(true);setStatus('Dati giornalieri aggiornati. Chiusura trasferimento…','ok');
+   renderLoadedDay();stage='exit';
+   next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit dopo EF giornalieri'),120);
+   return true
+ }
  return false
+}
+function romePartsFromSec(sec){
+ const d=new Date(sec*1000);
+ const parts=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
+ const o={};for(const x of parts)o[x.type]=x.value;
+ return {date:`${o.year}-${o.month}-${o.day}`,time:`${o.hour}:${o.minute}`}
+}
+function romeTimeForActivity(dateSec,minute){
+ return romePartsFromSec(dateSec+minute*60)
+}
+function pictogram(activity){
+ return ({'GUIDA':'◉','LAVORO':'⚒','DISPONIBILITÀ':'▱','RIPOSO':'▰'})[activity]||'•'
+}
+const NATIONS={0:'—',1:'A',2:'AL',3:'AND',4:'ARM',5:'AZ',6:'B',7:'BG',8:'BIH',9:'BY',10:'CH',11:'CY',12:'CZ',13:'D',14:'DK',15:'E',16:'EST',17:'F',18:'FIN',19:'FL',20:'FO',21:'GE',22:'GR',23:'H',24:'HR',25:'I',26:'IRL',27:'IS',28:'KZ',29:'L',30:'LT',31:'LV',32:'M',33:'MD',34:'MK',35:'N',36:'NL',37:'P',38:'PL',39:'RO',40:'RSM',41:'RUS',42:'S',43:'SK',44:'SLO',45:'TM',46:'TR',47:'UA',48:'V',49:'YU',255:'RESTO DEL MONDO'};
+function nation(v){return NATIONS[v]??`PAESE ${v}`}
+function odometer3(a,o){return ((a[o]||0)<<16)|((a[o+1]||0)<<8)|(a[o+2]||0)}
+function parsePlaces(data){
+ const ef=findEF(data,0x0506,2)||findEF(data,0x0506,0); if(!ef)return [];
+ const p=ef.payload, gen2=ef.type===2, recLen=gen2?21:10, ptrLen=gen2?2:1;
+ if(p.length<ptrLen+recLen)return [];
+ const out=[];
+ for(let o=ptrLen;o+recLen<=p.length;o+=recLen){
+   const sec=be32(p,o); if(sec<946684800||sec>4102444800)continue;
+   const type=p[o+4],country=p[o+5],region=p[o+6],odo=odometer3(p,o+7);
+   out.push({sec,type,country,region,odo})
+ }
+ return out
+}
+function parseCurrentUse(data){
+ const ef=findEF(data,0x0507,2)||findEF(data,0x0507,0); if(!ef||ef.payload.length<4)return null;
+ const sec=be32(ef.payload,0); return sec>946684800?{sec}:null
+}
+function parseSpecific(data){
+ const ef=findEF(data,0x0522,2)||findEF(data,0x0522,0);if(!ef)return [];
+ const p=ef.payload,out=[];
+ // SpecificConditionRecord = TimeReal(4) + type(1)
+ for(let o=0;o+5<=p.length;o+=5){const sec=be32(p,o);if(sec>946684800&&sec<4102444800)out.push({sec,type:p[o+4]})}
+ return out
+}
+function parseBorders(data){
+ const ef=findEF(data,0x0528,2);if(!ef||ef.payload.length<19)return [];
+ const p=ef.payload,out=[];
+ // CardBorderCrossings: pointer newest (2) + record da 17 byte.
+ // record: countryLeft, countryEntered, GNSSPlaceAuthRecord(12), odometer(3).
+ for(let o=2;o+17<=p.length;o+=17){
+   const left=p[o],entered=p[o+1],sec=be32(p,o+2);
+   if(sec>946684800&&sec<4102444800)out.push({sec,left,entered,odo:odometer3(p,o+14)})
+ }
+ return out
+}
+function eventTime(sec){return romePartsFromSec(sec)}
+function entryTypeLabel(t){
+ // EntryTypeDailyWorkPeriod: valori standard start/end; manteniamo il valore grezzo se non noto.
+ return ({0:'INIZIO GIORNATA',1:'FINE GIORNATA',2:'INIZIO GIORNATA',3:'FINE GIORNATA'})[t]||`LUOGO GIORNATA (${t})`
 }
 
 function renderAcquisition(data){
  $('pDay').textContent=targetDate.split('-').reverse().join('/');
  $('pDriver').textContent=driverName;
  try{
-   const ef=findActivityEF(data);
-   if(!ef)throw Error('EF Driver_Activity_Data (0504) non trovato');
+   const ef=findActivityEF(data);if(!ef)throw Error('EF Driver_Activity_Data (0504) non trovato');
    const parsed=parseDailyRecords(ef.payload);
+   // La data del record è UTC; per scegliere il record usiamo quella ufficiale della carta.
    const rec=parsed.records.find(r=>r.date===targetDate);
-
-   log(`EF 0504 @${ef.pos} · tipo ${ef.type.toString(16).padStart(2,'0')} · ${ef.len} byte`);
-   log(`ACTIVITY RING · oldest ${parsed.oldest} · newest ${parsed.newest} · ${parsed.records.length} giornate`);
-
    if(!rec){
      const first=parsed.records[0]?.date||'N/D',last=parsed.records.at(-1)?.date||'N/D';
-     $('rows').innerHTML=`<tr><td colspan="4"><b>Nessun record per ${targetDate.split('-').reverse().join('/')}.</b><br>Intervallo disponibile nella carta: ${first.split('-').reverse().join('/')} → ${last.split('-').reverse().join('/')}.</td></tr>`;
-     setStatus(`Carta letta: ${parsed.records.length} giornate · data scelta non presente.`,'warn');
-     return
+     $('rows').innerHTML=`<tr><td colspan="4"><b>Nessun record per ${targetDate.split('-').reverse().join('/')}.</b><br>Intervallo carta: ${first} → ${last}.</td></tr>`;
+     setStatus('Data scelta non presente.','warn');return
    }
 
+   const timeline=[];
    const ch=rec.changes.filter(x=>x.minute<=1439).sort((a,b)=>a.minute-b.minute);
-   const rows=[];
    for(let i=0;i<ch.length;i++){
-     const cur=ch[i],next=ch[i+1];
-     const end=next?next.minute:1440;
-     const dur=Math.max(0,end-cur.minute);
-     const origin=cur.cardOut?'Carta non inserita':(cur.slot===0?'Slot conducente':'Slot secondo conducente');
-     rows.push(`<tr><td>${hm(cur.minute)}–${end>=1440?'24:00':hm(end)}</td><td><b>${cur.activity}</b></td><td>${durationText(dur)}</td><td>${origin}${cur.crew?' · equipaggio':''}</td></tr>`)
+     const cur=ch[i],next=ch[i+1],end=next?next.minute:1440;
+     const st=romeTimeForActivity(rec.dateSec,cur.minute);
+     const en=romeTimeForActivity(rec.dateSec,end);
+     timeline.push({sec:rec.dateSec+cur.minute*60,html:`<tr><td>${st.time}–${en.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(Math.max(0,end-cur.minute))}</td><td>${cur.cardOut?'Carta non inserita':'Carta inserita'}${cur.crew?' · equipaggio':''}</td></tr>`})
    }
-   $('rows').innerHTML=rows.join('')||'<tr><td colspan="4">Nessun cambio attività nel record.</td></tr>';
-   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} pronta · ${ch.length} cambi · ${rec.distance} km · ${cardSource||'carta DTCO'}.`,'ok');
-   log(`GIORNATA ${rec.date} · presenza ${rec.presence} · distanza ${rec.distance} km · cambi ${ch.length}`);
+
+   for(const x of parsePlaces(data)){
+     const z=eventTime(x.sec);if(z.date!==targetDate)continue;
+     const label=entryTypeLabel(x.type),icon=label.includes('INIZIO')?'▶':'■';
+     timeline.push({sec:x.sec,html:`<tr><td>${z.time}</td><td><b>${icon} ${label}</b></td><td>—</td><td>${nation(x.country)} · km ${x.odo}</td></tr>`})
+   }
+   const cu=parseCurrentUse(data);
+   if(cu){const z=eventTime(cu.sec);if(z.date===targetDate)timeline.push({sec:cu.sec-1,html:`<tr><td>${z.time}</td><td><b>▣ CARTA INSERITA / APERTURA SESSIONE</b></td><td>—</td><td>DTCO</td></tr>`})}
+   for(const x of parseSpecific(data)){
+     const z=eventTime(x.sec);if(z.date!==targetDate)continue;
+     const lab=({1:'OUT — FUORI CAMPO',2:'TRAGHETTO / TRENO'})[x.type]||`CONDIZIONE SPECIALE ${x.type}`;
+     timeline.push({sec:x.sec,html:`<tr><td>${z.time}</td><td><b>◆ ${lab}</b></td><td>—</td><td>Carta conducente</td></tr>`})
+   }
+   for(const x of parseBorders(data)){
+     const z=eventTime(x.sec);if(z.date!==targetDate)continue;
+     timeline.push({sec:x.sec,html:`<tr><td>${z.time}</td><td><b>⇄ CAMBIO NAZIONE</b></td><td>—</td><td>${nation(x.left)} → ${nation(x.entered)} · km ${x.odo}</td></tr>`})
+   }
+
+   timeline.sort((a,b)=>a.sec-b.sec);
+   $('rows').innerHTML=timeline.map(x=>x.html).join('')||'<tr><td colspan="4">Nessun dato.</td></tr>';
+   const extra=timeline.length-ch.length;
+   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${extra} eventi · ${rec.distance} km.`,'ok');
+   log(`GIORNATA COMPLETA ${rec.date} · attività ${ch.length} · eventi extra ${extra}`);
  }catch(e){
-   $('rows').innerHTML=`<tr><td colspan="4"><b>Parser attività:</b> ${String(e.message||e)}</td></tr>`;
-   setStatus('Download riuscito, ma parser attività non completato.','err');
-   log('PARSER ERROR '+(e.message||e))
+   $('rows').innerHTML=`<tr><td colspan="4"><b>Parser:</b> ${String(e.message||e)}</td></tr>`;
+   setStatus('Parser giornata non completato.','err');log('PARSER ERROR '+(e.message||e))
  }
 }
 async function connect(){
@@ -502,12 +586,12 @@ async function updateArchive(){
  if(stage!=='idle'){setStatus('Trasferimento già in corso.','warn');return}
 
  baseCardBytes=Array.from(cardBytes);
- partialUpdate=true;updatedActivity=false;streamScanFrom=0;
+ partialUpdate=true;updatedActivity=false;updatedEFs=new Set();partialLastRelevantSeen=false;streamScanFrom=0;
  targetDate=$('day').value||new Date().toISOString().slice(0,10);
  rawBlocks=[];downloadData=[];cardBytes=[];lastMsgCounter=-1;cardStartedAt=Date.now();
  setExportReady(false);setTransferUi(true);
  for(let i=2;i<=6;i++)step(i,'');
- stage='start';setStatus('Cerco il nuovo EF 0504 nel DTCO…','warn');
+ stage='start';setStatus('Aggiorno i dati necessari alla stampa giornaliera…','warn');
  try{await lSendFrame(startComm(),'StartCommunication')}
  catch(e){
    cardBytes=Array.from(baseCardBytes);cardComplete=true;partialUpdate=false;
@@ -519,7 +603,7 @@ async function readDay(){
  if(!device?.gatt?.connected)return;
  if(stage!=='idle'){setStatus('Download già in corso.','warn');return}
  targetDate=$('day').value;if(!targetDate){setStatus('Seleziona un giorno.','warn');return}
- partialUpdate=false;baseCardBytes=[];updatedActivity=false;streamScanFrom=0;
+ partialUpdate=false;baseCardBytes=[];updatedActivity=false;updatedEFs=new Set();partialLastRelevantSeen=false;streamScanFrom=0;
  rawBlocks=[];downloadData=[];cardBytes=[];lastMsgCounter=-1;cardComplete=false;cardStartedAt=Date.now();
  setExportReady(false);setTransferUi(true);
  for(let i=2;i<=6;i++)step(i,'');
