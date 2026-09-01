@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8.2</title>
+<title>Stampa · v1.8.3</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -31,6 +31,22 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 .addr{font-size:12px;margin-top:3px;font-weight:700}.addr.muted{font-weight:400;color:#555}
 
 @media(max-width:720px){.head,.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.steps{grid-template-columns:1fr 1fr 1fr}.print .meta{grid-template-columns:1fr}}
+
+.printTotals{margin-top:22px;border:2px solid #176fd1;border-radius:14px;padding:14px 10px;background:#f7fbff;color:#071321}
+.printTotals h2{margin:0 0 12px;text-align:center;color:#0b55aa}
+.totalsGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:0}
+.totalBox{padding:8px 10px;text-align:center;border-right:1px solid #9fc3ea}
+.totalBox:last-child{border-right:0}
+.totalLabel{font-size:11px;font-weight:900;color:#0b55aa}
+.totalValue{font-size:24px;font-weight:950;margin-top:6px;white-space:nowrap}
+.totalSub{font-size:11px;font-weight:800;margin-top:2px}
+@media(max-width:700px){
+ .totalsGrid{grid-template-columns:repeat(2,1fr)}
+ .totalBox{border-right:0;border-bottom:1px solid #c8dced}
+ .totalBox:last-child{grid-column:1/-1;border-bottom:0}
+ .totalValue{font-size:21px}
+}
+
 </style>
 </head>
 <body>
@@ -75,7 +91,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <section class="panel">
-    <div class="small">L'aggiornamento cerca le sezioni necessarie alla stampa giornaliera: attività, luoghi di inizio/fine giornata, condizioni specifiche e attraversamenti di frontiera disponibili sulla carta. Gli orari visualizzati sono convertiti automaticamente in <b>Europe/Rome</b> (CET/CEST). I dati originali del BIN non vengono convertiti né alterati nell'orario.</div>
+    <div class="small">L'aggiornamento cerca solo le sezioni usate dalla stampa giornaliera: attività, luoghi di inizio/fine giornata, condizioni specifiche e attraversamenti di frontiera. Il trasferimento viene chiuso appena è stato ricevuto l'ultimo blocco necessario, senza attendere le sezioni successive della carta. Gli orari visualizzati sono convertiti automaticamente in <b>Europe/Rome</b> (CET/CEST). I dati originali del BIN non vengono convertiti né alterati nell'orario.</div>
   </section>
 
   
@@ -88,10 +104,21 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
     </div>
 
     <h2>DETTAGLIO ATTIVITÀ</h2>
-    <div class="printScroll"><table><thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Stato</th></tr></thead><tbody id="rows"><tr><td colspan="4">Apri un BIN per visualizzare la giornata.</td></tr></tbody></table></div>
+    <div class="printScroll"><table><thead><tr><th>INIZIO</th><th>ATTIVITÀ</th><th>DURATA</th><th>FINE</th></tr></thead><tbody id="rows"><tr><td colspan="4">Apri un BIN per visualizzare la giornata.</td></tr></tbody></table></div>
 
     <h2 style="margin-top:24px">APERTURE · CAMBI NAZIONE · CHIUSURE</h2>
     <div class="printScroll"><table><thead><tr><th>Ora</th><th>Evento</th><th>Nazione / posizione</th><th>Km</th></tr></thead><tbody id="journeyRows"><tr><td colspan="4">Apri un BIN per visualizzare i dati.</td></tr></tbody></table></div>
+
+    <div class="printTotals" id="dailyTotals">
+      <h2>TOTALI GIORNATA</h2>
+      <div class="totalsGrid">
+        <div class="totalBox"><div class="totalLabel">ORARIO APERTURA</div><div class="totalValue" id="totOpen">—</div></div>
+        <div class="totalBox"><div class="totalLabel">ORARIO CHIUSURA</div><div class="totalValue" id="totClose">—</div></div>
+        <div class="totalBox"><div class="totalLabel">TOT. KM</div><div class="totalValue" id="totKm">—</div><div class="totalSub">km</div></div>
+        <div class="totalBox"><div class="totalLabel">TOT. ORE GUIDA</div><div class="totalValue" id="totDrive">—</div></div>
+        <div class="totalBox"><div class="totalLabel">TOT. IMPEGNO</div><div class="totalValue" id="totDuty">—</div><div class="totalSub">chiusura − apertura</div></div>
+      </div>
+    </div>
   </section>
 
   <section class="panel" id="dirtyCard">
@@ -101,7 +128,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.2 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.3 pronta.</div>
   </details>
 </div>
 
@@ -459,7 +486,7 @@ function replaceEF(base,fid,newEFBytes){
  if(!old) return base; // se il vecchio BIN non aveva questo EF, non rischiamo di alterare il layout firmato
  return new Uint8Array([...base.slice(0,old.pos),...newEFBytes,...base.slice(old.pos+old.totalLength)])
 }
-const UPDATE_FIDS=new Set([0x0502,0x0503,0x0504,0x0506,0x0507,0x0522,0x0528,0x0529,0x0530]);
+const UPDATE_FIDS=new Set([0x0504,0x0506,0x0507,0x0522,0x0528]);
 function scanPartialActivity(){
  if(!partialUpdate)return false;
  const a=new Uint8Array(downloadData);
@@ -477,20 +504,20 @@ function scanPartialActivity(){
    baseCardBytes=Array.from(merged);
    updatedEFs.add(key);
    if(fid===0x0504)updatedActivity=true;
-   if(fid===0x0530)partialLastRelevantSeen=true;
+   if(fid===0x0528)partialLastRelevantSeen=true;
    log(`EF ${fid.toString(16).padStart(4,'0')} aggiornato · tipo ${a[i+2].toString(16).padStart(2,'0')} · ${len} byte`);
    i=end-1
  }
  streamScanFrom=Math.max(0,a.length-8);
 
- // Gen2 v2: 0530 è l'ultimo EF giornaliero che ci serve. A quel punto chiudiamo.
+ // Gen2 v2: 0528 (attraversamenti di frontiera) è l'ultimo EF usato dalla stampa. A quel punto chiudiamo.
  // Per carte più vecchie il trasferimento terminerà normalmente e conserveremo gli EF trovati.
  if(partialLastRelevantSeen&&updatedActivity){
    cardBytes=Array.from(baseCardBytes);cardComplete=true;cardSource='BIN + aggiornamento DTCO';
    setExportReady(true);setArchiveDirty(true);
    setStatus('Dati giornalieri aggiornati. Chiusura trasferimento…','ok');
    renderLoadedDay();stage='exit';
-   next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit dopo EF giornalieri'),120);
+   next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit dopo ultimo EF stampa (0528)'),120);
    return true
  }
  return false
@@ -1012,7 +1039,7 @@ function entryTypeLabel(t){
  const M={
    0:'APERTURA GIORNATA',
    1:'CHIUSURA GIORNATA',
-   2:'INSERIMENTO NAZIONE',
+   2:'CAMBIO NAZIONE MANUALE',
    3:'CHIUSURA GIORNATA',
    4:'APERTURA GIORNATA',
    5:'CHIUSURA GIORNATA'
@@ -1031,12 +1058,14 @@ function renderAcquisition(data){
      const first=parsed.records[0]?.date||'N/D',last=parsed.records.at(-1)?.date||'N/D';
      $('rows').innerHTML=`<tr><td colspan="4"><b>Nessun record per ${targetDate.split('-').reverse().join('/')}.</b><br>Intervallo carta: ${first} → ${last}.</td></tr>`;
      $('journeyRows').innerHTML='<tr><td colspan="4">Nessun dato.</td></tr>';
+     for(const id of ['totOpen','totClose','totKm','totDrive','totDuty'])$(id).textContent='—';
      setStatus('Data scelta non presente.','warn');return
    }
 
    // 1) DETTAGLIO ATTIVITÀ: solo guida/lavoro/disponibilità/riposo.
    const ch=rec.changes.filter(x=>x.minute<=1439).sort((a,b)=>a.minute-b.minute);
    const activityRows=[];
+   let totalDriveMin=0;
    for(let i=0;i<ch.length;i++){
      const cur=ch[i],next=ch[i+1];
      let end=next?next.minute:1440;
@@ -1045,9 +1074,11 @@ function renderAcquisition(data){
      if(!next && nowSec>=rec.dateSec && nowSec<rec.dateSec+86400){
        end=Math.max(cur.minute,Math.min(1440,(nowSec-rec.dateSec)/60));
      }
+     const mins=Math.max(0,end-cur.minute);
+     if(cur.activity==='GUIDA')totalDriveMin+=mins;
      const st=romeTimeForActivity(rec.dateSec,cur.minute);
      const en=romeTimeForActivity(rec.dateSec,end);
-     activityRows.push(`<tr><td>${st.time}–${en.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(Math.max(0,end-cur.minute))}</td><td>${cur.cardOut?'Carta non inserita':'Carta inserita'}${cur.crew?' · equipaggio':''}</td></tr>`)
+     activityRows.push(`<tr><td>${st.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(mins)}</td><td>${en.time}</td></tr>`)
    }
    $('rows').innerHTML=activityRows.join('')||'<tr><td colspan="4">Nessuna attività.</td></tr>';
 
@@ -1058,7 +1089,7 @@ function renderAcquisition(data){
      const label=entryTypeLabel(x.type);
      const placeIcon=label==='APERTURA GIORNATA'?'start':(label==='CHIUSURA GIORNATA'?'end':'card');
      journey.push({
-       sec:x.sec,
+       sec:x.sec,label,odo:x.odo,time:z.time,country:x.country,
        html:`<tr><td>${z.time}</td><td><b>${tachoIcon(placeIcon)} ${label}</b></td><td><b>${nation(x.country)}</b><div style="font-size:12px;margin-top:3px">${coordText(x.gps)}</div>${x.gps?`<div class="addr muted" data-lat="${x.gps.lat}" data-lon="${x.gps.lon}">Risoluzione indirizzo…</div>`:''}</td><td>${x.odo}</td></tr>`
      })
    }
@@ -1087,6 +1118,24 @@ function renderAcquisition(data){
    }
    journey.sort((a,b)=>a.sec-b.sec);
    $('journeyRows').innerHTML=journey.map(x=>x.html).join('')||'<tr><td colspan="4">Nessuna apertura, cambio nazione o chiusura registrata.</td></tr>';
+
+   // TOTALI GIORNATA: prima apertura, chiusura finale, km percorsi, guida e impegno.
+   const openings=journey.filter(x=>x.label==='APERTURA GIORNATA' && Number.isFinite(Number(x.odo))).sort((a,b)=>a.sec-b.sec);
+   const closings=journey.filter(x=>x.label==='CHIUSURA GIORNATA' && Number.isFinite(Number(x.odo))).sort((a,b)=>a.sec-b.sec);
+   const firstOpen=openings[0]||null;
+   const finalClose=closings.length?closings[closings.length-1]:null;
+   $('totOpen').textContent=firstOpen?firstOpen.time:'—';
+   $('totClose').textContent=finalClose?finalClose.time:'—';
+   $('totDrive').textContent=durationText(totalDriveMin);
+   if(firstOpen&&finalClose){
+     const km=Math.max(0,Number(finalClose.odo)-Number(firstOpen.odo));
+     $('totKm').textContent=String(km);
+     $('totDuty').textContent=durationText(Math.max(0,(finalClose.sec-firstOpen.sec)/60));
+   }else{
+     $('totKm').textContent='—';
+     $('totDuty').textContent='—';
+   }
+
    resolveAddresses();
 
    setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${rec.distance} km.`,'ok');
@@ -1094,6 +1143,7 @@ function renderAcquisition(data){
  }catch(e){
    $('rows').innerHTML=`<tr><td colspan="4"><b>Parser:</b> ${String(e.message||e)}</td></tr>`;
    $('journeyRows').innerHTML='<tr><td colspan="4">Parser non completato.</td></tr>';
+   for(const id of ['totOpen','totClose','totKm','totDrive','totDuty'])$(id).textContent='—';
    setStatus('Parser giornata non completato.','err');log('PARSER ERROR '+(e.message||e))
  }
 }
