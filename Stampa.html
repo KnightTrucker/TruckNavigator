@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8</title>
+<title>Stampa · v1.8.1</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -31,7 +31,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.1</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -76,6 +76,23 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   
 
 
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div><div class="small">GIORNO</div><div id="pDay" style="font-size:24px;font-weight:900">—</div></div>
+      <div style="text-align:right"><div class="small">CONDUCENTE</div><div id="pDriver" style="font-size:18px;font-weight:900">—</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin-top:0">DETTAGLIO ATTIVITÀ</h2>
+    <div style="overflow:auto"><table><thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Stato</th></tr></thead><tbody id="rows"><tr><td colspan="4">Apri un BIN per visualizzare la giornata.</td></tr></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin-top:0">APERTURE · CAMBI NAZIONE · CHIUSURE</h2>
+    <div style="overflow:auto"><table><thead><tr><th>Ora</th><th>Evento</th><th>Nazione / posizione</th><th>Km</th></tr></thead><tbody id="journeyRows"><tr><td colspan="4">Apri un BIN per visualizzare i dati.</td></tr></tbody></table></div>
+  </section>
+
   <section class="panel" id="dirtyCard">
     <button id="dirtyBtn" class="primary" style="width:100%;font-size:18px">SCHEDA SPORCA?</button>
     <div class="small" style="margin-top:8px"><b>Controllo automatico degli ultimi 53 giorni rispetto al giorno della verifica.</b> È indipendente dalla data scelta per la stampa giornaliera.</div>
@@ -83,7 +100,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.1 pronta.</div>
   </details>
 </div>
 
@@ -1013,7 +1030,6 @@ function renderAcquisition(data){
      const first=parsed.records[0]?.date||'N/D',last=parsed.records.at(-1)?.date||'N/D';
      $('rows').innerHTML=`<tr><td colspan="4"><b>Nessun record per ${targetDate.split('-').reverse().join('/')}.</b><br>Intervallo carta: ${first} → ${last}.</td></tr>`;
      $('journeyRows').innerHTML='<tr><td colspan="4">Nessun dato.</td></tr>';
-     $('faultRows').innerHTML='<tr><td colspan="4">Nessun dato.</td></tr>';
      setStatus('Data scelta non presente.','warn');return
    }
 
@@ -1066,14 +1082,11 @@ function renderAcquisition(data){
    $('journeyRows').innerHTML=journey.map(x=>x.html).join('')||'<tr><td colspan="4">Nessuna apertura, cambio nazione o chiusura registrata.</td></tr>';
    resolveAddresses();
 
-   // 3) EVENTI / ANOMALIE / GUASTI: sempre ultima sezione.
-
-   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${problems.length} registrazioni evento/guasto negli ultimi 53 giorni · ${rec.distance} km.`,'ok');
-   log(`GIORNATA ${rec.date} · attività ${ch.length} · viaggio ${journey.length} · anomalie/guasti ${problems.length}`);
+   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${rec.distance} km.`,'ok');
+   log(`GIORNATA ${rec.date} · attività ${ch.length} · viaggio ${journey.length}`);
  }catch(e){
    $('rows').innerHTML=`<tr><td colspan="4"><b>Parser:</b> ${String(e.message||e)}</td></tr>`;
    $('journeyRows').innerHTML='<tr><td colspan="4">Parser non completato.</td></tr>';
-   $('faultRows').innerHTML='<tr><td colspan="4">Parser non completato.</td></tr>';
    setStatus('Parser giornata non completato.','err');log('PARSER ERROR '+(e.message||e))
  }
 }
