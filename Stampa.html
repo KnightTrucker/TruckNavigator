@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8.3</title>
+<title>Stampa · v1.8.4</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -18,7 +18,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 .print{background:#fff;color:#111;border-radius:8px;padding:22px;min-height:320px}.print h2{margin:0 0 8px;text-align:center}.print .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:2px solid #111;border-bottom:2px solid #111;padding:8px 0;margin:10px 0}.print table{width:100%;border-collapse:collapse;font-size:14px}.print th,.print td{border-bottom:1px solid #aaa;padding:7px;text-align:left;vertical-align:top}
 .print h2{font-size:22px;line-height:1.15}
 .printScroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.print table{min-width:620px}
+.print table{width:100%;min-width:0;table-layout:fixed}
 .print td:first-child,.print th:first-child{white-space:nowrap}
 
 .raw{background:#04131e;border:1px solid #173b55;border-radius:10px;padding:12px;min-height:180px;max-height:380px;overflow:auto;white-space:pre-wrap;color:#7fe88d;font:12px ui-monospace,Consolas,monospace}
@@ -45,6 +45,36 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
  .totalBox{border-right:0;border-bottom:1px solid #c8dced}
  .totalBox:last-child{grid-column:1/-1;border-bottom:0}
  .totalValue{font-size:21px}
+}
+
+
+/* v1.8.4 — mobile precision / no horizontal page overflow */
+html,body{max-width:100%;overflow-x:hidden}
+main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
+.print{width:100%;padding:14px 12px;overflow:hidden}
+.printScroll{width:100%;max-width:100%;overflow-x:hidden}
+.print table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse}
+.print th,.print td{box-sizing:border-box;overflow-wrap:anywhere;word-break:normal}
+#printArea #rows td,#printArea #rows th{padding-left:6px;padding-right:6px}
+#printArea table:has(#rows) th:nth-child(1),#printArea table:has(#rows) td:nth-child(1){width:18%}
+#printArea table:has(#rows) th:nth-child(2),#printArea table:has(#rows) td:nth-child(2){width:34%}
+#printArea table:has(#rows) th:nth-child(3),#printArea table:has(#rows) td:nth-child(3){width:24%}
+#printArea table:has(#rows) th:nth-child(4),#printArea table:has(#rows) td:nth-child(4){width:24%;text-align:right}
+#printArea table:has(#journeyRows) th:nth-child(1),#printArea table:has(#journeyRows) td:nth-child(1){width:10%}
+#printArea table:has(#journeyRows) th:nth-child(2),#printArea table:has(#journeyRows) td:nth-child(2){width:28%}
+#printArea table:has(#journeyRows) th:nth-child(3),#printArea table:has(#journeyRows) td:nth-child(3){width:50%}
+#printArea table:has(#journeyRows) th:nth-child(4),#printArea table:has(#journeyRows) td:nth-child(4){width:12%;text-align:right}
+@media(max-width:700px){
+  .wrap{padding-left:0!important;padding-right:0!important}
+  .panel{margin-left:0!important;margin-right:0!important;border-radius:12px}
+  .print{border-radius:0;padding:12px 10px}
+  .print h2{font-size:20px}
+  .print th,.print td{font-size:12px;padding:6px 4px}
+  .print td b{font-size:12px}
+  .meta{gap:8px}
+  .totalsGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .totalBox{min-width:0}
+  .totalValue{font-size:20px}
 }
 
 </style>
@@ -128,7 +158,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.3 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8.4 pronta.</div>
   </details>
 </div>
 
@@ -1086,7 +1116,12 @@ function renderAcquisition(data){
    const journey=[];
    for(const x of parsePlaces(data)){
      const z=eventTime(x.sec);if(z.date!==targetDate)continue;
-     const label=entryTypeLabel(x.type);
+     let label=entryTypeLabel(x.type);
+     // Nella stessa giornata soltanto il primo BEGIN è l'apertura.
+     // I BEGIN successivi sono inserimenti/cambi nazione manuali.
+     if((x.type===0 || x.type===2 || x.type===4) && journey.some(j=>j.label==='APERTURA GIORNATA')){
+       label='CAMBIO NAZIONE MANUALE';
+     }
      const placeIcon=label==='APERTURA GIORNATA'?'start':(label==='CHIUSURA GIORNATA'?'end':'card');
      journey.push({
        sec:x.sec,label,odo:x.odo,time:z.time,country:x.country,
@@ -1130,7 +1165,7 @@ function renderAcquisition(data){
    if(firstOpen&&finalClose){
      const km=Math.max(0,Number(finalClose.odo)-Number(firstOpen.odo));
      $('totKm').textContent=String(km);
-     $('totDuty').textContent=durationText(Math.max(0,(finalClose.sec-firstOpen.sec)/60));
+     $('totDuty').textContent=durationText(Math.round(Math.max(0,(finalClose.sec-firstOpen.sec)/60)));
    }else{
      $('totKm').textContent='—';
      $('totDuty').textContent='—';
