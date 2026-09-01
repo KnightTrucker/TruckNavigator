@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v0.3</title>
+<title>Stampa · v0.4</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -24,7 +24,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.3</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.4</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -62,7 +62,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.3 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.4 pronta.</div>
   </details>
 </div>
 
@@ -162,7 +162,18 @@ async function handleFrame(frame){
  const sid=p[0];
 
  if(sid===0x7F){
-   const req=p[1],nrc=p[2];setStatus(`Rifiutato: servizio 0x${req.toString(16).toUpperCase()} · NRC 0x${nrc.toString(16).toUpperCase()}`,'err');
+   const req=p[1],nrc=p[2];
+
+   // NRC 0x78 = requestCorrectlyReceived-ResponsePending:
+   // il DTCO ha accettato la richiesta ma sta ancora preparando la risposta.
+   // NON interrompere la sessione e NON inviare una nuova richiesta.
+   if(nrc===0x78){
+     setStatus('DTCO sta preparando i dati… attendere.','warn');
+     log('RESPONSE PENDING 7F '+req.toString(16).padStart(2,'0').toUpperCase()+' 78 · sessione mantenuta');
+     return
+   }
+
+   setStatus(`Rifiutato: servizio 0x${req.toString(16).toUpperCase()} · NRC 0x${nrc.toString(16).toUpperCase()}`,'err');
    log('NEGATIVE RESPONSE '+hex(p));stage='error';return
  }
  if(stage==='start'&&sid===0xC1){step(2,'done');setStatus('StartCommunication OK.','ok');stage='diag';return next(()=>lSendFrame(kwp([0x10,0x81]),'StartDiagnosticSession'),300)}
@@ -175,6 +186,8 @@ async function handleFrame(frame){
    return next(()=>lSendFrame(kwp([0x36,0x06,0x01]),'CardDownload slot 1'),300)
  }
  if(stage==='card'&&sid===0x76){
+   step(5,'on');
+   setStatus('Dati carta in ricezione…','ok');
    // Positive Response Transfer Data. TREP deve essere 06 per il download carta.
    if(p[1]!==0x06){
      log('TREP inatteso: '+hex(p));
