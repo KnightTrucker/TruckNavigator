@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v0.7</title>
+<title>Stampa · v0.8</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -24,7 +24,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.7</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.8</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -32,7 +32,10 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
     <div class="actions">
       <button id="connectBtn" class="btn primary">CONNETTI DTCO</button>
       <button id="disconnectBtn" class="btn" disabled>DISCONNETTI</button>
-      <button id="readBtn" class="btn" disabled>SCARICA CARTA</button>
+      <button id="readBtn" class="btn" disabled>SCARICA CARTA COMPLETA</button>
+    </div>
+    <div class="actions" style="margin-top:8px;grid-template-columns:1fr">
+      <button id="updateArchiveBtn" class="btn primary" disabled>AGGIORNA ATTIVITÀ DAL DTCO</button>
     </div>
     <div class="actions" style="margin-top:8px;grid-template-columns:1fr 1fr">
       <button id="importCardBtn" class="btn primary">APRI DATI CARTA (.BIN)</button>
@@ -59,7 +62,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <section class="panel">
-    <div class="small">Per l'uso normale apri un file .BIN già salvato: la giornata scelta viene letta subito senza collegarsi al DTCO. Il download Bluetooth della carta resta disponibile solo quando vuoi aggiornare l'archivio.</div>
+    <div class="small">Per l'uso normale apri il .BIN già salvato. Con AGGIORNA ATTIVITÀ DAL DTCO il programma avvia il trasferimento, acquisisce il nuovo EF Driver_Activity_Data 0504 completo e chiude appena quel file è disponibile; poi sostituisce il vecchio 0504 nell'archivio in memoria.</div>
   </section>
 
   <section class="panel">
@@ -71,7 +74,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.7 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.8 pronta.</div>
   </details>
 </div>
 
@@ -87,7 +90,7 @@ const DL_CRED='db9c4128-bff3-41fe-a306-fb6f9a8aeb2d';
 let device,server;
 let dfifo,dcred,dtx=0,dBusy=false,dExp=0,dGot=0,dBuf=[],dWait=null;
 let lfifo,lcred,ltx=0,lBusy=false,lExp=0,lGot=0,lBuf=[],lWait=null;
-let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1,cardComplete=false,cardStartedAt=0,cardSource='';
+let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1,cardComplete=false,cardStartedAt=0,cardSource='',partialUpdate=false,baseCardBytes=[],streamScanFrom=0,updatedActivity=false;
 const $=id=>document.getElementById(id);
 function log(m){$('raw').textContent+=`\n[${new Date().toLocaleTimeString('it-IT')}] ${m}`;$('raw').scrollTop=$('raw').scrollHeight}
 function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
@@ -174,6 +177,7 @@ function setTransferUi(active){
 function setExportReady(v){
  cardComplete=!!v;
  $('exportCardBtn').disabled=!cardComplete||!cardBytes.length;
+ $('updateArchiveBtn').disabled=!cardComplete||!cardBytes.length||!device?.gatt?.connected;
 }
 function safeName(s){
  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -193,7 +197,7 @@ async function importCardFile(file){
    const buf=await file.arrayBuffer();
    cardBytes=Array.from(new Uint8Array(buf));
    if(!cardBytes.length)throw Error('File vuoto');
-   cardComplete=true; cardSource=file.name;
+   cardComplete=true; partialUpdate=false; baseCardBytes=[]; cardSource=file.name;
    driverName=guessDriverFromFileName(file.name);
    setExportReady(true);
 
@@ -287,6 +291,12 @@ async function handleFrame(frame){
      setStatus(`Carta conducente: ricezione blocco ${msgc} · ${cardBytes.length} byte · ${elapsed}s`,'ok');
      log('CARD SUBMESSAGE '+msgc+' · '+(p.length-4)+' byte · totale '+cardBytes.length);
 
+     if(partialUpdate){
+       // Per l'aggiornamento accumuliamo il flusso nuovo separatamente e,
+       // appena EF 0504 è completo, chiudiamo il trasferimento.
+       if(scanPartialActivity())return
+     }
+
      // ACK del sub-message ricevuto con MsgC successivo.
      const nextCounter=(msgc+1)&0xFFFF;
      return next(()=>lSendFrame(
@@ -301,6 +311,17 @@ async function handleFrame(frame){
    if(tail.length){
      cardBytes.push(...tail);
      downloadData.push(...tail)
+   }
+
+   if(partialUpdate&&!updatedActivity){
+     if(scanPartialActivity())return;
+     // Se 0504 non è stato trovato, non distruggere il BIN base.
+     cardBytes=Array.from(baseCardBytes);
+     cardComplete=true;partialUpdate=false;
+     setExportReady(true);setTransferUi(false);
+     setStatus('Download terminato ma EF 0504 aggiornato non individuato: archivio originale conservato.','err');
+     stage='exit';
+     return next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit'),150)
    }
 
    cardComplete=true;
@@ -319,7 +340,7 @@ async function handleFrame(frame){
  if(stage==='stop'&&sid===0xC2){
    step(6,'done');
    setStatus('Sessione Download chiusa · copia carta pronta per esportazione.','ok');
-   stage='idle';setTransferUi(false);setExportReady(true)
+   stage='idle';partialUpdate=false;setTransferUi(false);setExportReady(true)
  }
 }
 function be16(a,o){return ((a[o]||0)<<8)|(a[o+1]||0)}
@@ -374,6 +395,44 @@ function parseDailyRecords(payload){
  if(!out.length||out[out.length-1].off!==newest)throw Error('Impossibile raggiungere il record più recente');
  return {oldest,newest,ringLength:ring.length,records:out}
 }
+
+function findActivityEFWithBounds(data){
+ const ef=findActivityEF(data);
+ if(!ef)return null;
+ return {...ef,totalLength:5+ef.len}
+}
+function replaceActivityEF(base,newEFBytes){
+ const old=findActivityEFWithBounds(base);
+ if(!old)throw Error('Nel BIN base non trovo EF 0504');
+ const before=Array.from(base.slice(0,old.pos));
+ const after=Array.from(base.slice(old.pos+old.totalLength));
+ return new Uint8Array([...before,...newEFBytes,...after])
+}
+function scanPartialActivity(){
+ if(!partialUpdate||updatedActivity)return false;
+ const a=new Uint8Array(downloadData);
+ // Cerca un EF 0504 completo già arrivato nel flusso TLV.
+ for(let i=Math.max(0,streamScanFrom-8);i+5<=a.length;i++){
+   if(a[i]!==0x05||a[i+1]!==0x04)continue;
+   const len=be16(a,i+3),end=i+5+len;
+   if(len<16)continue;
+   if(end>a.length){streamScanFrom=i;return false}
+   const efBytes=a.slice(i,end);
+   const merged=replaceActivityEF(new Uint8Array(baseCardBytes),efBytes);
+   cardBytes=Array.from(merged);
+   cardComplete=true;updatedActivity=true;cardSource='BIN + aggiornamento DTCO';
+   setExportReady(true);
+   log(`EF 0504 AGGIORNATO · ${len} byte · posizione stream ${i}`);
+   setStatus('Attività aggiornate. Interrompo il resto del download…','ok');
+   renderLoadedDay();
+   stage='exit';
+   next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit anticipato dopo EF 0504'),120);
+   return true
+ }
+ streamScanFrom=Math.max(0,a.length-8);
+ return false
+}
+
 function renderAcquisition(data){
  $('pDay').textContent=targetDate.split('-').reverse().join('/');
  $('pDriver').textContent=driverName;
@@ -436,10 +495,31 @@ async function connect(){
 function disconnectState(){
  clearTimeout(dWait);dtx=ltx=0;dBusy=lBusy=false;dfifo=dcred=lfifo=lcred=server=null;stage='idle';setConn(false);setTransferUi(false);setExportReady(cardComplete);setStatus('Scollegato.','');log('DTCO scollegato')
 }
+
+async function updateArchive(){
+ if(!device?.gatt?.connected){setStatus('Connetti prima il DTCO.','warn');return}
+ if(!cardComplete||!cardBytes.length){setStatus('Apri prima il BIN base.','warn');return}
+ if(stage!=='idle'){setStatus('Trasferimento già in corso.','warn');return}
+
+ baseCardBytes=Array.from(cardBytes);
+ partialUpdate=true;updatedActivity=false;streamScanFrom=0;
+ targetDate=$('day').value||new Date().toISOString().slice(0,10);
+ rawBlocks=[];downloadData=[];cardBytes=[];lastMsgCounter=-1;cardStartedAt=Date.now();
+ setExportReady(false);setTransferUi(true);
+ for(let i=2;i<=6;i++)step(i,'');
+ stage='start';setStatus('Cerco il nuovo EF 0504 nel DTCO…','warn');
+ try{await lSendFrame(startComm(),'StartCommunication')}
+ catch(e){
+   cardBytes=Array.from(baseCardBytes);cardComplete=true;partialUpdate=false;
+   stage='idle';setTransferUi(false);setExportReady(true);setStatus(e.message,'err')
+ }
+}
+
 async function readDay(){
  if(!device?.gatt?.connected)return;
  if(stage!=='idle'){setStatus('Download già in corso.','warn');return}
  targetDate=$('day').value;if(!targetDate){setStatus('Seleziona un giorno.','warn');return}
+ partialUpdate=false;baseCardBytes=[];updatedActivity=false;streamScanFrom=0;
  rawBlocks=[];downloadData=[];cardBytes=[];lastMsgCounter=-1;cardComplete=false;cardStartedAt=Date.now();
  setExportReady(false);setTransferUi(true);
  for(let i=2;i<=6;i++)step(i,'');
@@ -451,6 +531,7 @@ $('connectBtn').onclick=connect;
 $('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disconnectState();
 $('readBtn').onclick=readDay;
 $('exportCardBtn').onclick=exportCard;
+$('updateArchiveBtn').onclick=updateArchive;
 $('importCardBtn').onclick=()=>$('importCardFile').click();
 $('importCardFile').onchange=e=>importCardFile(e.target.files&&e.target.files[0]);
 $('day').addEventListener('change',renderLoadedDay);
