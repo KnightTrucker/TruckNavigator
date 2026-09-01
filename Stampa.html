@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v0.4</title>
+<title>Stampa · v0.5</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -24,7 +24,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.4</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.5</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -32,7 +32,10 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
     <div class="actions">
       <button id="connectBtn" class="btn primary">CONNETTI DTCO</button>
       <button id="disconnectBtn" class="btn" disabled>DISCONNETTI</button>
-      <button id="readBtn" class="btn" disabled>LEGGI GIORNATA</button>
+      <button id="readBtn" class="btn" disabled>SCARICA CARTA</button>
+    </div>
+    <div class="actions" style="margin-top:8px;grid-template-columns:1fr">
+      <button id="exportCardBtn" class="btn" disabled>ESPORTA DATI CARTA (.BIN)</button>
     </div>
   </section>
 
@@ -50,7 +53,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <section class="panel">
-    <div class="small">Questa pagina non comanda la stampante fisica del DTCO. Legge la carta conducente inserita nello slot 1 tramite il servizio Bluetooth Download e poi filtra la giornata selezionata.</div>
+    <div class="small">Questa pagina non comanda la stampante fisica del DTCO. Scarica in sola lettura i dati della carta conducente nello slot 1, li conserva in memoria e poi userà la data scelta per ricostruire la giornata.</div>
   </section>
 
   <section class="panel">
@@ -62,7 +65,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.4 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.5 pronta.</div>
   </details>
 </div>
 
@@ -78,7 +81,7 @@ const DL_CRED='db9c4128-bff3-41fe-a306-fb6f9a8aeb2d';
 let device,server;
 let dfifo,dcred,dtx=0,dBusy=false,dExp=0,dGot=0,dBuf=[],dWait=null;
 let lfifo,lcred,ltx=0,lBusy=false,lExp=0,lGot=0,lBuf=[],lWait=null;
-let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1;
+let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1,cardComplete=false,cardStartedAt=0;
 const $=id=>document.getElementById(id);
 function log(m){$('raw').textContent+=`\n[${new Date().toLocaleTimeString('it-IT')}] ${m}`;$('raw').scrollTop=$('raw').scrollHeight}
 function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
@@ -157,6 +160,36 @@ async function lRx(e){
  }
 }
 async function next(fn,delay=250){await new Promise(r=>setTimeout(r,delay));return fn()}
+
+function setTransferUi(active){
+ $('readBtn').disabled=active||!device?.gatt?.connected;
+ $('disconnectBtn').disabled=!device?.gatt?.connected;
+}
+function setExportReady(v){
+ cardComplete=!!v;
+ $('exportCardBtn').disabled=!cardComplete||!cardBytes.length;
+}
+function safeName(s){
+ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+   .replace(/[^A-Za-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'Conducente';
+}
+function exportCard(){
+ if(!cardComplete||!cardBytes.length){
+   setStatus('Nessun download carta completo da esportare.','warn');
+   return
+ }
+ const bytes=new Uint8Array(cardBytes);
+ const blob=new Blob([bytes],{type:'application/octet-stream'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+ a.href=url;
+ a.download=`Carta_${safeName(driverName)}_${stamp}.bin`;
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ log('EXPORT CARTA · '+bytes.length+' byte · '+a.download);
+ setStatus('Copia dati carta esportata · '+bytes.length+' byte.','ok')
+}
+
 async function handleFrame(frame){
  const p=framePayload(frame); if(!p.length)return;
  const sid=p[0];
@@ -174,7 +207,7 @@ async function handleFrame(frame){
    }
 
    setStatus(`Rifiutato: servizio 0x${req.toString(16).toUpperCase()} · NRC 0x${nrc.toString(16).toUpperCase()}`,'err');
-   log('NEGATIVE RESPONSE '+hex(p));stage='error';return
+   log('NEGATIVE RESPONSE '+hex(p));stage='error';setTransferUi(false);return
  }
  if(stage==='start'&&sid===0xC1){step(2,'done');setStatus('StartCommunication OK.','ok');stage='diag';return next(()=>lSendFrame(kwp([0x10,0x81]),'StartDiagnosticSession'),300)}
  if(stage==='diag'&&sid===0x50){step(3,'done');setStatus('Sessione diagnostica aperta.','ok');stage='upload';return next(()=>lSendFrame(kwp([0x35,0,0,0,0,0,255,255,255,255]),'RequestUpload'),300)}
@@ -188,24 +221,32 @@ async function handleFrame(frame){
  if(stage==='card'&&sid===0x76){
    step(5,'on');
    setStatus('Dati carta in ricezione…','ok');
-   // Positive Response Transfer Data. TREP deve essere 06 per il download carta.
+
+   // Positive Response TransferData; TRTP 06 = Card Download.
    if(p[1]!==0x06){
-     log('TREP inatteso: '+hex(p));
+     log('TREP inatteso durante CardDownload: '+hex(p));
      return
    }
 
-   // Le risposte lunghe possono essere suddivise in sub-message KWP.
-   // Con LEN=255, dopo SID/TREP sono presenti i 2 byte MsgC.
+   // DDP/KWP: i messaggi con LEN=FF contengono MsgC e richiedono ACK.
    const isSub = frame[0]===0x80 && frame[3]===0xFF && p.length>=4;
    if(isSub){
      const msgc=(p[2]<<8)|p[3];
-     lastMsgCounter=msgc;
-     cardBytes.push(...p.slice(4));
-     downloadData.push(...p.slice(4));
-     setStatus('Carta conducente: ricezione blocco '+msgc+'…','ok');
-     log('CARD SUBMESSAGE '+msgc+' · '+(p.length-4)+' byte');
 
-     // DDP_017: ACK contiene SID ricevuto (76) e MsgC+1.
+     // Protezione da duplicati: non aggiunge due volte lo stesso blocco.
+     if(msgc!==lastMsgCounter){
+       cardBytes.push(...p.slice(4));
+       downloadData.push(...p.slice(4));
+       lastMsgCounter=msgc;
+     }else{
+       log('CARD SUBMESSAGE DUPLICATO '+msgc+' · ignorato');
+     }
+
+     const elapsed=Math.max(1,Math.round((Date.now()-cardStartedAt)/1000));
+     setStatus(`Carta conducente: ricezione blocco ${msgc} · ${cardBytes.length} byte · ${elapsed}s`,'ok');
+     log('CARD SUBMESSAGE '+msgc+' · '+(p.length-4)+' byte · totale '+cardBytes.length);
+
+     // ACK del sub-message ricevuto con MsgC successivo.
      const nextCounter=(msgc+1)&0xFFFF;
      return next(()=>lSendFrame(
        kwp([0x83,0x76,(nextCounter>>8)&255,nextCounter&255]),
@@ -213,19 +254,31 @@ async function handleFrame(frame){
      ),120)
    }
 
-   // Ultimo sub-message: LEN < 255; non richiede ACK.
-   cardBytes.push(...p.slice(2));
-   downloadData.push(...p.slice(2));
-   step(5,'done');step(6,'done');
-   setStatus('Download carta completato · '+cardBytes.length+' byte ricevuti.','ok');
-   log('CARD DOWNLOAD COMPLETATO · '+cardBytes.length+' byte');
+   // Un 76/06 con lunghezza KWP diversa da FF è il blocco terminale.
+   // Non richiede ACK: completa il file e chiude correttamente la sessione.
+   const tail=p.length>2?p.slice(2):new Uint8Array();
+   if(tail.length){
+     cardBytes.push(...tail);
+     downloadData.push(...tail)
+   }
+
+   cardComplete=true;
+   setExportReady(true);
+   step(5,'done');
+   setStatus('Download carta completato · '+cardBytes.length+' byte. Chiusura sessione…','ok');
+   log('CARD DOWNLOAD TERMINALE · '+tail.length+' byte');
+   log('CARD DOWNLOAD COMPLETATO · '+cardBytes.length+' byte totali');
    renderAcquisition(new Uint8Array(cardBytes));
 
    stage='exit';
    return next(()=>lSendFrame(kwp([0x37]),'RequestTransferExit'),250)
  }
  if(stage==='exit'&&sid===0x77){stage='stop';return next(()=>lSendFrame(kwp([0x82]),'StopCommunication'),150)}
- if(stage==='stop'&&sid===0xC2){setStatus('Sessione Download chiusa.','ok');stage='idle'}
+ if(stage==='stop'&&sid===0xC2){
+   step(6,'done');
+   setStatus('Sessione Download chiusa · copia carta pronta per esportazione.','ok');
+   stage='idle';setTransferUi(false);setExportReady(true)
+ }
 }
 function renderAcquisition(data){
  $('pDay').textContent=targetDate.split('-').reverse().join('/');
@@ -267,19 +320,25 @@ async function connect(){
  }catch(e){setStatus('Connessione fallita: '+e.message,'err');log('CONNECT ERROR '+e.message);disconnectState()}
 }
 function disconnectState(){
- clearTimeout(dWait);dtx=ltx=0;dBusy=lBusy=false;dfifo=dcred=lfifo=lcred=server=null;stage='idle';setConn(false);setStatus('Scollegato.','');log('DTCO scollegato')
+ clearTimeout(dWait);dtx=ltx=0;dBusy=lBusy=false;dfifo=dcred=lfifo=lcred=server=null;stage='idle';setConn(false);setTransferUi(false);setExportReady(cardComplete);setStatus('Scollegato.','');log('DTCO scollegato')
 }
 async function readDay(){
  if(!device?.gatt?.connected)return;
+ if(stage!=='idle'){setStatus('Download già in corso.','warn');return}
  targetDate=$('day').value;if(!targetDate){setStatus('Seleziona un giorno.','warn');return}
- rawBlocks=[];downloadData=[];cardBytes=[];lastMsgCounter=-1;for(let i=2;i<=6;i++)step(i,'');stage='start';setStatus('Apro sessione Download…','warn');
- try{await lSendFrame(startComm(),'StartCommunication')}catch(e){setStatus(e.message,'err')}
+ rawBlocks=[];downloadData=[];cardBytes=[];lastMsgCounter=-1;cardComplete=false;cardStartedAt=Date.now();
+ setExportReady(false);setTransferUi(true);
+ for(let i=2;i<=6;i++)step(i,'');
+ stage='start';setStatus('Apro sessione Download…','warn');
+ try{await lSendFrame(startComm(),'StartCommunication')}
+ catch(e){stage='idle';setTransferUi(false);setStatus(e.message,'err')}
 }
 $('connectBtn').onclick=connect;
 $('disconnectBtn').onclick=()=>device?.gatt?.connected?device.gatt.disconnect():disconnectState();
 $('readBtn').onclick=readDay;
+$('exportCardBtn').onclick=exportCard;
 $('day').value=new Date().toISOString().slice(0,10);
-setConn(false);
+setConn(false);setExportReady(false);
 })();
 </script>
 </body>
