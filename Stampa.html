@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.4</title>
+<title>Stampa · v1.6</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -31,7 +31,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.4</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.6</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -94,7 +94,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
       <div style="margin-top:24px;border-top:3px solid #111;padding-top:14px">
         <div style="font-size:18px;font-weight:900;margin-bottom:8px">⚠ EVENTI / ANOMALIE / GUASTI</div>
         <table>
-          <thead><tr><th>Ora</th><th>Tipo</th><th>Durata</th><th>Veicolo</th></tr></thead>
+          <thead><tr><th>Data / Ora</th><th>Tipo</th><th>Durata</th><th>Veicolo</th></tr></thead>
           <tbody id="faultRows"><tr><td colspan="4">Nessun dato.</td></tr></tbody>
         </table>
       </div>
@@ -102,7 +102,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.4 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.6 pronta.</div>
   </details>
 </div>
 
@@ -678,8 +678,15 @@ function parseBorders(data){
 }
 function eventTime(sec){return romePartsFromSec(sec)}
 function entryTypeLabel(t){
- // EntryTypeDailyWorkPeriod: valori standard start/end; manteniamo il valore grezzo se non noto.
- return ({0:'INSERIMENTO NAZIONE',1:'FINE GIORNATA',2:'INSERIMENTO NAZIONE',3:'FINE GIORNATA'})[t]||`LUOGO GIORNATA (${t})`
+ const M={
+   0:'APERTURA GIORNATA',
+   1:'CHIUSURA GIORNATA',
+   2:'INSERIMENTO NAZIONE',
+   3:'CHIUSURA GIORNATA',
+   4:'APERTURA GIORNATA',
+   5:'CHIUSURA GIORNATA'
+ };
+ return M[t]||`LUOGO GIORNATA (${t})`
 }
 
 function renderAcquisition(data){
@@ -712,10 +719,11 @@ function renderAcquisition(data){
    const journey=[];
    for(const x of parsePlaces(data)){
      const z=eventTime(x.sec);if(z.date!==targetDate)continue;
-     const label=entryTypeLabel(x.type),icon=label.includes('INIZIO')?'▶':'■';
+     const label=entryTypeLabel(x.type);
+     const placeIcon=label==='APERTURA GIORNATA'?'start':(label==='CHIUSURA GIORNATA'?'end':'card');
      journey.push({
        sec:x.sec,
-       html:`<tr><td>${z.time}</td><td><b>${tachoIcon(label.includes('INIZIO')?'start':'end')} ${label}</b></td><td><b>${nation(x.country)}</b><div style="font-size:12px;margin-top:3px">${coordText(x.gps)}</div>${x.gps?`<div class="addr muted" data-lat="${x.gps.lat}" data-lon="${x.gps.lon}">Risoluzione indirizzo…</div>`:''}</td><td>${x.odo}</td></tr>`
+       html:`<tr><td>${z.time}</td><td><b>${tachoIcon(placeIcon)} ${label}</b></td><td><b>${nation(x.country)}</b><div style="font-size:12px;margin-top:3px">${coordText(x.gps)}</div>${x.gps?`<div class="addr muted" data-lat="${x.gps.lat}" data-lon="${x.gps.lon}">Risoluzione indirizzo…</div>`:''}</td><td>${x.odo}</td></tr>`
      })
    }
    const cu=parseCurrentUse(data);
@@ -746,19 +754,23 @@ function renderAcquisition(data){
    resolveAddresses();
 
    // 3) EVENTI / ANOMALIE / GUASTI: sempre ultima sezione.
+   const nowSec=Math.floor(Date.now()/1000);
+   const cutoff53=nowSec-(53*24*60*60);
    const problems=[...parseEventsFaults(data,0x0502,false),...parseEventsFaults(data,0x0503,true)]
      .filter(x=>{
-       const b=eventTime(x.beg),e=(x.end&&x.end!==0xffffffff)?eventTime(x.end):null;
-       return b.date===targetDate||(e&&e.date===targetDate)
-     }).sort((a,b)=>a.beg-b.beg);
+       const endSec=(x.end&&x.end!==0xffffffff)?x.end:x.beg;
+       return endSec>=cutoff53 && x.beg<=nowSec
+     }).sort((a,b)=>b.beg-a.beg);
    $('faultRows').innerHTML=problems.length?problems.map(x=>{
      const b=eventTime(x.beg),e=(x.end&&x.end!==0xffffffff)?eventTime(x.end):null;
      const mins=e?Math.max(0,Math.round((x.end-x.beg)/60)):null;
      const dur=mins===null?'IN CORSO':durationText(mins);
-     return `<tr><td>${b.time}${e?'–'+e.time:''}</td><td><b>${tachoIcon('warning')} ${x.isFault?'GUASTO':'EVENTO'} · ${eventFaultLabel(x.typ,x.isFault)} <span style="font-size:11px;white-space:nowrap">[0x${x.typ.toString(16).toUpperCase().padStart(2,'0')}]</span></b></td><td>${dur}</td><td>${nation(x.nation)}${x.vrn?' · '+x.vrn:''}</td></tr>`
-   }).join(''):'<tr><td colspan="4">Nessun evento, anomalia o guasto registrato per questa giornata.</td></tr>';
+     const d=b.date.split('-').reverse().join('/');
+     const when=e&&e.date===b.date?`${d}<br>${b.time}–${e.time}`:`${d}<br>${b.time}${e?` → ${e.date.split('-').reverse().join('/')} ${e.time}`:''}`;
+     return `<tr><td>${when}</td><td><b>${tachoIcon('warning')} ${x.isFault?'GUASTO':'EVENTO'} · ${eventFaultLabel(x.typ,x.isFault)} <span style="font-size:11px;white-space:nowrap">[0x${x.typ.toString(16).toUpperCase().padStart(2,'0')}]</span></b></td><td>${dur}</td><td>${nation(x.nation)}${x.vrn?' · '+x.vrn:''}</td></tr>`
+   }).join(''):'<tr><td colspan="4">Nessun evento, anomalia o guasto registrato negli ultimi 53 giorni.</td></tr>';
 
-   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${problems.length} anomalie/guasti · ${rec.distance} km.`,'ok');
+   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${problems.length} registrazioni evento/guasto negli ultimi 53 giorni · ${rec.distance} km.`,'ok');
    log(`GIORNATA ${rec.date} · attività ${ch.length} · viaggio ${journey.length} · anomalie/guasti ${problems.length}`);
  }catch(e){
    $('rows').innerHTML=`<tr><td colspan="4"><b>Parser:</b> ${String(e.message||e)}</td></tr>`;
