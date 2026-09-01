@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>ToraTako</title>
+<title>ToraTako · v2.1</title>
 
 <style>
 :root{
@@ -72,16 +72,41 @@ button{font:inherit}
 .footer b{color:#2c94ff}
 .fullscreen-hint{display:none}
 
-.topbar{grid-template-columns:1fr 1fr}.brandbox{grid-column:1/-1;min-height:100px}.brand-title h1{font-size:38px}.brandbox img.cat{width:70px;height:70px}
-  .dtcobox,.cardbox{min-height:105px}.powerbox{grid-column:1/-1}
-  .hero-row{grid-template-columns:1fr}.hero-cell{border-right:0;border-bottom:1px solid rgba(56,112,151,.45);min-height:145px}.hero-cell:last-child{border-bottom:0}
-  .activity-main{justify-content:center}.wheel{font-size:72px}.activity-text{font-size:48px}.speedval,.over-main{font-size:54px}
-  .limit-grid{grid-template-columns:1fr 1fr}.limit-item{border-bottom:1px solid rgba(56,112,151,.3);border-right:0;padding:14px 8px}.limit-value{font-size:38px}
-  .timeline-labels{font-size:12px}
-  .counter-grid{grid-template-columns:1fr}.counter{border-right:0;border-bottom:1px solid rgba(56,112,151,.3)}.counter:last-child{border-bottom:0}
-  .detail-grid{grid-template-columns:1fr}.detail{min-height:auto}
-  .actions{grid-template-columns:1fr}
-  .fullscreen-hint{display:block;text-align:center;color:#73879a;font-size:12px;margin:4px 0 8px}
+/* Responsive ToraTako: nessuna tela fissa, nessuno spazio nero laterale */
+@media (max-width:760px){
+  html,body{width:100%;overflow-x:hidden}
+  .dashboard{width:100%;min-width:0;padding:6px}
+  .topbar{grid-template-columns:1fr 1fr;gap:6px}
+  .brandbox{grid-column:1/-1;min-height:92px;padding:10px 12px}
+  .brandbox img.cat{width:66px;height:66px}
+  .brand-title h1{font-size:36px}
+  .brand-title .sub{font-size:11px;letter-spacing:2px;margin-top:7px}
+  .dtcobox,.cardbox{min-height:100px;padding:10px}
+  .powerbox{grid-column:1/-1;min-height:92px}
+  .powerwrap .crest{height:76px;width:76px}
+  .powerwrap .powered{max-height:76px}
+  .hero-row{grid-template-columns:1fr 1fr;min-height:0}
+  .hero-cell{padding:14px 10px;min-height:140px}
+  .hero-cell:first-child{grid-column:1/-1;border-right:0;border-bottom:1px solid rgba(56,112,151,.45)}
+  .hero-cell:nth-child(2){border-right:1px solid rgba(56,112,151,.45)}
+  .activity-main{justify-content:center;gap:14px}
+  .wheel{font-size:66px}.activity-text{font-size:42px}
+  .activity-time{font-size:34px}
+  .speedval,.over-main{font-size:48px}
+  .speedicon{font-size:46px}
+  .limit-grid{grid-template-columns:1fr 1fr}
+  .limit-item{border-bottom:1px solid rgba(56,112,151,.3);padding:12px 6px}
+  .limit-item:nth-child(2n){border-right:0}
+  .limit-value{font-size:36px}
+  .timeline-labels{font-size:11px}
+  .counter-grid{grid-template-columns:1fr}
+  .counter{border-right:0;border-bottom:1px solid rgba(56,112,151,.3)}
+  .counter:last-child{border-bottom:0}
+  .detail-grid{grid-template-columns:1fr}
+  .detail{min-height:auto}
+  .actions{grid-template-columns:1fr 1fr}
+  #historySummary{grid-template-columns:1fr 1fr!important}
+  .fold-content{overflow-x:auto}
 }
 </style>
 
@@ -227,7 +252,7 @@ AAAAAAAlkZXNjAAAA8AAAAHRyWFlaAAABZAAAABRnWFlaAAABeAAAABRiWFlaAAABjAAAABRyVFJDAAA
     <summary>DIAGNOSTICA BLE / ITS</summary>
     <div class="fold-content">
       <button id="clearLogBtn" class="btn" style="margin-bottom:8px">Pulisci log</button>
-      <div id="log" class="diag">ToraTako pronto.</div>
+      <div id="log" class="diag">ToraTako v2.1 pronto.</div>
     </div>
   </details>
 </div>
@@ -237,8 +262,9 @@ AAAAAAAlkZXNjAAAA8AAAAHRyWFlaAAABZAAAABRnWFlaAAABeAAAABRiWFlaAAABjAAAABRyVFJDAAA
 const SERVICE='fa213def-aef4-475c-bcea-0a8d69073efc',FIFO='e413960c-75ba-4ca9-8a67-99bc052a1b13',CRED='e168d1a6-304f-42b4-ab96-4cd1d4efebd9';
 const DOWNLOAD_SERVICE='eef90782-55dd-4388-b80b-695aba7a69b5',DOWNLOAD_FIFO='29d3a479-1592-47df-80a4-afa742d369bb',DOWNLOAD_CREDITS='db9c4128-bff3-41fe-a306-fb6f9a8aeb2d';
 const DIDS={0xF190:'VIN',0xF19B:'Data calibrazione',0xF902:'Velocità tachigrafo',0xF903:'Attività conducente 1',0xF905:'Veicolo in movimento',0xF906:'Stati temporali conducente 1',0xF907:'Carta conducente slot 1',0xF908:'Overspeed',0xF90B:'Data/ora DTCO',0xF912:'Km totali alta risoluzione',0xF913:'Trip alta risoluzione',0xF914:'Identificazione componente',0xF915:'Service calendario',0xF916:'Identificazione conducente 1',0xF922:'Prossima calibrazione',0xF923:'Guida continua conducente 1',0xF925:'Pausa cumulativa conducente 1',0xF927:'Durata attività conducente 1',0xF92C:'Velocità autorizzata',0xF930:'Stato carta slot 1',0xF931:'Nome conducente 1',0xF936:'Out of Scope',0xF937:'Modo operativo',0xF938:'Guida bisettimanale conducente 1',0xF99A:'Guida giornaliera',0xF99B:'Guida settimanale',0xF99C:'Tempo fino al riposo giornaliero',0xF9A0:'Estensioni guida 10h'};
-const SEQ=[0xF903,0xF923,0xF927,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925,0xF190,0xF19B,0xF902,0xF905,0xF906,0xF907,0xF908,0xF90B,0xF912,0xF913,0xF914,0xF915,0xF916,0xF922,0xF92C,0xF930,0xF931,0xF936,0xF937];
+const SEQ=[0xF903,0xF923,0xF927,0xF99A,0xF99B,0xF99C,0xF9A0,0xF938,0xF925,0xF190,0xF19B,0xF905,0xF906,0xF907,0xF90B,0xF912,0xF913,0xF914,0xF915,0xF916,0xF922,0xF92C,0xF930,0xF931,0xF936,0xF937];
 let device,server,fifo,credits,txCredits=0,timer=null,idx=0,busy=false,expected=0,received=0,buf=[],timeout=null;
+let nextSpeedPoll=0,nextOverspeedPoll=0,nextSlowPoll=0,overspeedSince=null,overspeedUiTimer=null;
 let dlFifo=null,dlCredits=null,dlTxCredits=0,dlExpected=0,dlReceived=0,dlBuf=[],dlFrames=[],dlBusy=false,dlStage='idle',dlTargetDate=null;
 const values={},rawValues={},decodedValues={},ok=new Set(),unsupported=new Set(),sent=new Set(),timedOut=new Set();let activeDid=null;const $=id=>document.getElementById(id),logEl=$('log');
 function log(m){const t=new Date().toLocaleTimeString('it-IT');logEl.textContent+=`\n[${t}] ${m}`;logEl.scrollTop=logEl.scrollHeight}
@@ -294,16 +320,35 @@ function render(){
   $('outScope').textContent=decodedValues[0xF936]||'N/D';
   $('operatingMode').textContent=decodedValues[0xF937]||'N/D';
 
-  const sp=decodedValues[0xF902];
-  $('speedValue').textContent=sp?sp.replace(/\s*km\/h/i,''):'N/D';
+  const speed=values[0xF902], authorised=values[0xF92C];
+  $('speedValue').textContent=speed==null?'N/D':speed.toFixed(1);
 
   const ov=decodedValues[0xF908]||'N/D';
-  const overActive=/^OVERSPEED$/i.test(ov)||/ATTIVO/i.test(ov);
-  $('overspeedValue').textContent=ov==='N/D'?'N/D':(overActive?'ATTIVO':'NO');
-  $('overspeedValue').style.color=overActive?'#ff4242':'#53c82f';
-  $('overspeedNote').textContent=overActive?'Overspeed segnalato dal DTCO':'Nessun overspeed attivo';
-  $('vehicleOverspeed').textContent=ov==='N/D'?'N/D':(overActive?'ATTIVO':'NO');
-  $('vehicleOverspeed').style.color=overActive?'#ff4242':'#53c82f';
+  const officialOver=/^OVERSPEED$/i.test(ov)||/ATTIVO/i.test(ov);
+  const liveOver=speed!=null&&authorised!=null&&speed>authorised;
+
+  if(liveOver){
+    if(overspeedSince==null)overspeedSince=Date.now();
+    const elapsed=(Date.now()-overspeedSince)/1000;
+    const remain=Math.max(0,30-Math.floor(elapsed));
+    if(remain>0){
+      $('overspeedValue').textContent=remain+' s';
+      $('overspeedValue').style.color='#ffc400';
+      $('overspeedNote').textContent='Countdown overspeed · limite '+authorised.toFixed(0)+' km/h';
+    }else{
+      $('overspeedValue').textContent='OVERSPEED';
+      $('overspeedValue').style.color='#ff4242';
+      $('overspeedNote').textContent=officialOver?'Confermato anche dal DTCO':'Superamento > 30 secondi';
+    }
+  }else{
+    overspeedSince=null;
+    $('overspeedValue').textContent='—';
+    $('overspeedValue').style.color='#53c82f';
+    $('overspeedNote').textContent=authorised==null?'In attesa del limite DTCO':'Entro il limite · '+authorised.toFixed(0)+' km/h';
+  }
+
+  $('vehicleOverspeed').textContent=ov==='N/D'?'N/D':(officialOver?'ATTIVO':'NO');
+  $('vehicleOverspeed').style.color=officialOver?'#ff4242':'#53c82f';
 
   $('totalKm').textContent=decodedValues[0xF912]||'N/D';
   $('tripKm').textContent=decodedValues[0xF913]||'N/D';
@@ -429,6 +474,8 @@ function decode(did,d){
  if(did===0xF903)v=d.length?(d[0]&7):null;
  else if(did===0xF9A0)v=d.length?d[0]:null;
  else if([0xF923,0xF925,0xF927,0xF938,0xF99A,0xF99B,0xF99C].includes(did))v=u16(d);
+ else if([0xF902,0xF92C].includes(did)){const x=u16(d);v=x==null?null:x/256}
+ else if(did===0xF908)v=d.length?(d[0]&3):null;
  if(v!=null)values[did]=v;
  render();
  log(`DID 0x${did.toString(16).toUpperCase()} RX ${hex(d)} → ${decodedValues[did]}`)
@@ -466,8 +513,25 @@ async function sendDid(did){
    busy=false;activeDid=null;log('Errore TX: '+e.message)
  }
 }
-function start(){stop();timer=setInterval(()=>{if(!busy&&device?.gatt?.connected)sendDid(SEQ[idx++%SEQ.length])},1600)}
-function stop(){if(timer){clearInterval(timer);timer=null}if(timeout){clearTimeout(timeout);timeout=null}busy=false}
+function start(){
+ stop();
+ const now=performance.now();
+ nextSpeedPoll=now;nextOverspeedPoll=now+150;nextSlowPoll=now+700;
+ overspeedUiTimer=setInterval(()=>{if(device?.gatt?.connected)render()},200);
+ timer=setInterval(()=>{
+   if(busy||!device?.gatt?.connected||txCredits<=0)return;
+   const t=performance.now();
+   if(t>=nextSpeedPoll){nextSpeedPoll=t+300;sendDid(0xF902);return}
+   if(t>=nextOverspeedPoll){nextOverspeedPoll=t+600;sendDid(0xF908);return}
+   if(t>=nextSlowPoll){nextSlowPoll=t+2000;sendDid(SEQ[idx++%SEQ.length]);return}
+ },50)
+}
+function stop(){
+ if(timer){clearInterval(timer);timer=null}
+ if(overspeedUiTimer){clearInterval(overspeedUiTimer);overspeedUiTimer=null}
+ if(timeout){clearTimeout(timeout);timeout=null}
+ busy=false;overspeedSince=null
+}
 
 function kwpFrame(data){const a=[0x80,0xEE,0xF0,data.length,...data];a.push(a.reduce((x,y)=>(x+y)&255,0));return new Uint8Array(a)}
 function startCommFrame(){return new Uint8Array([0x81,0xEE,0xF0,0x81,0xE0])}
