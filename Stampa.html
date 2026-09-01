@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.6</title>
+<title>Stampa · v1.8</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -31,7 +31,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.6</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -73,36 +73,17 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
     <div class="small">L'aggiornamento cerca le sezioni necessarie alla stampa giornaliera: attività, luoghi di inizio/fine giornata, condizioni specifiche e attraversamenti di frontiera disponibili sulla carta. Gli orari visualizzati sono convertiti automaticamente in <b>Europe/Rome</b> (CET/CEST). I dati originali del BIN non vengono convertiti né alterati nell'orario.</div>
   </section>
 
-  <section class="panel">
-    <div id="paper" class="print">
-      <h2>ATTIVITÀ GIORNALIERA CONDUCENTE</h2>
-      <div class="meta"><div><b>Data:</b> <span id="pDay">—</span></div><div><b>Conducente:</b> <span id="pDriver">—</span></div></div>
-      <div style="font-size:18px;font-weight:900;margin-bottom:8px">DETTAGLIO ATTIVITÀ</div>
-      <table>
-        <thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Origine</th></tr></thead>
-        <tbody id="rows"><tr><td colspan="4">Nessun dato acquisito.</td></tr></tbody>
-      </table>
+  
 
-      <div style="margin-top:24px;border-top:3px solid #111;padding-top:14px">
-        <div style="font-size:18px;font-weight:900;margin-bottom:8px">APERTURE · CAMBI NAZIONE · CHIUSURE</div>
-        <table>
-          <thead><tr><th>Ora</th><th>Evento</th><th>Paese / GPS</th><th>Km</th></tr></thead>
-          <tbody id="journeyRows"><tr><td colspan="4">Nessun dato.</td></tr></tbody>
-        </table>
-      </div>
 
-      <div style="margin-top:24px;border-top:3px solid #111;padding-top:14px">
-        <div style="font-size:18px;font-weight:900;margin-bottom:8px">⚠ EVENTI / ANOMALIE / GUASTI</div>
-        <table>
-          <thead><tr><th>Data / Ora</th><th>Tipo</th><th>Durata</th><th>Veicolo</th></tr></thead>
-          <tbody id="faultRows"><tr><td colspan="4">Nessun dato.</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+  <section class="panel" id="dirtyCard">
+    <button id="dirtyBtn" class="primary" style="width:100%;font-size:18px">SCHEDA SPORCA?</button>
+    <div class="small" style="margin-top:8px"><b>Controllo automatico degli ultimi 53 giorni rispetto al giorno della verifica.</b> È indipendente dalla data scelta per la stampa giornaliera.</div>
+    <div id="dirtyResult" style="display:none;margin-top:14px"></div>
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.6 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.8 pronta.</div>
   </details>
 </div>
 
@@ -589,6 +570,338 @@ async function resolveAddresses(){
  }
 }
 
+function dirtyFmt(min){
+ min=Math.max(0,Math.round(min));
+ return `${Math.floor(min/60)}h ${String(min%60).padStart(2,'0')}m`
+}
+function dirtyDate(sec){
+ return new Date(sec*1000).toLocaleDateString('it-IT',{timeZone:'Europe/Rome'})
+}
+function dirtyDateTime(sec){
+ return new Date(sec*1000).toLocaleString('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+}
+function dirtyMonday(sec){
+ const d=new Date(sec*1000),n=(d.getUTCDay()+6)%7;
+ d.setUTCDate(d.getUTCDate()-n);d.setUTCHours(0,0,0,0);
+ return d.getTime()/1000
+}
+function dirtyWindow(){
+ const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-52);
+ return {cut:d.getTime()/1000,now:Date.now()/1000}
+}
+function dirtyIntervals(data){
+ const ef=findActivityEF(data);if(!ef)throw Error('EF attività 0504 non trovato');
+ const parsed=parseDailyRecords(ef.payload), rs=parsed.records, out=[], now=Date.now()/1000;
+ for(let ri=0;ri<rs.length;ri++){
+   const r=rs[ri],a=r.changes||[],base=r.dateSec;
+   for(let i=0;i<a.length;i++){
+     let endMin=a[i+1]?a[i+1].minute:1440;
+     if(ri===rs.length-1 && now>=base && now<base+86400)endMin=Math.min(endMin,Math.max(a[i].minute,(now-base)/60));
+     if(endMin<a[i].minute)continue;
+     out.push({start:base+a[i].minute*60,end:base+endMin*60,activity:a[i].activity,crew:!!a[i].crew,cardOut:!!a[i].cardOut,date:r.date})
+   }
+ }
+ return out.filter(x=>x.end>x.start).sort((x,y)=>x.start-y.start)
+}
+function dirtyRestBlocks(ints){
+ const r=[];
+ for(const x of ints){
+   if(x.activity!=='RIPOSO')continue;
+   const last=r[r.length-1];
+   if(last && x.start<=last.end+1){last.end=Math.max(last.end,x.end)}
+   else r.push({start:x.start,end:x.end})
+ }
+ for(const x of r)x.min=(x.end-x.start)/60;
+ return r
+}
+function dirtyOverlap(ints,start,end,activity=null){
+ let sec=0;
+ for(const x of ints){
+   if(activity && x.activity!==activity)continue;
+   sec+=Math.max(0,Math.min(end,x.end)-Math.max(start,x.start))
+ }
+ return sec/60
+}
+function dirtyLevel(code,label){return {code,level:label}}
+function dirtyDailyDriveClass(m,extendedAllowed){
+ if(extendedAllowed){
+   if(m>=900)return dirtyLevel('B8','MSI · PIÙ GRAVE');
+   if(m>=720)return dirtyLevel('B7','VSI · MOLTO GRAVE');
+   if(m>=660)return dirtyLevel('B6','SI · GRAVE');
+   if(m>600)return dirtyLevel('B5','MI · MINORE')
+ }else{
+   if(m>=810)return dirtyLevel('B4','MSI · PIÙ GRAVE');
+   if(m>=660)return dirtyLevel('B3','VSI · MOLTO GRAVE');
+   if(m>=600)return dirtyLevel('B2','SI · GRAVE');
+   if(m>540)return dirtyLevel('B1','MI · MINORE')
+ }
+ return null
+}
+function dirtyWeekClass(m){
+ if(m>=4200)return dirtyLevel('B12','MSI · PIÙ GRAVE');
+ if(m>=3900)return dirtyLevel('B11','VSI · MOLTO GRAVE');
+ if(m>=3600)return dirtyLevel('B10','SI · GRAVE');
+ if(m>3360)return dirtyLevel('B9','MI · MINORE');
+ return null
+}
+function dirtyFortnightClass(m){
+ if(m>=6750)return dirtyLevel('B16','MSI · PIÙ GRAVE');
+ if(m>=6300)return dirtyLevel('B15','VSI · MOLTO GRAVE');
+ if(m>=6000)return dirtyLevel('B14','SI · GRAVE');
+ if(m>5400)return dirtyLevel('B13','MI · MINORE');
+ return null
+}
+function dirtyBreakClass(m){
+ if(m>=360)return dirtyLevel('C3','VSI · MOLTO GRAVE');
+ if(m>=300)return dirtyLevel('C2','SI · GRAVE');
+ if(m>270)return dirtyLevel('C1','MI · MINORE');
+ return null
+}
+function dirtyRestClass(min,mode){
+ if(mode==='multi'){
+   if(min>=480&&min<540)return dirtyLevel('D10','MI · MINORE');
+   if(min>=420&&min<480)return dirtyLevel('D11','SI · GRAVE');
+   if(min<420)return dirtyLevel('D12','VSI · MOLTO GRAVE')
+ }else if(mode==='split'){
+   if(min>=480&&min<540)return dirtyLevel('D7','MI · MINORE');
+   if(min>=420&&min<480)return dirtyLevel('D8','SI · GRAVE');
+   if(min<420)return dirtyLevel('D9','VSI · MOLTO GRAVE')
+ }else if(mode==='reduced'){
+   if(min>=480&&min<540)return dirtyLevel('D4','MI · MINORE');
+   if(min>=420&&min<480)return dirtyLevel('D5','SI · GRAVE');
+   if(min<420)return dirtyLevel('D6','VSI · MOLTO GRAVE')
+ }else{
+   if(min>=600&&min<660)return dirtyLevel('D1','MI · MINORE');
+   if(min>=510&&min<600)return dirtyLevel('D2','SI · GRAVE');
+   if(min<510)return dirtyLevel('D3','VSI · MOLTO GRAVE')
+ }
+ return dirtyLevel(mode==='reduced'?'D4':'D1','MI · MINORE')
+}
+function dirtyWeeklyShortClass(min,regularRequired=false){
+ if(regularRequired){
+   if(min>=2520&&min<2700)return dirtyLevel('D16','MI · MINORE');
+   if(min>=2160&&min<2520)return dirtyLevel('D17','SI · GRAVE');
+   if(min<2160)return dirtyLevel('D18','VSI · MOLTO GRAVE')
+ }else{
+   if(min>=1320&&min<1440)return dirtyLevel('D13','MI · MINORE');
+   if(min>=1200&&min<1320)return dirtyLevel('D14','SI · GRAVE');
+   if(min<1200)return dirtyLevel('D15','VSI · MOLTO GRAVE')
+ }
+ return null
+}
+function dirtyWeeklyDelayClass(min){
+ if(min>=720)return dirtyLevel('D21','VSI · MOLTO GRAVE');
+ if(min>=180)return dirtyLevel('D20','SI · GRAVE');
+ if(min>0)return dirtyLevel('D19','MI · MINORE');
+ return null
+}
+function dirtyPush(out,ts,title,detail,cl,certainty='CERTA'){
+ if(!cl)return;
+ out.push({ts,title,detail,code:cl.code,level:cl.level,certainty})
+}
+function dirtyIsMulti(ints,start,end){
+ const drive=ints.filter(x=>x.activity==='GUIDA'&&x.end>start+3600&&x.start<end);
+ return drive.length>0 && drive.every(x=>x.crew)
+}
+function dirtyDailyPeriods(ints,rests,now){
+ const anchors=rests.filter(r=>r.min>=540),p=[];
+ for(let i=0;i<anchors.length;i++){
+   const start=anchors[i].end;
+   const next=i+1<anchors.length?anchors[i+1]:null;
+   const end=next?next.start:now;
+   if(end<=start)continue;
+   p.push({start,end,nextRest:next,prevRest:anchors[i]})
+ }
+ return p
+}
+function analyseDirty(data){
+ const W=dirtyWindow(),cut=W.cut,now=W.now,context=cut-28*86400;
+ const ints=dirtyIntervals(data).filter(x=>x.end>=context&&x.start<=now);
+ const rests=dirtyRestBlocks(ints);
+ const out=[],periods=dirtyDailyPeriods(ints,rests,now);
+
+ // C1-C3: guida ininterrotta oltre 4h30; pausa valida 45' oppure 15'+30'.
+ let drive=0,first15=false,thresholdTs=null;
+ function finishBreakEpisode(){
+   if(drive>270&&thresholdTs){
+     const cl=dirtyBreakClass(drive);
+     dirtyPush(out,thresholdTs,'GUIDA CONTINUA OLTRE 4h30',`Periodo di guida ${dirtyFmt(drive)} prima di un'interruzione valida.`,cl)
+   }
+   drive=0;first15=false;thresholdTs=null
+ }
+ for(const x of ints){
+   const m=(x.end-x.start)/60;
+   if(x.activity==='GUIDA'){
+     const before=drive;drive+=m;
+     if(before<=270&&drive>270)thresholdTs=x.start+Math.max(0,270-before)*60
+   }else if(x.activity==='RIPOSO'){
+     if(m>=45){finishBreakEpisode()}
+     else if(first15&&m>=30){finishBreakEpisode()}
+     else if(!first15&&m>=15){first15=true}
+   }
+ }
+ if(drive>270&&thresholdTs){const cl=dirtyBreakClass(drive);dirtyPush(out,thresholdTs,'GUIDA CONTINUA OLTRE 4h30',`Periodo di guida in corso/terminato di ${dirtyFmt(drive)} senza interruzione valida.`,cl)}
+
+ // B1-B8 + D1-D12: periodi giornalieri tra riposi qualificanti.
+ const extByWeek=new Map(),reducedByWeeklyCycle= new Map(); let reducedCount=0;
+ for(const P of periods){
+   if(P.end<context)continue;
+   const week=dirtyMonday(P.start),driving=dirtyOverlap(ints,P.start,P.end,'GUIDA');
+   let ext=extByWeek.get(week)||0;
+   if(driving>540){
+     const extensionAllowed=ext<2;
+     const cl=dirtyDailyDriveClass(driving,extensionAllowed);
+     if(cl)dirtyPush(out,P.start,extensionAllowed?'SUPERAMENTO GUIDA GIORNALIERA 10h':'SUPERAMENTO GUIDA GIORNALIERA 9h',
+       `Guida giornaliera ${dirtyFmt(driving)}. ${extensionAllowed?'Estensione a 10h disponibile.':'Già utilizzate due estensioni nella settimana.'}`,cl);
+     ext++;extByWeek.set(week,ext)
+   }
+
+   // A weekly rest resets the count of reduced daily rests.
+   if(P.prevRest.min>=1440)reducedCount=0;
+
+   const multi=dirtyIsMulti(ints,P.start,Math.min(P.start+30*3600,now));
+   const deadline=P.start+(multi?30:24)*3600;
+   if(now<deadline && !P.nextRest)continue;
+
+   const winEnd=Math.min(deadline,now);
+   const cand=rests.filter(r=>r.end>P.start&&r.start<winEnd)
+      .map(r=>({start:r.start,end:Math.min(r.end,winEnd),min:(Math.min(r.end,winEnd)-Math.max(r.start,P.start))/60}))
+      .filter(r=>r.min>0).sort((a,b)=>a.start-b.start);
+   const fullRegular=cand.find(r=>r.min>=660);
+   let split=null;
+   for(let i=0;i<cand.length&&!split;i++)if(cand[i].min>=180)for(let j=i+1;j<cand.length;j++)if(cand[j].min>=540){split={first:cand[i],second:cand[j]};break}
+   const reduced=cand.find(r=>r.min>=540);
+   const reducedAllowed=reducedCount<3;
+   if(fullRegular||split){
+     // lawful regular daily rest
+   }else if(reduced && reducedAllowed){
+     reducedCount++
+   }else if(reduced && !reducedAllowed){
+     const cl=dirtyRestClass(reduced.min,'regular');
+     const duty=(reduced.start-P.start)/60;
+     dirtyPush(out,reduced.start,'RIPOSO GIORNALIERO INSUFFICIENTE / IMPEGNO ECCESSIVO',
+       `Quarta (o successiva) riduzione tra due riposi settimanali. Riposo ${dirtyFmt(reduced.min)}; impegno prima del riposo ${dirtyFmt(duty)}.`,cl)
+   }else if(now>=deadline){
+     let best=cand.reduce((z,r)=>!z||r.min>z.min?r:z,null);
+     const bestMin=best?best.min:0, duty=best?(best.start-P.start)/60:(deadline-P.start)/60;
+     let mode=multi?'multi':(reducedAllowed?'reduced':'regular');
+     // If a first part >=3h exists, classify the deficient second part as split rest where applicable.
+     const first3=cand.find(r=>r.min>=180);
+     if(!multi&&first3){
+       const after=cand.filter(r=>r.start>first3.end-1).reduce((z,r)=>!z||r.min>z.min?r:z,null);
+       if(after&&after.min<540){best=after;mode='split'}
+     }
+     const cl=dirtyRestClass(best?best.min:0,mode);
+     dirtyPush(out,deadline,'RIPOSO GIORNALIERO INSUFFICIENTE / IMPEGNO ECCESSIVO',
+       `${multi?'Multipresenza: limite 30h.':'Limite 24h.'} Miglior riposo utile ${dirtyFmt(best?best.min:0)}; impegno prima del riposo ${dirtyFmt(duty)}.`,cl)
+   }
+ }
+
+ // B9-B12: guida settimanale, ripartendo correttamente le attività sui confini lunedì/domenica.
+ const weeks=new Map();
+ for(const x of ints){
+   if(x.activity!=='GUIDA')continue;
+   let a=Math.max(x.start,context),e=Math.min(x.end,now);
+   while(a<e){
+     const w=dirtyMonday(a),we=w+7*86400,part=Math.min(e,we)-a;
+     weeks.set(w,(weeks.get(w)||0)+part/60);a+=part
+   }
+ }
+ const wkeys=[...weeks.keys()].sort((a,b)=>a-b);
+ for(const w of wkeys){
+   if(w+7*86400<cut)continue;
+   const m=weeks.get(w),cl=dirtyWeekClass(m);
+   if(cl)dirtyPush(out,w,'GUIDA SETTIMANALE OLTRE 56h',`Totale settimana ${dirtyFmt(m)}.`,cl)
+ }
+ // B13-B16: due settimane consecutive.
+ for(let i=1;i<wkeys.length;i++){
+   if(wkeys[i]-wkeys[i-1]!==7*86400)continue;
+   if(wkeys[i]+7*86400<cut)continue;
+   const m=weeks.get(wkeys[i])+weeks.get(wkeys[i-1]),cl=dirtyFortnightClass(m);
+   if(cl)dirtyPush(out,wkeys[i],'GUIDA SU DUE SETTIMANE OLTRE 90h',`Totale due settimane ${dirtyFmt(m)}.`,cl)
+ }
+
+ // D13-D21: riposo settimanale e termine massimo 6 x 24h.
+ const weekly=rests.filter(r=>r.min>=1440);
+ for(let i=0;i<weekly.length;i++){
+   const prev=weekly[i],next=i+1<weekly.length?weekly[i+1]:null,deadline=prev.end+144*3600;
+   if(next){
+     const delay=(next.start-deadline)/60;
+     if(delay>0&&next.start>=cut){
+       const cl=dirtyWeeklyDelayClass(delay);
+       dirtyPush(out,deadline,'RIPOSO SETTIMANALE INIZIATO OLTRE 6×24h',`Ritardo ${dirtyFmt(delay)}.`,cl)
+     }
+   }else if(now>deadline){
+     const delay=(now-deadline)/60,cl=dirtyWeeklyDelayClass(delay);
+     dirtyPush(out,deadline,'RIPOSO SETTIMANALE NON ANCORA INIZIATO ENTRO 6×24h',`Ritardo maturato ${dirtyFmt(delay)}.`,cl)
+   }
+ }
+
+ // Possible weekly rest <24h around an expired weekly deadline.
+ for(const prev of weekly){
+   const deadline=prev.end+144*3600;if(deadline>now||deadline<cut)continue;
+   const next24=weekly.find(r=>r.start>prev.start&&r.start>=prev.end);
+   const endSearch=Math.min(next24?next24.start:now,deadline+24*3600);
+   const short=rests.filter(r=>r.start>prev.end&&r.start<endSearch&&r.min<1440).reduce((z,r)=>!z||r.min>z.min?r:z,null);
+   if(short&&short.min>=600){
+     const cl=dirtyWeeklyShortClass(short.min,false);
+     dirtyPush(out,short.start,'POSSIBILE RIPOSO SETTIMANALE RIDOTTO INSUFFICIENTE',
+       `Sosta più lunga attorno alla scadenza: ${dirtyFmt(short.min)} (<24h). Da verificare se destinata a riposo settimanale.`,cl,'DA VERIFICARE')
+   }
+ }
+
+ // D22 / compensation: conservative check. If a reduced weekly rest has an expired compensation deadline
+ // and there is no later single rest long enough to contain 9h + compensation, flag for verification.
+ for(const r of weekly.filter(x=>x.min>=1440&&x.min<2700)){
+   const deficit=2700-r.min, rw=dirtyMonday(r.start),deadline=rw+4*7*86400; // end of third week following
+   if(deadline>now||deadline<cut)continue;
+   const possible=rests.some(z=>z.start>r.end&&z.start<deadline&&z.min>=540+deficit);
+   if(!possible)dirtyPush(out,deadline,'POSSIBILE MANCATA COMPENSAZIONE RIPOSO SETTIMANALE RIDOTTO',
+     `Riduzione ${dirtyFmt(deficit)}. Non è stato trovato un singolo riposo successivo sufficientemente lungo entro il termine.`,dirtyLevel('D22','SI · GRAVE'),'DA VERIFICARE')
+ }
+
+ // Two consecutive weeks without a regular weekly rest: exception may apply to international freight.
+ for(let i=1;i<wkeys.length;i++){
+   const w1=wkeys[i-1],w2=wkeys[i];if(w2-w1!==7*86400||w2+7*86400<cut)continue;
+   const rr=weekly.filter(r=>r.start>=w1&&r.start<w2+7*86400);
+   const has1=rr.some(r=>r.start>=w1&&r.start<w1+7*86400),has2=rr.some(r=>r.start>=w2&&r.start<w2+7*86400);
+   const regular=rr.some(r=>r.min>=2700);
+   if(has1&&has2&&!regular)out.push({ts:w2,title:'DUE SETTIMANE CON SOLI RIPOSI SETTIMANALI RIDOTTI',detail:'Può essere ammesso nel trasporto internazionale merci solo alle condizioni specifiche dell’art. 8(6). Verificare nazioni, rientro e compensazioni.',code:'Art. 8(6)',level:'DA VERIFICARE',certainty:'DA VERIFICARE'})
+ }
+
+ // Keep only findings whose legal occurrence/deadline falls in the requested 53 calendar days.
+ const uniq=new Map();
+ for(const x of out){
+   if(x.ts<cut||x.ts>now+60)continue;
+   const k=[Math.round(x.ts/60),x.title,x.code].join('|');
+   if(!uniq.has(k))uniq.set(k,x)
+ }
+ return {findings:[...uniq.values()].sort((a,b)=>b.ts-a.ts),cut,now}
+}
+function renderDirtyCard(){
+ if(!baseCardBytes||!baseCardBytes.length){alert('Apri prima un BIN della carta conducente.');return}
+ const box=$('dirtyResult');box.style.display='block';
+ try{
+   const A=analyseDirty(new Uint8Array(baseCardBytes)),r=A.findings;
+   const from=dirtyDate(A.cut),to=dirtyDate(A.now);
+   if(!r.length){
+     box.innerHTML=`<div class="archiveState saved"><b>SCHEDA PULITA</b><br>Nessuna infrazione rilevata automaticamente dal ${from} al ${to}.</div>${dirtyCoverage()}`
+     return
+   }
+   box.innerHTML=`<div class="archiveState show"><b>SCHEDA SPORCA · ${r.length} SEGNALAZION${r.length===1?'E':'I'}</b><br>Periodo controllato: ${from} → ${to}</div>
+   <div style="overflow:auto;margin-top:10px"><table><thead><tr><th>Data</th><th>Codice</th><th>Infrazione</th><th>Dettaglio</th><th>Gravità</th></tr></thead><tbody>
+   ${r.map(x=>`<tr><td>${dirtyDateTime(x.ts)}</td><td><b>${x.code}</b></td><td><b>${x.title}</b>${x.certainty==='DA VERIFICARE'?'<br><span style="font-size:11px">⚠ DA VERIFICARE</span>':''}</td><td>${x.detail}</td><td><b>${x.level}</b></td></tr>`).join('')}
+   </tbody></table></div>${dirtyCoverage()}`
+ }catch(e){box.innerHTML=`<div class="status err">Errore analisi SCHEDA SPORCA: ${e.message||e}</div>`;log('SCHEDA SPORCA ERROR '+(e.stack||e))}
+}
+function dirtyCoverage(){
+ return `<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:900">COSA CONTROLLA / COSA RICHIEDE VERIFICA</summary>
+ <div class="small" style="margin-top:8px">
+ <b>Controllo automatico:</b> guida giornaliera 9/10h e due estensioni; 56h settimanali; 90h in due settimane; 4h30 e interruzioni 45' o 15'+30'; riposo giornaliero 11h/9h/3+9; massimo tre riposi giornalieri ridotti tra riposi settimanali; multipresenza quando il flag carta lo consente; termine del riposo settimanale entro 6×24h; possibili riposi settimanali sotto 24h; possibili compensazioni scadute.<br><br>
+ <b>Non dichiarabile con certezza dalla sola carta:</b> deroga art. 12 e relativa motivazione, condizioni speciali dei due riposi settimanali ridotti consecutivi nel trasporto internazionale, riposo settimanale effettuato dentro/fuori dal veicolo, pagamento dell'alloggio, attività non registrate o dati mancanti. Questi casi vengono esclusi oppure marcati <b>DA VERIFICARE</b>.
+ </div></details>`
+}
+
 function parseApplication(data){
  const ef=findEF(data,0x0501,2)||findEF(data,0x0501,0);
  if(!ef)return {events:0,faults:0};
@@ -754,21 +1067,6 @@ function renderAcquisition(data){
    resolveAddresses();
 
    // 3) EVENTI / ANOMALIE / GUASTI: sempre ultima sezione.
-   const nowSec=Math.floor(Date.now()/1000);
-   const cutoff53=nowSec-(53*24*60*60);
-   const problems=[...parseEventsFaults(data,0x0502,false),...parseEventsFaults(data,0x0503,true)]
-     .filter(x=>{
-       const endSec=(x.end&&x.end!==0xffffffff)?x.end:x.beg;
-       return endSec>=cutoff53 && x.beg<=nowSec
-     }).sort((a,b)=>b.beg-a.beg);
-   $('faultRows').innerHTML=problems.length?problems.map(x=>{
-     const b=eventTime(x.beg),e=(x.end&&x.end!==0xffffffff)?eventTime(x.end):null;
-     const mins=e?Math.max(0,Math.round((x.end-x.beg)/60)):null;
-     const dur=mins===null?'IN CORSO':durationText(mins);
-     const d=b.date.split('-').reverse().join('/');
-     const when=e&&e.date===b.date?`${d}<br>${b.time}–${e.time}`:`${d}<br>${b.time}${e?` → ${e.date.split('-').reverse().join('/')} ${e.time}`:''}`;
-     return `<tr><td>${when}</td><td><b>${tachoIcon('warning')} ${x.isFault?'GUASTO':'EVENTO'} · ${eventFaultLabel(x.typ,x.isFault)} <span style="font-size:11px;white-space:nowrap">[0x${x.typ.toString(16).toUpperCase().padStart(2,'0')}]</span></b></td><td>${dur}</td><td>${nation(x.nation)}${x.vrn?' · '+x.vrn:''}</td></tr>`
-   }).join(''):'<tr><td colspan="4">Nessun evento, anomalia o guasto registrato negli ultimi 53 giorni.</td></tr>';
 
    setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${problems.length} registrazioni evento/guasto negli ultimi 53 giorni · ${rec.distance} km.`,'ok');
    log(`GIORNATA ${rec.date} · attività ${ch.length} · viaggio ${journey.length} · anomalie/guasti ${problems.length}`);
@@ -861,10 +1159,12 @@ $('updateArchiveBtn').onclick=updateArchive;
 $('importCardBtn').onclick=()=>$('importCardFile').click();
 $('importCardFile').onchange=e=>importCardFile(e.target.files&&e.target.files[0]);
 $('day').addEventListener('change',renderLoadedDay);
+$('dirtyBtn').addEventListener('click',renderDirtyCard);
 window.addEventListener('beforeunload',e=>{if(archiveDirty){e.preventDefault();e.returnValue=''}});
 $('day').value=new Date().toISOString().slice(0,10);
 setConn(false);setExportReady(false);
 })();
+
 </script>
 </body>
 </html>
