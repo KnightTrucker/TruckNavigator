@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v0.5</title>
+<title>Stampa · v0.6</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -24,7 +24,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.5</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v0.6</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -65,7 +65,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.5 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v0.6 pronta.</div>
   </details>
 </div>
 
@@ -280,22 +280,94 @@ async function handleFrame(frame){
    stage='idle';setTransferUi(false);setExportReady(true)
  }
 }
+function be16(a,o){return ((a[o]||0)<<8)|(a[o+1]||0)}
+function be32(a,o){return (((a[o]||0)*0x1000000)+((a[o+1]||0)<<16)+((a[o+2]||0)<<8)+(a[o+3]||0))>>>0}
+function ymdUTC(sec){
+ const d=new Date(sec*1000);
+ return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`
+}
+function hm(min){min=Math.max(0,Math.min(1439,min));return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`}
+function durationText(min){min=Math.max(0,min);return `${Math.floor(min/60)}h ${String(min%60).padStart(2,'0')}m`}
+function activityInfo(v){
+ const names=['RIPOSO','DISPONIBILITÀ','LAVORO','GUIDA'];
+ return {
+   slot:(v>>15)&1, crew:(v>>14)&1, cardOut:(v>>13)&1,
+   activity:names[(v>>11)&3]||'N/D', minute:v&0x07FF
+ }
+}
+function findActivityEF(data){
+ // Il download reale del DTCO usa blocchi FID 0504 + generation/type + length(2).
+ // Preferiamo il blocco dati tipo 00; accettiamo anche 02 se necessario.
+ let fallback=null;
+ for(let i=0;i+5<data.length;i++){
+   if(data[i]!==0x05||data[i+1]!==0x04)continue;
+   const typ=data[i+2],len=be16(data,i+3),start=i+5,end=start+len;
+   if(len<16||end>data.length)continue;
+   const hit={pos:i,type:typ,len,start,end,payload:data.slice(start,end)};
+   if(typ===0x00)return hit;
+   if(typ===0x02&&!fallback)fallback=hit
+ }
+ return fallback
+}
+function parseDailyRecords(payload){
+ if(payload.length<16)throw Error('EF 0504 troppo corto');
+ const oldest=be16(payload,0),newest=be16(payload,2);
+ const ring=payload.slice(4);
+ if(oldest>=ring.length||newest>=ring.length)throw Error(`Puntatori EF 0504 non validi (${oldest}/${newest})`);
+ const out=[];let off=oldest,guard=0;
+ while(guard++<1500){
+   if(off+12>ring.length)throw Error('Record giornaliero fuori area ciclica');
+   const previousLength=be16(ring,off),recordLength=be16(ring,off+2);
+   if(recordLength<14||recordLength>2892)throw Error(`Lunghezza record non valida ${recordLength} @${off}`);
+   // I record reali osservati non attraversano il bordo; manteniamo controllo rigoroso.
+   if(off+recordLength>ring.length)throw Error(`Record attraversa il bordo ciclico @${off}`);
+   const dateSec=be32(ring,off+4),date=ymdUTC(dateSec);
+   const presence=be16(ring,off+8),distance=be16(ring,off+10);
+   const changes=[];
+   for(let q=off+12;q+1<off+recordLength;q+=2)changes.push(activityInfo(be16(ring,q)));
+   out.push({off,previousLength,recordLength,date,dateSec,presence,distance,changes});
+   if(off===newest)break;
+   off=(off+recordLength)%ring.length
+ }
+ if(!out.length||out[out.length-1].off!==newest)throw Error('Impossibile raggiungere il record più recente');
+ return {oldest,newest,ringLength:ring.length,records:out}
+}
 function renderAcquisition(data){
  $('pDay').textContent=targetDate.split('-').reverse().join('/');
  $('pDriver').textContent=driverName;
+ try{
+   const ef=findActivityEF(data);
+   if(!ef)throw Error('EF Driver_Activity_Data (0504) non trovato');
+   const parsed=parseDailyRecords(ef.payload);
+   const rec=parsed.records.find(r=>r.date===targetDate);
 
- // Individua nel flusso grezzo l'EF Driver_Activity_Data (FID 0504) quando presente.
- let efPos=-1;
- for(let i=0;i<data.length-1;i++){
-   if(data[i]===0x05&&data[i+1]===0x04){efPos=i;break}
+   log(`EF 0504 @${ef.pos} · tipo ${ef.type.toString(16).padStart(2,'0')} · ${ef.len} byte`);
+   log(`ACTIVITY RING · oldest ${parsed.oldest} · newest ${parsed.newest} · ${parsed.records.length} giornate`);
+
+   if(!rec){
+     const first=parsed.records[0]?.date||'N/D',last=parsed.records.at(-1)?.date||'N/D';
+     $('rows').innerHTML=`<tr><td colspan="4"><b>Nessun record per ${targetDate.split('-').reverse().join('/')}.</b><br>Intervallo disponibile nella carta: ${first.split('-').reverse().join('/')} → ${last.split('-').reverse().join('/')}.</td></tr>`;
+     setStatus(`Carta letta: ${parsed.records.length} giornate · data scelta non presente.`,'warn');
+     return
+   }
+
+   const ch=rec.changes.filter(x=>x.minute<=1439).sort((a,b)=>a.minute-b.minute);
+   const rows=[];
+   for(let i=0;i<ch.length;i++){
+     const cur=ch[i],next=ch[i+1];
+     const end=next?next.minute:1440;
+     const dur=Math.max(0,end-cur.minute);
+     const origin=cur.cardOut?'Carta non inserita':(cur.slot===0?'Slot conducente':'Slot secondo conducente');
+     rows.push(`<tr><td>${hm(cur.minute)}–${end>=1440?'24:00':hm(end)}</td><td><b>${cur.activity}</b></td><td>${durationText(dur)}</td><td>${origin}${cur.crew?' · equipaggio':''}</td></tr>`)
+   }
+   $('rows').innerHTML=rows.join('')||'<tr><td colspan="4">Nessun cambio attività nel record.</td></tr>';
+   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} decodificata · ${ch.length} cambi · ${rec.distance} km.`,'ok');
+   log(`GIORNATA ${rec.date} · presenza ${rec.presence} · distanza ${rec.distance} km · cambi ${ch.length}`);
+ }catch(e){
+   $('rows').innerHTML=`<tr><td colspan="4"><b>Parser attività:</b> ${String(e.message||e)}</td></tr>`;
+   setStatus('Download riuscito, ma parser attività non completato.','err');
+   log('PARSER ERROR '+(e.message||e))
  }
-
- const efText=efPos>=0
-   ? `EF Driver_Activity_Data (0504) individuato al byte ${efPos}.`
-   : 'EF Driver_Activity_Data (0504) non ancora individuato nel flusso grezzo.';
-
- $('rows').innerHTML=`<tr><td>—</td><td>Download carta conducente completato</td><td>${data.length} byte</td><td>TRTP 06 · slot 1</td></tr>
- <tr><td colspan="4"><b>${efText}</b><br>Il passo successivo è decodificare i record dell'EF 0504 e mostrare soltanto la data ${targetDate.split('-').reverse().join('/')}.</td></tr>`
 }
 async function connect(){
  if(!navigator.bluetooth){setStatus('Web Bluetooth non disponibile. Usa Chrome Android via HTTPS.','err');return}
