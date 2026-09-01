@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.0</title>
+<title>Stampa · v1.3</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -21,13 +21,17 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 .archiveState{display:none;margin-top:10px;border:1px solid #8b6b00;background:#2b2100;color:#ffd84a;border-radius:10px;padding:11px;font-weight:900}
 .archiveState.show{display:block}
 .archiveState.saved{border-color:#2a7b27;background:#06210d;color:var(--green)}
+.tachoIcon{display:inline-flex;width:22px;height:22px;vertical-align:-5px;margin-right:5px;align-items:center;justify-content:center}
+.tachoIcon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.addr{font-size:12px;margin-top:3px;font-weight:700}.addr.muted{font-weight:400;color:#555}
+
 @media(max-width:720px){.head,.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.steps{grid-template-columns:1fr 1fr 1fr}.print .meta{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.0</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.3</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -73,12 +77,32 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
     <div id="paper" class="print">
       <h2>ATTIVITÀ GIORNALIERA CONDUCENTE</h2>
       <div class="meta"><div><b>Data:</b> <span id="pDay">—</span></div><div><b>Conducente:</b> <span id="pDriver">—</span></div></div>
-      <table><thead><tr><th>Ora</th><th>Evento / attività</th><th>Durata</th><th>Origine</th></tr></thead><tbody id="rows"><tr><td colspan="4">Nessun dato acquisito.</td></tr></tbody></table>
+      <div style="font-size:18px;font-weight:900;margin-bottom:8px">DETTAGLIO ATTIVITÀ</div>
+      <table>
+        <thead><tr><th>Ora</th><th>Attività</th><th>Durata</th><th>Origine</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="4">Nessun dato acquisito.</td></tr></tbody>
+      </table>
+
+      <div style="margin-top:24px;border-top:3px solid #111;padding-top:14px">
+        <div style="font-size:18px;font-weight:900;margin-bottom:8px">APERTURE · CAMBI NAZIONE · CHIUSURE</div>
+        <table>
+          <thead><tr><th>Ora</th><th>Evento</th><th>Paese / GPS</th><th>Km</th></tr></thead>
+          <tbody id="journeyRows"><tr><td colspan="4">Nessun dato.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:24px;border-top:3px solid #111;padding-top:14px">
+        <div style="font-size:18px;font-weight:900;margin-bottom:8px">⚠ EVENTI / ANOMALIE / GUASTI</div>
+        <table>
+          <thead><tr><th>Ora</th><th>Tipo</th><th>Durata</th><th>Veicolo</th></tr></thead>
+          <tbody id="faultRows"><tr><td colspan="4">Nessun dato.</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
   <details class="panel"><summary style="cursor:pointer;font-weight:900;color:#2389ff">DIAGNOSTICA / DATI GREZZI</summary>
-    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.0 pronta.</div>
+    <div id="raw" class="raw" style="margin-top:12px">Stampa v1.3 pronta.</div>
   </details>
 </div>
 
@@ -436,7 +460,7 @@ function replaceEF(base,fid,newEFBytes){
  if(!old) return base; // se il vecchio BIN non aveva questo EF, non rischiamo di alterare il layout firmato
  return new Uint8Array([...base.slice(0,old.pos),...newEFBytes,...base.slice(old.pos+old.totalLength)])
 }
-const UPDATE_FIDS=new Set([0x0504,0x0506,0x0507,0x0522,0x0528,0x0529,0x0530]);
+const UPDATE_FIDS=new Set([0x0502,0x0503,0x0504,0x0506,0x0507,0x0522,0x0528,0x0529,0x0530]);
 function scanPartialActivity(){
  if(!partialUpdate)return false;
  const a=new Uint8Array(downloadData);
@@ -481,12 +505,132 @@ function romePartsFromSec(sec){
 function romeTimeForActivity(dateSec,minute){
  return romePartsFromSec(dateSec+minute*60)
 }
-function pictogram(activity){
- return ({'GUIDA':'◉','LAVORO':'⚒','DISPONIBILITÀ':'▱','RIPOSO':'▰'})[activity]||'•'
+function tachoIcon(name){
+ const icons={
+  drive:'<circle cx="11" cy="11" r="7"/><circle cx="11" cy="11" r="2"/><path d="M4.5 9h13M11 4v5M6 16l3-4M16 16l-3-4"/>',
+  work:'<path d="M4 5l6 6M8 3l-5 5M14 4l6 6M18 2l4 4M10 11l-5 9M14 10l5 10"/>',
+  avail:'<rect x="3" y="6" width="18" height="12" rx="1"/><path d="M6 15L18 9"/>',
+  rest:'<path d="M3 17h18M5 17V8M5 13h15v4M7 10h5c2 0 3 1 3 3"/>',
+  start:'<path d="M4 12h12M12 7l5 5-5 5"/><circle cx="12" cy="12" r="9"/>',
+  end:'<path d="M20 12H8M12 7l-5 5 5 5"/><circle cx="12" cy="12" r="9"/>',
+  border:'<path d="M3 7h18M3 17h18M7 3v18M17 3v18M9 12h6M12 9l3 3-3 3"/>',
+  card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h5M7 13h8"/>',
+  ferry:'<path d="M4 14h16l-2 5H6zM7 14V8h10v6M9 8V5h6v3M3 21c2-2 4 2 6 0s4 2 6 0 4 2 6 0"/>',
+  out:'<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M6 9h12M6 15h12"/>',
+  warning:'<path d="M12 3l10 18H2zM12 9v5M12 18h.01"/>'
+ };
+ return `<span class="tachoIcon" aria-hidden="true"><svg viewBox="0 0 24 24">${icons[name]||icons.warning}</svg></span>`
 }
-const NATIONS={0:'—',1:'A',2:'AL',3:'AND',4:'ARM',5:'AZ',6:'B',7:'BG',8:'BIH',9:'BY',10:'CH',11:'CY',12:'CZ',13:'D',14:'DK',15:'E',16:'EST',17:'F',18:'FIN',19:'FL',20:'FO',21:'GE',22:'GR',23:'H',24:'HR',25:'I',26:'IRL',27:'IS',28:'KZ',29:'L',30:'LT',31:'LV',32:'M',33:'MD',34:'MK',35:'N',36:'NL',37:'P',38:'PL',39:'RO',40:'RSM',41:'RUS',42:'S',43:'SK',44:'SLO',45:'TM',46:'TR',47:'UA',48:'V',49:'YU',255:'RESTO DEL MONDO'};
+function pictogram(activity){
+ return tachoIcon(({'GUIDA':'drive','LAVORO':'work','DISPONIBILITÀ':'avail','RIPOSO':'rest'})[activity]||'warning')
+}
+const NATIONS={
+0:'—',1:'A',2:'AL',3:'AND',4:'ARM',5:'AZ',6:'B',7:'BG',8:'BIH',9:'BY',
+10:'CH',11:'CY',12:'CZ',13:'D',14:'DK',15:'E',16:'EST',17:'F',18:'FIN',
+19:'FL',20:'FO',21:'UK',22:'GE',23:'GR',24:'H',25:'HR',26:'I',27:'IRL',
+28:'IS',29:'KZ',30:'L',31:'LT',32:'LV',33:'M',34:'MC',35:'MD',36:'MK',
+37:'N',38:'NL',39:'P',40:'PL',41:'RO',42:'RSM',43:'RUS',44:'S',45:'SK',
+46:'SLO',47:'TM',48:'TR',49:'UA',50:'V',51:'YU',52:'MNE',53:'SRB',
+56:'UZ',57:'IL',255:'RESTO DEL MONDO'};
 function nation(v){return NATIONS[v]??`PAESE ${v}`}
 function odometer3(a,o){return ((a[o]||0)<<16)|((a[o+1]||0)<<8)|(a[o+2]||0)}
+
+function s24(a,o){
+ let v=(a[o]<<16)|(a[o+1]<<8)|a[o+2];
+ if(v&0x800000)v-=0x1000000;
+ return v
+}
+function decodeCoordValue(v){
+ const sign=v<0?-1:1,x=Math.abs(v)/10,deg=Math.floor(x/100),mins=x-deg*100;
+ return sign*(deg+mins/60)
+}
+function parseGeo(a,o){
+ if(o+6>a.length)return null;
+ const latRaw=s24(a,o),lonRaw=s24(a,o+3);
+ if((latRaw===0&&lonRaw===0)||Math.abs(latRaw)>90000||Math.abs(lonRaw)>180000)return null;
+ return {lat:decodeCoordValue(latRaw),lon:decodeCoordValue(lonRaw)}
+}
+function coordText(g){
+ if(!g)return 'GPS —';
+ const ns=g.lat<0?'S':'N',ew=g.lon<0?'W':'E';
+ function one(v,hemi){
+   const x=Math.abs(v),d=Math.floor(x),m=(x-d)*60;
+   return `${d}°${m.toFixed(1)}'${hemi}`
+ }
+ return `${one(g.lat,ns)} ${one(g.lon,ew)}`
+}
+
+const geoCache=new Map(); let geoLastRequest=0;
+function geoKey(g){return g?`${g.lat.toFixed(5)},${g.lon.toFixed(5)}`:''}
+async function reverseAddress(g){
+ if(!g)return '';
+ const k=geoKey(g);if(geoCache.has(k))return geoCache.get(k);
+ const wait=Math.max(0,1100-(Date.now()-geoLastRequest));if(wait)await new Promise(r=>setTimeout(r,wait));
+ geoLastRequest=Date.now();
+ try{
+   const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(g.lat)}&lon=${encodeURIComponent(g.lon)}&zoom=18&addressdetails=1`;
+   const r=await fetch(u,{headers:{'Accept-Language':'it'}});
+   if(!r.ok)throw Error('HTTP '+r.status);
+   const j=await r.json(),a=j.address||{};
+   const road=a.road||a.pedestrian||a.path||a.motorway||a.state_road||'';
+   const num=a.house_number||'',place=a.city||a.town||a.village||a.municipality||a.county||'';
+   const region=a.state||'',country=a.country||'';
+   const text=[([road,num].filter(Boolean).join(' ')),place,region,country].filter(Boolean).join(', ')||j.display_name||'';
+   geoCache.set(k,text);return text
+ }catch(e){log('REVERSE GEOCODING '+k+' · '+(e.message||e));return ''}
+}
+async function resolveAddresses(){
+ const els=[...document.querySelectorAll('[data-lat][data-lon]')];
+ for(const e of els){
+   const g={lat:Number(e.dataset.lat),lon:Number(e.dataset.lon)};
+   const a=await reverseAddress(g);
+   e.textContent=a||'Indirizzo non disponibile';
+   e.classList.remove('muted')
+ }
+}
+
+function parseApplication(data){
+ const ef=findEF(data,0x0501,2)||findEF(data,0x0501,0);
+ if(!ef)return {events:0,faults:0};
+ const p=ef.payload;
+ return {events:p.length>3?p[3]:0,faults:p.length>4?p[4]:0}
+}
+function vehicleReg(a,o){
+ if(o+15>a.length)return '';
+ let t='';
+ for(let i=o+2;i<o+15;i++){const c=a[i];if(c!==0&&c!==0xff&&c!==0x20)t+=String.fromCharCode(c)}
+ return t.trim()
+}
+function eventFaultLabel(v,isFault=false){
+ const m={
+ 0x00:'Nessun dettaglio',0x01:'Carta non valida',0x02:'Conflitto carta',
+ 0x03:'Sovrapposizione temporale',0x04:'Guida senza carta appropriata',
+ 0x05:'Inserimento carta durante la guida',0x06:'Ultima sessione carta non chiusa correttamente',
+ 0x07:'Superamento velocità',0x08:'Interruzione alimentazione',0x09:'Errore dati di movimento',
+ 0x0A:'Conflitto movimento veicolo',0x0B:'Conflitto ora GNSS / VU',
+ 0x0C:'Errore comunicazione remota',0x0D:'Assenza posizione GNSS',
+ 0x0E:'Errore GNSS esterno',0x0F:'Anomalia GNSS',
+ 0x20:'Guasto sensore di movimento',0x21:'Guasto unità veicolo',0x22:'Guasto stampante',
+ 0x23:'Guasto display',0x24:'Guasto scaricamento dati',
+ 0x30:'Guasto carta',0x31:'Guasto carta slot 1',0x32:'Guasto carta slot 2',
+ 0x33:'Guasto carta',0x34:'Guasto apparecchio di controllo'
+ };
+ return m[v]||(isFault?'Guasto':'Evento')+` 0x${v.toString(16).padStart(2,'0').toUpperCase()}`
+}
+function parseEventsFaults(data,fid,isFault=false){
+ const ef=findEF(data,fid,2)||findEF(data,fid,0);if(!ef)return [];
+ const app=parseApplication(data),n=isFault?app.faults:app.events;
+ if(!n)return [];
+ const groups=isFault?2:11,recLen=24,p=ef.payload,out=[];
+ const total=Math.min(p.length,groups*n*recLen);
+ for(let o=0;o+recLen<=total;o+=recLen){
+   const typ=p[o],beg=be32(p,o+1),end=be32(p,o+5);
+   if((typ===0&&beg===0&&end===0)||beg===0||beg===0xffffffff)continue;
+   out.push({typ,beg,end,nation:p[o+9],vrn:vehicleReg(p,o+9),isFault})
+ }
+ return out
+}
+
 function parsePlaces(data){
  const ef=findEF(data,0x0506,2)||findEF(data,0x0506,0); if(!ef)return [];
  const p=ef.payload, gen2=ef.type===2, recLen=gen2?21:10, ptrLen=gen2?2:1;
@@ -495,7 +639,8 @@ function parsePlaces(data){
  for(let o=ptrLen;o+recLen<=p.length;o+=recLen){
    const sec=be32(p,o); if(sec<946684800||sec>4102444800)continue;
    const type=p[o+4],country=p[o+5],region=p[o+6],odo=odometer3(p,o+7);
-   out.push({sec,type,country,region,odo})
+   const gps=gen2?parseGeo(p,o+15):null;
+   out.push({sec,type,country,region,odo,gps})
  }
  return out
 }
@@ -516,8 +661,8 @@ function parseBorders(data){
  // CardBorderCrossings: pointer newest (2) + record da 17 byte.
  // record: countryLeft, countryEntered, GNSSPlaceAuthRecord(12), odometer(3).
  for(let o=2;o+17<=p.length;o+=17){
-   const left=p[o],entered=p[o+1],sec=be32(p,o+2);
-   if(sec>946684800&&sec<4102444800)out.push({sec,left,entered,odo:odometer3(p,o+14)})
+   const left=p[o],entered=p[o+1],sec=be32(p,o+2),gps=parseGeo(p,o+7);
+   if(sec>946684800&&sec<4102444800)out.push({sec,left,entered,odo:odometer3(p,o+14),gps})
  }
  return out
 }
@@ -533,50 +678,100 @@ function renderAcquisition(data){
  try{
    const ef=findActivityEF(data);if(!ef)throw Error('EF Driver_Activity_Data (0504) non trovato');
    const parsed=parseDailyRecords(ef.payload);
-   // La data del record è UTC; per scegliere il record usiamo quella ufficiale della carta.
    const rec=parsed.records.find(r=>r.date===targetDate);
    if(!rec){
      const first=parsed.records[0]?.date||'N/D',last=parsed.records.at(-1)?.date||'N/D';
      $('rows').innerHTML=`<tr><td colspan="4"><b>Nessun record per ${targetDate.split('-').reverse().join('/')}.</b><br>Intervallo carta: ${first} → ${last}.</td></tr>`;
+     $('journeyRows').innerHTML='<tr><td colspan="4">Nessun dato.</td></tr>';
+     $('faultRows').innerHTML='<tr><td colspan="4">Nessun dato.</td></tr>';
      setStatus('Data scelta non presente.','warn');return
    }
 
-   const timeline=[];
+   // 1) DETTAGLIO ATTIVITÀ: solo guida/lavoro/disponibilità/riposo.
    const ch=rec.changes.filter(x=>x.minute<=1439).sort((a,b)=>a.minute-b.minute);
+   const activityRows=[];
    for(let i=0;i<ch.length;i++){
      const cur=ch[i],next=ch[i+1],end=next?next.minute:1440;
      const st=romeTimeForActivity(rec.dateSec,cur.minute);
      const en=romeTimeForActivity(rec.dateSec,end);
-     timeline.push({sec:rec.dateSec+cur.minute*60,html:`<tr><td>${st.time}–${en.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(Math.max(0,end-cur.minute))}</td><td>${cur.cardOut?'Carta non inserita':'Carta inserita'}${cur.crew?' · equipaggio':''}</td></tr>`})
+     activityRows.push(`<tr><td>${st.time}–${en.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(Math.max(0,end-cur.minute))}</td><td>${cur.cardOut?'Carta non inserita':'Carta inserita'}${cur.crew?' · equipaggio':''}</td></tr>`)
    }
+   $('rows').innerHTML=activityRows.join('')||'<tr><td colspan="4">Nessuna attività.</td></tr>';
 
+   // 2) APERTURE / CAMBI NAZIONE / CHIUSURE: sezione separata.
+   const journey=[];
    for(const x of parsePlaces(data)){
      const z=eventTime(x.sec);if(z.date!==targetDate)continue;
      const label=entryTypeLabel(x.type),icon=label.includes('INIZIO')?'▶':'■';
-     timeline.push({sec:x.sec,html:`<tr><td>${z.time}</td><td><b>${icon} ${label} · ${nation(x.country)}</b></td><td>—</td><td>${nation(x.country)} · km ${x.odo}</td></tr>`})
+     journey.push({
+       sec:x.sec,
+       html:`<tr><td>${z.time}</td><td><b>${tachoIcon(label.includes('INIZIO')?'start':'end')} ${label}</b></td><td><b>${nation(x.country)}</b><div style="font-size:12px;margin-top:3px">${coordText(x.gps)}</div>${x.gps?`<div class="addr muted" data-lat="${x.gps.lat}" data-lon="${x.gps.lon}">Risoluzione indirizzo…</div>`:''}</td><td>${x.odo}</td></tr>`
+     })
    }
    const cu=parseCurrentUse(data);
-   if(cu){const z=eventTime(cu.sec);if(z.date===targetDate)timeline.push({sec:cu.sec-1,html:`<tr><td>${z.time}</td><td><b>▣ CARTA INSERITA / SESSIONE DTCO</b></td><td>—</td><td>DTCO</td></tr>`})}
+   if(cu){
+     const z=eventTime(cu.sec);
+     if(z.date===targetDate)journey.push({
+       sec:cu.sec-1,
+       html:`<tr><td>${z.time}</td><td><b>${tachoIcon('card')} CARTA INSERITA / SESSIONE DTCO</b></td><td>—</td><td>—</td></tr>`
+     })
+   }
    for(const x of parseSpecific(data)){
      const z=eventTime(x.sec);if(z.date!==targetDate)continue;
      const lab=({1:'OUT — FUORI CAMPO',2:'TRAGHETTO / TRENO'})[x.type]||`CONDIZIONE SPECIALE ${x.type}`;
-     timeline.push({sec:x.sec,html:`<tr><td>${z.time}</td><td><b>◆ ${lab}</b></td><td>—</td><td>Carta conducente</td></tr>`})
+     journey.push({
+       sec:x.sec,
+       html:`<tr><td>${z.time}</td><td><b>${tachoIcon(x.type===2?'ferry':'out')} ${lab}</b></td><td>—</td><td>—</td></tr>`
+     })
    }
    for(const x of parseBorders(data)){
      const z=eventTime(x.sec);if(z.date!==targetDate)continue;
-     timeline.push({sec:x.sec,html:`<tr><td>${z.time}</td><td><b>⇄ CAMBIO NAZIONE · ${nation(x.left)} → ${nation(x.entered)}</b></td><td>—</td><td>km ${x.odo}</td></tr>`})
+     journey.push({
+       sec:x.sec,
+       html:`<tr><td>${z.time}</td><td><b>${tachoIcon('border')} CAMBIO NAZIONE</b></td><td><b>${nation(x.left)} → ${nation(x.entered)}</b><div style="font-size:12px;margin-top:3px">${coordText(x.gps)}</div>${x.gps?`<div class="addr muted" data-lat="${x.gps.lat}" data-lon="${x.gps.lon}">Risoluzione indirizzo…</div>`:''}</td><td>${x.odo}</td></tr>`
+     })
    }
+   journey.sort((a,b)=>a.sec-b.sec);
+   $('journeyRows').innerHTML=journey.map(x=>x.html).join('')||'<tr><td colspan="4">Nessuna apertura, cambio nazione o chiusura registrata.</td></tr>';
+   resolveAddresses();
 
-   timeline.sort((a,b)=>a.sec-b.sec);
-   $('rows').innerHTML=timeline.map(x=>x.html).join('')||'<tr><td colspan="4">Nessun dato.</td></tr>';
-   const extra=timeline.length-ch.length;
-   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${extra} eventi · ${rec.distance} km.`,'ok');
-   log(`GIORNATA COMPLETA ${rec.date} · attività ${ch.length} · eventi extra ${extra}`);
+   // 3) EVENTI / ANOMALIE / GUASTI: sempre ultima sezione.
+   const problems=[...parseEventsFaults(data,0x0502,false),...parseEventsFaults(data,0x0503,true)]
+     .filter(x=>{
+       const b=eventTime(x.beg),e=(x.end&&x.end!==0xffffffff)?eventTime(x.end):null;
+       return b.date===targetDate||(e&&e.date===targetDate)
+     }).sort((a,b)=>a.beg-b.beg);
+   $('faultRows').innerHTML=problems.length?problems.map(x=>{
+     const b=eventTime(x.beg),e=(x.end&&x.end!==0xffffffff)?eventTime(x.end):null;
+     const mins=e?Math.max(0,Math.round((x.end-x.beg)/60)):null;
+     const dur=mins===null?'IN CORSO':durationText(mins);
+     return `<tr><td>${b.time}${e?'–'+e.time:''}</td><td><b>${tachoIcon('warning')} ${x.isFault?'GUASTO':'EVENTO'} · ${eventFaultLabel(x.typ,x.isFault)}</b></td><td>${dur}</td><td>${nation(x.nation)}${x.vrn?' · '+x.vrn:''}</td></tr>`
+   }).join(''):'<tr><td colspan="4">Nessun evento, anomalia o guasto registrato per questa giornata.</td></tr>';
+
+   setStatus(`Giornata ${targetDate.split('-').reverse().join('/')} · ora italiana CET/CEST · ${ch.length} attività · ${journey.length} eventi viaggio · ${problems.length} anomalie/guasti · ${rec.distance} km.`,'ok');
+   log(`GIORNATA ${rec.date} · attività ${ch.length} · viaggio ${journey.length} · anomalie/guasti ${problems.length}`);
  }catch(e){
    $('rows').innerHTML=`<tr><td colspan="4"><b>Parser:</b> ${String(e.message||e)}</td></tr>`;
+   $('journeyRows').innerHTML='<tr><td colspan="4">Parser non completato.</td></tr>';
+   $('faultRows').innerHTML='<tr><td colspan="4">Parser non completato.</td></tr>';
    setStatus('Parser giornata non completato.','err');log('PARSER ERROR '+(e.message||e))
  }
 }
+
+let wakeLock=null;
+async function acquireWakeLock(){
+ if(!('wakeLock' in navigator))return;
+ try{
+   if(!wakeLock){wakeLock=await navigator.wakeLock.request('screen');log('WAKE LOCK · schermo mantenuto acceso');
+     wakeLock.addEventListener('release',()=>{wakeLock=null;log('WAKE LOCK · rilasciato')})
+   }
+ }catch(e){log('WAKE LOCK ERROR '+(e.message||e))}
+}
+async function releaseWakeLock(){
+ try{if(wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&device?.gatt?.connected)acquireWakeLock()});
+
 async function connect(){
  if(!navigator.bluetooth){setStatus('Web Bluetooth non disponibile. Usa Chrome Android via HTTPS.','err');return}
  try{
@@ -604,6 +799,7 @@ function disconnectState(){
 }
 
 async function updateArchive(){
+ await acquireWakeLock();
  if(!device?.gatt?.connected){setStatus('Connetti prima il DTCO.','warn');return}
  if(!cardComplete||!cardBytes.length){setStatus('Apri prima il BIN base.','warn');return}
  if(stage!=='idle'){setStatus('Trasferimento già in corso.','warn');return}
@@ -623,6 +819,7 @@ async function updateArchive(){
 }
 
 async function readDay(){
+ await acquireWakeLock();
  if(!device?.gatt?.connected)return;
  if(stage!=='idle'){setStatus('Download già in corso.','warn');return}
  targetDate=$('day').value;if(!targetDate){setStatus('Seleziona un giorno.','warn');return}
