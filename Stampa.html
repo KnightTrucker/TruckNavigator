@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8.8</title>
+<title>Stampa · v1.8.9</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -48,7 +48,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 }
 
 
-/* v1.8.8 — mobile precision / no horizontal page overflow */
+/* v1.8.9 — mobile precision / no horizontal page overflow */
 html,body{max-width:100%;overflow-x:hidden}
 main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 .print{width:100%;padding:14px 12px;overflow:hidden}
@@ -78,7 +78,7 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 }
 
 
-/* v1.8.8 — SCHEDA SPORCA: tabella scorrevole orizzontalmente su mobile */
+/* v1.8.9 — SCHEDA SPORCA: tabella scorrevole orizzontalmente su mobile */
 #dirtyCard{min-width:0;max-width:100%;overflow:hidden}
 #dirtyResult{min-width:0;max-width:100%}
 @media(max-width:420px){
@@ -91,12 +91,12 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 }
 
 
-/* v1.8.8 — selezione giorno semplificata */
+/* v1.8.9 — selezione giorno semplificata */
 #day{width:100%;box-sizing:border-box}
 #archiveState:empty{display:none}
 
 
-/* v1.8.8 — SCHEDA SPORCA leggibile in portrait e landscape, senza allargare la pagina */
+/* v1.8.9 — SCHEDA SPORCA leggibile in portrait e landscape, senza allargare la pagina */
 #dirtyCard,#dirtyResult{min-width:0;max-width:100%;overflow:hidden}
 .dirtyList{display:grid;grid-template-columns:1fr;gap:14px;width:100%;max-width:100%;margin-top:14px}
 .dirtyItem{
@@ -135,7 +135,7 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.8</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.9</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -196,6 +196,14 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
     <button id="dirtyBtn" class="btn primary" style="width:100%;font-size:18px">SCHEDA SPORCA?</button>
     <div class="small" style="margin-top:8px"><b>Controllo automatico degli ultimi 53 giorni rispetto al giorno della verifica.</b> È indipendente dalla data scelta per la stampa giornaliera.</div>
     <div id="dirtyResult" style="display:none;margin-top:14px"></div>
+  </section>
+
+  <section class="panel" id="pdfExportPanel">
+    <div class="actions" style="grid-template-columns:1fr 1fr">
+      <button id="exportErrorsPdfBtn" class="btn">ESPORTA ERRORI PDF</button>
+      <button id="exportDayPdfBtn" class="btn primary">ESPORTA GIORNATA PDF</button>
+    </div>
+    <div class="small" style="margin-top:8px">I nomi vengono creati automaticamente dalle date del controllo e dalla giornata selezionata.</div>
   </section>
 </div>
 
@@ -956,18 +964,8 @@ function analyseDirty(data){
    }
  }
 
- // Possible weekly rest <24h around an expired weekly deadline.
- for(const prev of weekly){
-   const deadline=prev.end+144*3600;if(deadline>now||deadline<cut)continue;
-   const next24=weekly.find(r=>r.start>prev.start&&r.start>=prev.end);
-   const endSearch=Math.min(next24?next24.start:now,deadline+24*3600);
-   const short=rests.filter(r=>r.start>prev.end&&r.start<endSearch&&r.min<1440).reduce((z,r)=>!z||r.min>z.min?r:z,null);
-   if(short&&short.min>=600){
-     const cl=dirtyWeeklyShortClass(short.min,false);
-     dirtyPush(out,short.start,'POSSIBILE RIPOSO SETTIMANALE RIDOTTO INSUFFICIENTE',
-       `Sosta più lunga attorno alla scadenza: ${dirtyFmt(short.min)} (<24h). Da verificare se destinata a riposo settimanale.`,cl,'DA VERIFICARE')
-   }
- }
+ // Le soste inferiori a 24h NON sono mai classificate come riposo settimanale.
+ // Se alla scadenza 6×24h non è iniziato un riposo di almeno 24h, la violazione viene già rilevata dal controllo D13-D21 sopra.
 
  // D22 / compensation: conservative check. If a reduced weekly rest has an expired compensation deadline
  // and there is no later single rest long enough to contain 9h + compensation, flag for verification.
@@ -1023,7 +1021,7 @@ function renderDirtyCard(){
         </div>
       </div>
       <div class="dirtyDetail">${x.detail}</div>
-      <div class="dirtyLevel">${x.level}</div>
+      <div class="dirtyLevel">${x.certainty==='DA VERIFICARE'?'DA VERIFICARE':x.level}</div>
    </article>`}).join('')}
    </div>${dirtyCoverage()}`
  }catch(e){box.innerHTML=`<div class="status err">Errore analisi SCHEDA SPORCA: ${e.message||e}</div>`;log('SCHEDA SPORCA ERROR '+(e.stack||e))}
@@ -1031,7 +1029,7 @@ function renderDirtyCard(){
 function dirtyCoverage(){
  return `<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:900">COSA CONTROLLA / COSA RICHIEDE VERIFICA</summary>
  <div class="small" style="margin-top:8px">
- <b>Controllo automatico:</b> guida giornaliera 9/10h e due estensioni; 56h settimanali; 90h in due settimane; 4h30 e interruzioni 45' o 15'+30'; riposo giornaliero 11h/9h/3+9; massimo tre riposi giornalieri ridotti tra riposi settimanali; multipresenza quando il flag carta lo consente; termine del riposo settimanale entro 6×24h; possibili riposi settimanali sotto 24h; possibili compensazioni scadute.<br><br>
+ <b>Controllo automatico:</b> guida giornaliera 9/10h e due estensioni; 56h settimanali; 90h in due settimane; 4h30 e interruzioni 45' o 15'+30'; riposo giornaliero 11h/9h/3+9; massimo tre riposi giornalieri ridotti tra riposi settimanali; multipresenza quando il flag carta lo consente; termine del riposo settimanale entro 6×24h; riposo settimanale ridotto valido da almeno 24h e regolare da almeno 45h; possibili compensazioni scadute.<br><br>
  <b>Riferimenti normativi usati:</b><br>
  • <b>Regolamento (CE) n. 561/2006</b>, art. 6 — tempi di guida giornalieri, settimanali e bisettimanali;<br>
  • <b>Regolamento (CE) n. 561/2006</b>, art. 7 — interruzione dopo 4h30 e pausa 45' / 15'+30';<br>
@@ -1288,6 +1286,42 @@ function disconnectState(){
  clearTimeout(dWait);dtx=ltx=0;dBusy=lBusy=false;dfifo=dcred=lfifo=lcred=server=null;stage='idle';setConn(false);setTransferUi(false);setExportReady(cardComplete);setStatus('Scollegato.','');log('DTCO scollegato')
 }
 
+function pdfDateCompactFromTs(ts){
+ const d=new Date(ts*1000);
+ const f=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(d);
+ const g=k=>(f.find(x=>x.type===k)||{}).value||'';
+ return g('day')+g('month')+g('year')
+}
+function pdfDateCompactFromIso(iso){
+ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||'');
+ return m?m[3]+m[2]+m[1]:''
+}
+function openPrintPdf(html,filename){
+ const w=window.open('','_blank');
+ if(!w){alert('Chrome ha bloccato la finestra di stampa. Consenti i popup e riprova.');return}
+ const css=Array.from(document.querySelectorAll('style')).map(x=>x.textContent).join('\n');
+ const safeTitle=filename.replace(/\.pdf$/i,'');
+ w.document.open();
+ w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${css}\nbody{background:#fff!important;color:#000!important;padding:12px!important}.panel,.print{max-width:100%!important;margin:0 auto!important;box-shadow:none!important}.btn,.actions,.small,details{display:none!important}.dirtyItem{break-inside:avoid;page-break-inside:avoid;background:#fff!important;color:#000!important;border-color:#777!important}.dirtyWhen,.dirtyDetail{color:#000!important}.dirtyTitle,.dirtyLevel{color:#000!important}.archiveState{background:#fff!important;color:#000!important;border:1px solid #777!important}.print{background:#fff!important;color:#000!important}table{color:#000!important}th,td{border-color:#777!important}.pdfHeading{font:900 22px system-ui;margin:0 0 14px}</style></head><body>${html}</body></html>`);
+ w.document.close();
+ setTimeout(()=>{try{w.focus();w.print()}catch(e){alert('Impossibile aprire la stampa PDF: '+(e.message||e))}},350)
+}
+function exportErrorsPdf(){
+ if(!baseCardBytes||!baseCardBytes.length){alert('Apri prima un BIN della carta conducente.');return}
+ renderDirtyCard();
+ const W=dirtyWindow(),from=pdfDateCompactFromTs(W.cut),to=pdfDateCompactFromTs(W.now);
+ const filename=`Errori_del_${from}_al_${to}.pdf`;
+ const box=$('dirtyResult');
+ openPrintPdf(`<div class="pdfHeading">CONTROLLO ERRORI CARTA CONDUCENTE</div>${box.outerHTML}`,filename)
+}
+function exportDayPdf(){
+ const iso=$('day').value;
+ if(!iso){alert('Seleziona prima il giorno da esportare.');return}
+ if(!baseCardBytes||!baseCardBytes.length){alert('Apri prima un BIN della carta conducente.');return}
+ const stamp=pdfDateCompactFromIso(iso);
+ openPrintPdf($('printArea').outerHTML,`Stampata_${stamp}.pdf`)
+}
+
 async function updateArchive(){
  await acquireWakeLock();
  if(!device?.gatt?.connected){setStatus('Connetti prima il DTCO.','warn');return}
@@ -1330,6 +1364,8 @@ $('importCardBtn').onclick=()=>$('importCardFile').click();
 $('importCardFile').onchange=e=>importCardFile(e.target.files&&e.target.files[0]);
 $('day').addEventListener('change',renderLoadedDay);
 $('dirtyBtn').addEventListener('click',renderDirtyCard);
+$('exportErrorsPdfBtn').addEventListener('click',exportErrorsPdf);
+$('exportDayPdfBtn').addEventListener('click',exportDayPdf);
 window.addEventListener('beforeunload',e=>{if(archiveDirty){e.preventDefault();e.returnValue=''}});
 $('day').value=new Date().toISOString().slice(0,10);
 setConn(false);setExportReady(false);
