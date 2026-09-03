@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8.9</title>
+<title>Stampa · v1.8.10</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -48,7 +48,7 @@ body{padding:10px}.app{max-width:1100px;margin:auto;display:grid;gap:10px}
 }
 
 
-/* v1.8.9 — mobile precision / no horizontal page overflow */
+/* v1.8.10 — mobile precision / no horizontal page overflow */
 html,body{max-width:100%;overflow-x:hidden}
 main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 .print{width:100%;padding:14px 12px;overflow:hidden}
@@ -78,7 +78,7 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 }
 
 
-/* v1.8.9 — SCHEDA SPORCA: tabella scorrevole orizzontalmente su mobile */
+/* v1.8.10 — SCHEDA SPORCA: tabella scorrevole orizzontalmente su mobile */
 #dirtyCard{min-width:0;max-width:100%;overflow:hidden}
 #dirtyResult{min-width:0;max-width:100%}
 @media(max-width:420px){
@@ -91,12 +91,12 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 }
 
 
-/* v1.8.9 — selezione giorno semplificata */
+/* v1.8.10 — selezione giorno semplificata */
 #day{width:100%;box-sizing:border-box}
 #archiveState:empty{display:none}
 
 
-/* v1.8.9 — SCHEDA SPORCA leggibile in portrait e landscape, senza allargare la pagina */
+/* v1.8.10 — SCHEDA SPORCA leggibile in portrait e landscape, senza allargare la pagina */
 #dirtyCard,#dirtyResult{min-width:0;max-width:100%;overflow:hidden}
 .dirtyList{display:grid;grid-template-columns:1fr;gap:14px;width:100%;max-width:100%;margin-top:14px}
 .dirtyItem{
@@ -135,7 +135,7 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.9</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.10</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -194,7 +194,7 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
 
   <section class="panel" id="dirtyCard">
     <button id="dirtyBtn" class="btn primary" style="width:100%;font-size:18px">SCHEDA SPORCA?</button>
-    <div class="small" style="margin-top:8px"><b>Controllo automatico degli ultimi 53 giorni rispetto al giorno della verifica.</b> È indipendente dalla data scelta per la stampa giornaliera.</div>
+    <div class="small" style="margin-top:8px"><b>Controllo automatico degli ultimi 56 + 1(per sicurezza!) giorni indietro rispetto a oggi: <span id="dirtyToday">—</span></b> È indipendente dalla data scelta per la stampa giornaliera.</div>
     <div id="dirtyResult" style="display:none;margin-top:14px"></div>
   </section>
 
@@ -713,7 +713,7 @@ function dirtyMonday(sec){
  return d.getTime()/1000
 }
 function dirtyWindow(){
- const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-52);
+ const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-56);
  return {cut:d.getTime()/1000,now:Date.now()/1000}
 }
 function dirtyIntervals(data){
@@ -986,7 +986,7 @@ function analyseDirty(data){
    if(has1&&has2&&!regular)out.push({ts:w2,title:'DUE SETTIMANE CON SOLI RIPOSI SETTIMANALI RIDOTTI',detail:'Può essere ammesso nel trasporto internazionale merci solo alle condizioni specifiche dell’art. 8(6). Verificare nazioni, rientro e compensazioni.',code:'Art. 8(6)',level:'DA VERIFICARE',certainty:'DA VERIFICARE'})
  }
 
- // Keep only findings whose legal occurrence/deadline falls in the requested 53 calendar days.
+ // Keep only findings whose legal occurrence/deadline falls in the requested 57 calendar days.
  const uniq=new Map();
  for(const x of out){
    if(x.ts<cut||x.ts>now+60)continue;
@@ -996,6 +996,7 @@ function analyseDirty(data){
  return {findings:[...uniq.values()].sort((a,b)=>b.ts-a.ts),cut,now}
 }
 function renderDirtyCard(){
+ const dirtyTodayEl=$('dirtyToday');if(dirtyTodayEl)dirtyTodayEl.textContent=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
  if(!baseCardBytes||!baseCardBytes.length){alert('Apri prima un BIN della carta conducente.');return}
  const box=$('dirtyResult');box.style.display='block';
  try{
@@ -1368,6 +1369,7 @@ $('exportErrorsPdfBtn').addEventListener('click',exportErrorsPdf);
 $('exportDayPdfBtn').addEventListener('click',exportDayPdf);
 window.addEventListener('beforeunload',e=>{if(archiveDirty){e.preventDefault();e.returnValue=''}});
 $('day').value=new Date().toISOString().slice(0,10);
+const dirtyTodayEl=$('dirtyToday');if(dirtyTodayEl)dirtyTodayEl.textContent=new Date().toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
 setConn(false);setExportReady(false);
 })();
 
