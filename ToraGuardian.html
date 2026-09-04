@@ -474,7 +474,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor</small>
+        <small>Driver Attention Monitor · v1.1</small>
       </div>
       <div class="pill" id="systemPill">
         <span class="dot" id="systemDot"></span>
@@ -495,6 +495,7 @@
         <div class="camera-bottom">
           <span class="mini" id="fpsState">AI: -- fps</span>
           <span class="mini" id="calState">Non calibrato</span>
+          <span class="mini" id="headLive">Testa Δ: --</span>
         </div>
       </div>
     </section>
@@ -539,26 +540,26 @@
         <div class="settings-grid">
           <div class="range-row">
             <label for="lookAwaySec">Sguardo lontano prima dell'allarme</label>
-            <output id="lookAwayOut">2.5 s</output>
-            <input id="lookAwaySec" type="range" min="1.0" max="5.0" step="0.1" value="2.5">
+            <output id="lookAwayOut">2.0 s</output>
+            <input id="lookAwaySec" type="range" min="1.0" max="5.0" step="0.1" value="2.0">
           </div>
 
           <div class="range-row">
             <label for="eyesClosedSec">Occhi chiusi prima dell'allarme</label>
-            <output id="eyesClosedOut">1.5 s</output>
-            <input id="eyesClosedSec" type="range" min="0.6" max="3.0" step="0.1" value="1.5">
+            <output id="eyesClosedOut">1.2 s</output>
+            <input id="eyesClosedSec" type="range" min="0.6" max="3.0" step="0.1" value="1.2">
           </div>
 
           <div class="range-row">
             <label for="noFaceSec">Volto assente prima dell'allarme</label>
-            <output id="noFaceOut">2.0 s</output>
-            <input id="noFaceSec" type="range" min="0.8" max="5.0" step="0.1" value="2.0">
+            <output id="noFaceOut">1.5 s</output>
+            <input id="noFaceSec" type="range" min="0.8" max="5.0" step="0.1" value="1.5">
           </div>
 
           <div class="range-row">
             <label for="headSensitivity">Sensibilità rotazione testa</label>
-            <output id="headSensitivityOut">25%</output>
-            <input id="headSensitivity" type="range" min="10" max="60" step="1" value="25">
+            <output id="headSensitivityOut">7%</output>
+            <input id="headSensitivity" type="range" min="3" max="20" step="1" value="7">
           </div>
 
           <div class="hint">
@@ -931,9 +932,9 @@
       const rightEAR = eyeAspectRatio(lm,386,385,374,380,362,263);
       const ear=(leftEAR+rightEAR)/2;
 
-      // Soglia empirica FaceMesh. La calibrazione riguarda testa,
-      // gli occhi vengono valutati sulle proporzioni relative del volto.
-      const eyesOpen = ear > 0.16;
+      // Un battito di ciglia normale dura poco: lo rileviamo internamente,
+      // ma non facciamo lampeggiare subito la UI "CHIUSI".
+      const eyesOpenRaw = ear > 0.16;
 
       const hm=headMetrics(lm);
       const gm=gazeMetrics(lm);
@@ -944,52 +945,66 @@
 
       const sensitivity=settings.headThreshold;
       const headTurned = state.calibrated && Math.abs(dyaw) > sensitivity;
-      const headDown = state.calibrated && dpitch > 0.18;
-      const headAway = headTurned || headDown || Math.abs(droll) > 0.42;
+      const headDown = state.calibrated && dpitch > 0.15;
+      const headAway = headTurned || headDown || Math.abs(droll) > 0.38;
 
-      // Lo sguardo puro è intenzionalmente meno aggressivo.
-      // La testa deve pesare di più per evitare falsi positivi dagli specchietti.
+      // Lo sguardo puro resta un po' meno aggressivo della rotazione testa.
       const gazeAway = Math.abs(gm.horizontal) > 0.28 || gm.vertical > 0.34;
 
+      const eyesClosedFor=setTimer("eyesClosed",!eyesOpenRaw);
+      const eyesVisiblyClosed = eyesClosedFor >= 280;
+      const lookAwayFor=setTimer("lookAway",state.calibrated && (headAway || gazeAway));
+      const headDownFor=setTimer("headDown",state.calibrated && headDown);
+      setTimer("noFace",false);
+
       setValue($("faceValue"),"OK","ok");
-      setValue($("eyesValue"),eyesOpen?"APERTI":"CHIUSI",eyesOpen?"ok":"danger");
+      setValue(
+        $("eyesValue"),
+        eyesVisiblyClosed ? "CHIUSI" : "APERTI",
+        eyesVisiblyClosed ? "danger" : "ok"
+      );
+
+      if(state.calibrated){
+        const deltaPct=(Math.abs(dyaw)*100).toFixed(1);
+        $("headLive").textContent=`Testa Δ: ${deltaPct}% · soglia ${(sensitivity*100).toFixed(0)}%`;
+      }else{
+        $("headLive").textContent="Testa Δ: --";
+      }
 
       if(headDown){
         setValue($("headValue"),"BASSA","danger");
       }else if(headTurned){
-        setValue($("headValue"),"GIRATA","warn");
+        // La scritta rende immediatamente evidente che il movimento è stato rilevato.
+        // Il verso è riferito allo spostamento rilevato dalla camera.
+        const direction = dyaw < 0 ? "SINISTRA" : "DESTRA";
+        setValue($("headValue"),direction,"warn");
       }else{
         setValue($("headValue"),state.calibrated?"OK":"CALIBRA","ok");
       }
 
       setValue($("gazeValue"),gazeAway?"FUORI":"AVANTI",gazeAway?"warn":"ok");
 
-      const eyesClosedFor=setTimer("eyesClosed",!eyesOpen);
-      const lookAwayFor=setTimer("lookAway",state.calibrated && (headAway || gazeAway));
-      const headDownFor=setTimer("headDown",state.calibrated && headDown);
-      setTimer("noFace",false);
-
       updateAttention({
         faceOk:true,
-        eyesOpen,
+        eyesOpen:!eyesVisiblyClosed,
         headAway,
         gazeAway
       });
 
       if(eyesClosedFor >= settings.eyesClosedMs){
         triggerAlarm("eyes","ATTENZIONE","APRI GLI OCCHI","😴");
-      }else if(headDownFor >= Math.min(settings.lookAwayMs,1800)){
+      }else if(headDownFor >= Math.min(settings.lookAwayMs,1500)){
         triggerAlarm("down","ATTENZIONE","GUARDA LA STRADA","📱");
       }else if(lookAwayFor >= settings.lookAwayMs){
         triggerAlarm("away","ATTENZIONE","GUARDA LA STRADA","👀");
       }
     }
-
     function processNoFace(){
       setValue($("faceValue"),"ASSENTE","danger");
       setValue($("eyesValue"),"--","neutral");
       setValue($("headValue"),"--","neutral");
       setValue($("gazeValue"),"--","neutral");
+      $("headLive").textContent="Testa Δ: --";
 
       setTimer("eyesClosed",false);
       setTimer("lookAway",false);
@@ -1086,6 +1101,7 @@
 
       $("cameraState").textContent="Fotocamera inattiva";
       $("fpsState").textContent="AI: -- fps";
+      $("headLive").textContent="Testa Δ: --";
       $("startBtn").disabled=false;
       $("stopBtn").disabled=true;
       $("calibrateBtn").disabled=true;
