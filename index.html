@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#07111c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>KnightTruckerNavy 0.70.46</title>
+<title>KnightTruckerNavy 0.70.47</title>
 <link rel="manifest" href="./manifest.json?v=7046">
 <link rel="icon" href="./assets/ui/favicon.png" type="image/png">
 <style>
@@ -19,7 +19,7 @@
 <img class="logo" src="./assets/ui/logo.png" alt="KnightTruckerNavy" decoding="async">
 <div class="title">KnightTruckerNavy</div>
 <div class="sub">Scegli come avviare KnightTruckerNavy</div>
-<div class="ver">VERSIONE 0.70.46</div>
+<div class="ver">VERSIONE 0.70.47</div>
 <div id="state" class="state">PRONTO</div>
 <button id="drive" class="btn" type="button">☁ Connetti Google Drive</button>
 <button id="open" class="btn" type="button">📂 Apri file esistente</button>
@@ -32,7 +32,7 @@
 'use strict';
 var state=document.getElementById('state'),busy=false;
 function setState(t,err){state.textContent=t;state.className='state'+(err?' err':'')}
-function go(mode){try{sessionStorage.setItem('ktn_launch_mode',mode)}catch(_e){}location.href='./planner.html?mode='+encodeURIComponent(mode)+'&v=7046'}
+function go(mode){try{sessionStorage.setItem('ktn_launch_mode',mode)}catch(_e){}location.href='./planner.html?mode='+encodeURIComponent(mode)+'&v=7047'}
 function openDb(name,ver,upgrade){return new Promise(function(res,rej){var r=indexedDB.open(name,ver);r.onupgradeneeded=function(){upgrade&&upgrade(r.result)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 async function storePending(text,name){var db=await openDb('KTNLauncher',1,function(d){if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv')});await new Promise(function(res,rej){var tx=db.transaction('kv','readwrite');tx.objectStore('kv').put({text:text,name:name||'rubrica.json',at:Date.now()},'pendingImport');tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});db.close()}
 async function storeHandle(handle){try{var db=await openDb('DistributoriFS',1,function(d){if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv')});await new Promise(function(res,rej){var tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(handle,'distFileHandle');tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});db.close()}catch(_e){}}

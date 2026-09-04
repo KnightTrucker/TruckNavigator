@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.46';
+<script>window.KTN_APP_VERSION='0.0.70.47';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
 <script id="ktnPlannerBootstrap">
 (function(){
   'use strict';
-  window.KTN_STARTUP_VERSION='0.0.70.46';
+  window.KTN_STARTUP_VERSION='0.0.70.47';
   var q=new URLSearchParams(location.search);
   window.KTN_LAUNCH_MODE=String(q.get('mode')||sessionStorage.getItem('ktn_launch_mode')||'skip');
   window.__KTN_STARTUP_MODE__=window.KTN_LAUNCH_MODE;
@@ -57,8 +57,8 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
   window.ktnPlannerConsumeLaunch=async function(){
     var mode=window.KTN_LAUNCH_MODE||'skip';
     try{sessionStorage.removeItem('ktn_launch_mode')}catch(_e){}
-    try{window.ktnLoadOptionalFonts&&window.ktnLoadOptionalFonts()}catch(_e){}
-    try{if(typeof window.ktnInitPlannerMapAfterStartup==='function')window.ktnInitPlannerMapAfterStartup()}catch(_e){}
+    /* 0.70.47: nessuna risorsa di rete parte automaticamente all'apertura del planner.
+       Leaflet/mappa vengono caricati solo su richiesta esplicita dell'utente. */
 
     if(mode==='import'){
       try{
@@ -100,7 +100,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.46 STARTUP LAYER FIX</title>
+<title>KnightTruckerNavy - 0.0.70.47 OBSERVER FIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
 
 
@@ -1666,7 +1666,7 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 <header class="app-header">
   <div class="brand">
     <img src="assets/ui/logo.png" class="brand-mark" alt="Emblema Z" id="brandVersionLogo" title="Mostra versione" loading="lazy" decoding="async">
-    <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3</span> <em>/ Rubrica</em></div>
+    <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3 · 0.70.47</span> <em>/ Rubrica</em></div>
   </div>
   <div id="fileStatus" class="file-status"></div>
   <div id="driveStatus" class="drive-status"></div>
@@ -2404,10 +2404,26 @@ function updateMapMarkers() {
 function toggleMap() {
   const area = document.getElementById('mapArea');
   const btn  = document.getElementById('btnToggleMap');
-  mapVisible = !mapVisible;
-  area.classList.toggle('collapsed', !mapVisible);
-  btn.textContent = mapVisible ? '🗺 Nascondi mappa' : '🗺 Mostra mappa';
-  if (mapVisible) setTimeout(() => MAP && MAP.invalidateSize(), 280);
+
+  if (mapVisible) {
+    mapVisible = false;
+    area.classList.add('collapsed');
+    btn.textContent = '🗺 Mostra mappa';
+    return;
+  }
+
+  mapVisible = true;
+  area.classList.remove('collapsed');
+  btn.textContent = MAP ? '🗺 Nascondi mappa' : '🗺 Caricamento mappa…';
+
+  Promise.resolve(MAP || ktnInitPlannerMapAfterStartup()).then(function(){
+    btn.textContent = '🗺 Nascondi mappa';
+    setTimeout(function(){ if(MAP) MAP.invalidateSize(); },80);
+  }).catch(function(){
+    btn.textContent = '🗺 Mostra mappa';
+    mapVisible = false;
+    area.classList.add('collapsed');
+  });
 }
 
 /* ── Geolocation ────────────────────────────────────────────────────── */
@@ -2416,11 +2432,17 @@ function _ensureMapVisible(cb) {
   if (!mapVisible) {
     mapVisible = true;
     document.getElementById('mapArea').classList.remove('collapsed');
-    document.getElementById('btnToggleMap').textContent = 'Nascondi mappa';
-    setTimeout(function() { if (MAP) MAP.invalidateSize(); cb(); }, 320);
-  } else {
-    cb();
+    document.getElementById('btnToggleMap').textContent = MAP ? '🗺 Nascondi mappa' : '🗺 Caricamento mappa…';
   }
+
+  Promise.resolve(MAP || ktnInitPlannerMapAfterStartup()).then(function(){
+    var b=document.getElementById('btnToggleMap');if(b)b.textContent='🗺 Nascondi mappa';
+    setTimeout(function(){ if(MAP) MAP.invalidateSize(); cb(); },80);
+  }).catch(function(){
+    mapVisible=false;
+    var a=document.getElementById('mapArea');if(a)a.classList.add('collapsed');
+    var b=document.getElementById('btnToggleMap');if(b)b.textContent='🗺 Mostra mappa';
+  });
 }
 
 function _placeUserOnMap(lat, lng, acc) {
@@ -4789,27 +4811,30 @@ function shareWhatsApp(id) {
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
-var __ktnPlannerMapInitStarted=false;
+var __ktnPlannerMapInitPromise=null;
 function ktnInitPlannerMapAfterStartup(){
-  if(MAP || __ktnPlannerMapInitStarted) return;
-  __ktnPlannerMapInitStarted=true;
-  setTimeout(function(){
-    var p=(window.ktnEnsureLeaflet?window.ktnEnsureLeaflet():Promise.reject(new Error('Loader Leaflet assente')));
-    p.then(function(){
-      try{initMap()}
-      catch(e){throw e}
-    }).catch(function(e){
-      __ktnPlannerMapInitStarted=false;
-      try{console.error('[KTN 0.70.45] initMap',e)}catch(_){}
-      toast('Mappa temporaneamente non disponibile. Il resto dell’app è utilizzabile.');
-    });
-  },20);
+  if(MAP) return Promise.resolve(MAP);
+  if(__ktnPlannerMapInitPromise) return __ktnPlannerMapInitPromise;
+
+  __ktnPlannerMapInitPromise=(window.ktnEnsureLeaflet
+    ? window.ktnEnsureLeaflet()
+    : Promise.reject(new Error('Loader Leaflet assente'))
+  ).then(function(){
+    if(!MAP)initMap();
+    return MAP;
+  }).catch(function(e){
+    __ktnPlannerMapInitPromise=null;
+    try{console.error('[KTN 0.70.47] initMap',e)}catch(_){}
+    toast('Mappa temporaneamente non disponibile. Il resto dell’app è utilizzabile.');
+    throw e;
+  });
+
+  return __ktnPlannerMapInitPromise;
 }
 
 /* ── Startup compatibility — owner: early ktnStartupBootstrap ───────── */
 function startupClose(){
   try{window.__ktnStartupCloseNow&&window.__ktnStartupCloseNow()}catch(_e){}
-  try{ktnInitPlannerMapAfterStartup()}catch(_e){}
 }
 function startupDriveConnect(){ window.ktnStartupChoose('drive'); }
 function startupOpen(){ window.ktnStartupChoose('open'); }
@@ -8417,23 +8442,28 @@ function ktn55CancelSearchChoice(){
   function bindAll(){
     var main=id('routeToManual');
     if(main){
-      main.placeholder='Cerca azienda, POI o indirizzo: es. Sogefi Douai, Shell Binzen';
+      var mainPh='Cerca azienda, POI o indirizzo: es. Sogefi Douai, Shell Binzen';
+      if(main.placeholder!==mainPh)main.placeholder=mainPh;
       var hint=main.parentElement&&main.parentElement.querySelector('.route-endpoint-hint');
-      if(hint)hint.textContent='Scrivi come su Google Maps: aziende, benzinai, farmacie, indirizzi o località. I suggerimenti Geoapify compaiono mentre digiti; TomTom resta come fallback.';
+      var hintText='Scrivi come su Google Maps: aziende, benzinai, farmacie, indirizzi o località. I suggerimenti Geoapify compaiono mentre digiti; TomTom resta come fallback.';
+      if(hint&&hint.textContent!==hintText)hint.textContent=hintText;
       bindInput(main);
     }
 
     var quick=id('ktn56QuickPoi');
     if(quick){
-      quick.placeholder='Es. Sogefi Douai, Shell Binzen, farmacia Turate';
+      var quickPh='Es. Sogefi Douai, Shell Binzen, farmacia Turate';
+      if(quick.placeholder!==quickPh)quick.placeholder=quickPh;
       var hint2=quick.parentElement&&quick.parentElement.querySelector('.hint');
-      if(hint2)hint2.textContent='Ricerca libera Geoapify con suggerimenti mentre scrivi.';
+      var hint2Text='Ricerca libera Geoapify con suggerimenti mentre scrivi.';
+      if(hint2&&hint2.textContent!==hint2Text)hint2.textContent=hint2Text;
       bindInput(quick);
     }
 
     /* Tappe intermedie: stessa filosofia delle altre ricerche. */
+    var stopPh='Indirizzo, coordinate o POI: es. Shell Binzen, Sogefi Douai';
     document.querySelectorAll('.route-stop-input').forEach(function(stopInp){
-      stopInp.placeholder='Indirizzo, coordinate o POI: es. Shell Binzen, Sogefi Douai';
+      if(stopInp.placeholder!==stopPh)stopInp.placeholder=stopPh;
       bindInput(stopInp);
     });
   }
@@ -8528,8 +8558,22 @@ function ktn55CancelSearchChoice(){
   };
 
   setTimeout(bindAll,250);
-  try{new MutationObserver(function(){bindAll()}).observe(document.body,{childList:true,subtree:true});}catch(e){}
-  document.addEventListener('focusin',bindAll,{passive:true});
+  var bindQueued=false;
+  function scheduleBindAll(){
+    if(bindQueued)return;
+    bindQueued=true;
+    requestAnimationFrame(function(){bindQueued=false;bindAll();});
+  }
+  try{
+    new MutationObserver(function(muts){
+      for(var i=0;i<muts.length;i++){
+        if(muts[i].type==='childList'&&(muts[i].addedNodes.length||muts[i].removedNodes.length)){
+          scheduleBindAll();break;
+        }
+      }
+    }).observe(document.body,{childList:true,subtree:true});
+  }catch(e){}
+  document.addEventListener('focusin',scheduleBindAll,{passive:true});
 })();
 </script>
 
