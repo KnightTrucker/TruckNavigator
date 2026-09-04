@@ -1,0 +1,38 @@
+name: Apply KTN 0.70.50 Coherence Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Apply coherence fix
+        run: python KTN_07050_COHERENCE_FIX.py
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html planner.html navigator.html sw.js
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica da committare"
+          else
+            git commit -m "KTN 0.70.50: cache and map-start coherence fix"
+            git push
+          fi
