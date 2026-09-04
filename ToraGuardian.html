@@ -444,7 +444,7 @@
     }
 
     @media (min-width:620px){
-      .status-card{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .status-card{grid-template-columns:repeat(5,minmax(0,1fr))}
       .controls{grid-template-columns:repeat(4,1fr)}
       .camera-card{min-height:430px}
     }
@@ -474,7 +474,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.2</small>
+        <small>Driver Attention Monitor · v1.3</small>
       </div>
       <div class="pill" id="systemPill">
         <span class="dot" id="systemDot"></span>
@@ -496,6 +496,7 @@
           <span class="mini" id="fpsState">AI: -- fps</span>
           <span class="mini" id="calState">Non calibrato</span>
           <span class="mini" id="headLive">Testa Δ: --</span>
+          <span class="mini" id="objectAIState">Oggetti: --</span>
         </div>
       </div>
     </section>
@@ -517,6 +518,10 @@
         <div class="metric">
           <span class="label">Sguardo</span>
           <span class="value neutral" id="gazeValue">--</span>
+        </div>
+        <div class="metric">
+          <span class="label">Oggetto</span>
+          <span class="value neutral" id="objectValue">--</span>
         </div>
       </div>
 
@@ -562,9 +567,22 @@
             <input id="headSensitivity" type="range" min="3" max="20" step="1" value="7">
           </div>
 
+          <div class="range-row">
+            <label for="phoneHeldSec">Telefono in mano prima dell'allarme</label>
+            <output id="phoneHeldOut">0.8 s</output>
+            <input id="phoneHeldSec" type="range" min="0.4" max="2.5" step="0.1" value="0.8">
+          </div>
+
+          <div class="range-row">
+            <label for="drinkHeldSec">Bottiglia/tazza in mano prima dell'allarme</label>
+            <output id="drinkHeldOut">2.2 s</output>
+            <input id="drinkHeldSec" type="range" min="1.0" max="5.0" step="0.1" value="2.2">
+          </div>
+
           <div class="hint">
             Monta il telefono in posizione stabile, anche lateralmente, ma rivolto verso il volto.
             Dopo averlo fissato, premi <b>CALIBRA</b> e guarda normalmente la strada.
+            Il rilevamento oggetti distingue un oggetto semplicemente visibile da uno vicino a una mano.
           </div>
         </div>
       </details>
@@ -598,6 +616,8 @@
   <script type="module">
     import {
       FaceLandmarker,
+      HandLandmarker,
+      ObjectDetector,
       FilesetResolver,
       DrawingUtils
     } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm";
@@ -611,6 +631,8 @@
 
     const state = {
       faceLandmarker: null,
+      handLandmarker: null,
+      objectDetector: null,
       stream: null,
       running: false,
       wakeLock: null,
@@ -620,10 +642,18 @@
         noFace: null,
         eyesClosed: null,
         lookAway: null,
-        headDown: null
+        headDown: null,
+        phoneHeld: null,
+        drinkHeld: null
       },
       lastVideoTime: -1,
       lastFrameTs: 0,
+      lastObjectScanTs: 0,
+      objectScanIntervalMs: 350,
+      lastObjectDetections: [],
+      lastHands: [],
+      objectRisk: 0,
+      objectLabel: null,
       frameCount: 0,
       fpsWindowTs: performance.now(),
       currentAlarm: null,
@@ -637,7 +667,9 @@
       get lookAwayMs(){ return Number($("lookAwaySec").value) * 1000; },
       get eyesClosedMs(){ return Number($("eyesClosedSec").value) * 1000; },
       get noFaceMs(){ return Number($("noFaceSec").value) * 1000; },
-      get headThreshold(){ return Number($("headSensitivity").value) / 100; }
+      get headThreshold(){ return Number($("headSensitivity").value) / 100; },
+      get phoneHeldMs(){ return Number($("phoneHeldSec").value) * 1000; },
+      get drinkHeldMs(){ return Number($("drinkHeldSec").value) * 1000; }
     };
 
     function setValue(el, text, mode="neutral"){
@@ -744,6 +776,7 @@
       if(!eyesOpen) score-=45;
       if(headAway) score-=30;
       if(gazeAway) score-=25;
+      score -= state.objectRisk;
       state.attention = Math.round(clamp(score,0,100));
       $("attentionScore").textContent = state.attention + "%";
       $("attentionBar").style.width = state.attention + "%";
@@ -773,6 +806,42 @@
         outputFaceBlendshapes:false,
         outputFacialTransformationMatrixes:false
       });
+
+      // Le mani e gli oggetti vengono analizzati a frequenza ridotta per non
+      // appesantire il telefono durante il monitoraggio continuo. Se questa
+      // parte non si inizializza, il monitoraggio volto/occhi resta operativo.
+      $("objectAIState").textContent="Oggetti: caricamento AI...";
+      try{
+        state.handLandmarker = await HandLandmarker.createFromOptions(vision,{
+          baseOptions:{
+            modelAssetPath:
+              "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+          },
+          runningMode:"VIDEO",
+          numHands:2,
+          minHandDetectionConfidence:0.50,
+          minHandPresenceConfidence:0.50,
+          minTrackingConfidence:0.45
+        });
+
+        state.objectDetector = await ObjectDetector.createFromOptions(vision,{
+          baseOptions:{
+            modelAssetPath:
+              "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float32/1/efficientdet_lite0.tflite"
+          },
+          runningMode:"VIDEO",
+          maxResults:6,
+          scoreThreshold:0.38,
+          categoryAllowlist:["cell phone","bottle","cup"]
+        });
+        $("objectAIState").textContent="Oggetti: AI pronta";
+      }catch(err){
+        console.warn("AI oggetti non disponibile:",err);
+        state.handLandmarker=null;
+        state.objectDetector=null;
+        $("objectAIState").textContent="Oggetti: AI non disponibile";
+        setValue($("objectValue"),"N/D","neutral");
+      }
     }
 
     async function startCamera(){
@@ -906,6 +975,137 @@
       },2200);
     }
 
+    function pointInsideBox(point, box, margin=0){
+      const x=point.x*video.videoWidth;
+      const y=point.y*video.videoHeight;
+      return x >= box.originX-margin &&
+             x <= box.originX+box.width+margin &&
+             y >= box.originY-margin &&
+             y <= box.originY+box.height+margin;
+    }
+
+    function isObjectNearHand(detection, hands){
+      const box=detection.boundingBox;
+      if(!box || !hands?.length) return false;
+      const margin=Math.max(28, Math.max(box.width,box.height)*0.45);
+      const keyPoints=[0,4,5,8,9,12,13,16,17,20];
+      return hands.some(hand=>keyPoints.some(i=>hand[i] && pointInsideBox(hand[i],box,margin)));
+    }
+
+    function getDetectionName(detection){
+      const c=detection.categories?.[0];
+      return (c?.categoryName || c?.displayName || "").toLowerCase();
+    }
+
+    function getDetectionScore(detection){
+      return detection.categories?.[0]?.score || 0;
+    }
+
+    function processObjects(now){
+      if(!state.handLandmarker || !state.objectDetector || video.readyState<2) return;
+
+      try{
+        const handResult=state.handLandmarker.detectForVideo(video,now);
+        const objectResult=state.objectDetector.detectForVideo(video,now);
+        const hands=handResult.landmarks || [];
+        const detections=(objectResult.detections || []).filter(d=>{
+          const n=getDetectionName(d);
+          return n==="cell phone" || n==="bottle" || n==="cup";
+        });
+
+        state.lastHands=hands;
+        state.lastObjectDetections=detections;
+
+        let phoneVisible=false, phoneHeld=false;
+        let drinkVisible=false, drinkHeld=false;
+        let bestLabel=null, bestScore=0;
+
+        for(const d of detections){
+          const name=getDetectionName(d);
+          const held=isObjectNearHand(d,hands);
+          const score=getDetectionScore(d);
+
+          if(score>bestScore){ bestScore=score; bestLabel=name; }
+
+          if(name==="cell phone"){
+            phoneVisible=true;
+            if(held) phoneHeld=true;
+          }else if(name==="bottle" || name==="cup"){
+            drinkVisible=true;
+            if(held) drinkHeld=true;
+          }
+        }
+
+        const phoneFor=setTimer("phoneHeld",phoneHeld);
+        const drinkFor=setTimer("drinkHeld",!phoneHeld && drinkHeld);
+
+        if(phoneHeld){
+          state.objectRisk=35;
+          state.objectLabel="TELEFONO IN MANO";
+          setValue($("objectValue"),"📱 IN MANO","danger");
+          $("objectAIState").textContent=`Oggetti: telefono + mano${bestScore ? ` · ${Math.round(bestScore*100)}%` : ""}`;
+          if(phoneFor>=settings.phoneHeldMs){
+            triggerAlarm("phone","TELEFONO","POSA IL TELEFONO","📱");
+          }
+        }else if(drinkHeld){
+          state.objectRisk=12;
+          state.objectLabel="OGGETTO IN MANO";
+          setValue($("objectValue"),"🥤 IN MANO","warn");
+          $("objectAIState").textContent="Oggetti: bottiglia/tazza + mano";
+          if(drinkFor>=settings.drinkHeldMs){
+            triggerAlarm("drink","ATTENZIONE","GUARDA LA STRADA","🥤");
+          }
+        }else if(phoneVisible){
+          state.objectRisk=0;
+          state.objectLabel="TELEFONO VISIBILE";
+          setValue($("objectValue"),"TEL. VISIBILE","neutral");
+          $("objectAIState").textContent="Oggetti: telefono visibile, non in mano";
+        }else if(drinkVisible){
+          state.objectRisk=0;
+          state.objectLabel="OGGETTO VISIBILE";
+          setValue($("objectValue"),"VISIBILE","neutral");
+          $("objectAIState").textContent="Oggetti: bottiglia/tazza visibile";
+        }else{
+          state.objectRisk=0;
+          state.objectLabel=null;
+          setValue($("objectValue"),"NESSUNO","ok");
+          $("objectAIState").textContent=hands.length ? `Oggetti: nessuno · mani ${hands.length}` : "Oggetti: nessuno";
+        }
+      }catch(err){
+        console.warn("Rilevamento oggetti:",err);
+        $("objectAIState").textContent="Oggetti: errore rilevamento";
+      }
+    }
+
+    function drawObjectOverlays(){
+      if(!state.lastObjectDetections?.length) return;
+
+      ctx.save();
+      ctx.font="bold 24px system-ui";
+      ctx.textBaseline="top";
+
+      for(const d of state.lastObjectDetections){
+        const box=d.boundingBox;
+        if(!box) continue;
+        const name=getDetectionName(d);
+        const held=isObjectNearHand(d,state.lastHands);
+        const label=name==="cell phone" ? (held ? "TELEFONO IN MANO" : "TELEFONO")
+                   : (held ? "OGGETTO IN MANO" : name.toUpperCase());
+
+        ctx.lineWidth=held ? 6 : 3;
+        ctx.strokeStyle=held ? "rgba(255,70,85,.95)" : "rgba(251,191,36,.85)";
+        ctx.strokeRect(box.originX,box.originY,box.width,box.height);
+
+        const tw=ctx.measureText(label).width+18;
+        const ty=Math.max(0,box.originY-34);
+        ctx.fillStyle="rgba(4,8,14,.82)";
+        ctx.fillRect(box.originX,ty,tw,32);
+        ctx.fillStyle=held ? "#ff7883" : "#fbd34d";
+        ctx.fillText(label,box.originX+9,ty+3);
+      }
+      ctx.restore();
+    }
+
     function drawFace(lm){
       ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -1031,6 +1231,12 @@
           state.lastVideoTime=video.currentTime;
 
           const now=performance.now();
+
+          if(now-state.lastObjectScanTs >= state.objectScanIntervalMs){
+            state.lastObjectScanTs=now;
+            processObjects(now);
+          }
+
           const result=state.faceLandmarker.detectForVideo(video,now);
 
           ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -1042,6 +1248,8 @@
           }else{
             processNoFace();
           }
+
+          drawObjectOverlays();
 
           state.frameCount++;
           if(now-state.fpsWindowTs>=1000){
@@ -1102,6 +1310,13 @@
       $("cameraState").textContent="Fotocamera inattiva";
       $("fpsState").textContent="AI: -- fps";
       $("headLive").textContent="Testa Δ: --";
+      $("objectAIState").textContent="Oggetti: --";
+      state.lastObjectDetections=[];
+      state.lastHands=[];
+      state.objectRisk=0;
+      state.objectLabel=null;
+      setTimer("phoneHeld",false);
+      setTimer("drinkHeld",false);
       $("startBtn").disabled=false;
       $("stopBtn").disabled=true;
       $("calibrateBtn").disabled=true;
@@ -1110,6 +1325,7 @@
       setValue($("eyesValue"),"--");
       setValue($("headValue"),"--");
       setValue($("gazeValue"),"--");
+      setValue($("objectValue"),"--");
 
       $("attentionScore").textContent="--%";
       $("attentionBar").style.width="0%";
@@ -1177,6 +1393,8 @@
     bindRange("eyesClosedSec","eyesClosedOut",v=>Number(v).toFixed(1)+" s");
     bindRange("noFaceSec","noFaceOut",v=>Number(v).toFixed(1)+" s");
     bindRange("headSensitivity","headSensitivityOut",v=>v+"%");
+    bindRange("phoneHeldSec","phoneHeldOut",v=>Number(v).toFixed(1)+" s");
+    bindRange("drinkHeldSec","drinkHeldOut",v=>Number(v).toFixed(1)+" s");
 
     $("startBtn").addEventListener("click",start);
     $("stopBtn").addEventListener("click",stop);
