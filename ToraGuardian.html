@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#05080d" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>ToraGuardian</title>
+
+  <style>
+    :root{
+      --bg:#05080d;
+      --panel:#0d131c;
+      --panel2:#111925;
+      --text:#f3f7fb;
+      --muted:#8ea1b5;
+      --ok:#34d399;
+      --warn:#fbbf24;
+      --danger:#ff4655;
+      --blue:#19a7ff;
+      --border:#1d2a39;
+      --shadow:0 14px 38px rgba(0,0,0,.35);
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      overscroll-behavior:none;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    body{
+      min-height:100vh;
+      min-height:100dvh;
+    }
+
+    button,input{font:inherit}
+
+    .app{
+      width:min(100%,760px);
+      margin:0 auto;
+      min-height:100vh;
+      min-height:100dvh;
+      display:flex;
+      flex-direction:column;
+      padding:
+        max(12px,env(safe-area-inset-top))
+        12px
+        max(16px,env(safe-area-inset-bottom));
+      gap:12px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:6px 2px 0;
+    }
+
+    .brand h1{
+      margin:0;
+      font-size:clamp(24px,6vw,36px);
+      letter-spacing:.02em;
+    }
+
+    .brand small{
+      color:var(--muted);
+      display:block;
+      margin-top:2px;
+      font-size:12px;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      padding:8px 10px;
+      border-radius:999px;
+      color:var(--muted);
+      white-space:nowrap;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:#526273;
+      box-shadow:0 0 0 3px rgba(255,255,255,.03);
+    }
+
+    .dot.ok{background:var(--ok); box-shadow:0 0 15px rgba(52,211,153,.5)}
+    .dot.warn{background:var(--warn); box-shadow:0 0 15px rgba(251,191,36,.45)}
+    .dot.danger{background:var(--danger); box-shadow:0 0 18px rgba(255,70,85,.55)}
+
+    .camera-card{
+      position:relative;
+      overflow:hidden;
+      border-radius:22px;
+      border:1px solid var(--border);
+      background:#000;
+      box-shadow:var(--shadow);
+      min-height:310px;
+      aspect-ratio:4/3;
+    }
+
+    video,canvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transform:scaleX(-1);
+    }
+
+    canvas{pointer-events:none}
+
+    .camera-overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      padding:12px;
+      background:linear-gradient(to bottom,rgba(0,0,0,.38),transparent 32%,transparent 70%,rgba(0,0,0,.48));
+    }
+
+    .camera-top,
+    .camera-bottom{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .mini{
+      background:rgba(4,8,14,.72);
+      backdrop-filter:blur(8px);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      padding:7px 9px;
+      color:#dbe7f2;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .guide{
+      position:absolute;
+      inset:18% 18%;
+      border:2px dashed rgba(255,255,255,.18);
+      border-radius:44% 44% 46% 46%;
+      pointer-events:none;
+    }
+
+    .status-card{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+
+    .metric{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:13px;
+      min-height:92px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .metric .label{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+
+    .metric .value{
+      margin-top:8px;
+      font-size:22px;
+      font-weight:900;
+      line-height:1.1;
+    }
+
+    .value.ok{color:var(--ok)}
+    .value.warn{color:var(--warn)}
+    .value.danger{color:var(--danger)}
+    .value.neutral{color:#d9e4ee}
+
+    .attention{
+      background:linear-gradient(145deg,#0b121a,#0f1722);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:13px;
+    }
+
+    .attention-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:9px;
+    }
+
+    .attention strong{
+      font-size:15px;
+    }
+
+    .score{
+      font-size:26px;
+      font-weight:950;
+      letter-spacing:-.03em;
+    }
+
+    .bar{
+      height:10px;
+      border-radius:999px;
+      background:#182330;
+      overflow:hidden;
+    }
+
+    .bar > div{
+      width:0%;
+      height:100%;
+      border-radius:inherit;
+      background:linear-gradient(90deg,#34d399,#19a7ff);
+      transition:width .18s linear;
+    }
+
+    .controls{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    button{
+      border:0;
+      border-radius:17px;
+      padding:15px 14px;
+      font-weight:900;
+      letter-spacing:.01em;
+      cursor:pointer;
+      min-height:52px;
+    }
+
+    button:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .primary{
+      background:var(--blue);
+      color:#00111c;
+    }
+
+    .secondary{
+      background:var(--panel2);
+      color:var(--text);
+      border:1px solid var(--border);
+    }
+
+    .danger-btn{
+      background:#281016;
+      color:#ff8c95;
+      border:1px solid #52202a;
+    }
+
+    .settings{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:13px;
+    }
+
+    details summary{
+      cursor:pointer;
+      font-weight:900;
+      color:#dbe8f5;
+      user-select:none;
+    }
+
+    .settings-grid{
+      margin-top:14px;
+      display:grid;
+      gap:12px;
+    }
+
+    .range-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:8px 12px;
+      align-items:center;
+    }
+
+    .range-row label{
+      font-size:13px;
+      color:#d3dfeb;
+      font-weight:700;
+    }
+
+    .range-row output{
+      color:var(--blue);
+      font-weight:900;
+      font-size:13px;
+      min-width:54px;
+      text-align:right;
+    }
+
+    input[type="range"]{
+      grid-column:1/-1;
+      width:100%;
+      accent-color:var(--blue);
+    }
+
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+      margin-top:10px;
+    }
+
+    .alarm{
+      position:fixed;
+      inset:0;
+      z-index:50;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:24px;
+      background:rgba(120,0,0,.92);
+      backdrop-filter:blur(4px);
+      animation:pulseBg .7s infinite alternate;
+    }
+
+    .alarm.show{display:flex}
+
+    .alarm-box{
+      max-width:650px;
+    }
+
+    .alarm-icon{
+      font-size:72px;
+      line-height:1;
+      margin-bottom:10px;
+    }
+
+    .alarm-title{
+      margin:0;
+      font-size:clamp(36px,10vw,76px);
+      font-weight:1000;
+      line-height:.95;
+      letter-spacing:-.04em;
+    }
+
+    .alarm-text{
+      margin:14px 0 0;
+      font-size:clamp(18px,4vw,28px);
+      font-weight:800;
+    }
+
+    @keyframes pulseBg{
+      from{background:rgba(120,0,0,.88)}
+      to{background:rgba(215,0,18,.95)}
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:max(18px,env(safe-area-inset-bottom));
+      transform:translateX(-50%) translateY(140%);
+      opacity:0;
+      transition:.25s ease;
+      z-index:80;
+      background:#101923;
+      color:#edf6ff;
+      border:1px solid #26384a;
+      padding:11px 14px;
+      border-radius:14px;
+      max-width:min(92vw,650px);
+      box-shadow:var(--shadow);
+      font-size:13px;
+      font-weight:700;
+      text-align:center;
+    }
+
+    .toast.show{
+      transform:translateX(-50%) translateY(0);
+      opacity:1;
+    }
+
+    .calib{
+      position:fixed;
+      inset:0;
+      z-index:40;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      background:rgba(2,5,9,.94);
+      padding:24px;
+    }
+
+    .calib.show{display:flex}
+
+    .calib h2{
+      font-size:clamp(28px,8vw,58px);
+      margin:0 0 10px;
+    }
+
+    .calib p{
+      color:#b8c7d7;
+      max-width:540px;
+      line-height:1.45;
+    }
+
+    .countdown{
+      font-size:90px;
+      font-weight:1000;
+      line-height:1;
+      color:var(--blue);
+      margin-top:10px;
+    }
+
+    .footer{
+      text-align:center;
+      color:#617184;
+      font-size:11px;
+      padding:2px 0 6px;
+    }
+
+    @media (min-width:620px){
+      .status-card{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .controls{grid-template-columns:repeat(4,1fr)}
+      .camera-card{min-height:430px}
+    }
+
+    @media (orientation:landscape) and (max-height:650px){
+      .app{
+        width:min(100%,1200px);
+        display:grid;
+        grid-template-columns:minmax(420px,1.3fr) minmax(350px,.7fr);
+        grid-template-rows:auto 1fr auto;
+      }
+      .topbar{grid-column:1/-1}
+      .camera-card{grid-column:1; grid-row:2; min-height:0; aspect-ratio:auto}
+      .side{
+        grid-column:2; grid-row:2;
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        overflow:auto;
+      }
+      .footer{grid-column:1/-1}
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>ToraGuardian</h1>
+        <small>Driver Attention Monitor</small>
+      </div>
+      <div class="pill" id="systemPill">
+        <span class="dot" id="systemDot"></span>
+        <span id="systemText">PRONTO</span>
+      </div>
+    </header>
+
+    <section class="camera-card">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+      <div class="guide"></div>
+
+      <div class="camera-overlay">
+        <div class="camera-top">
+          <span class="mini" id="cameraState">Fotocamera inattiva</span>
+          <span class="mini" id="wakeState">Wake Lock: OFF</span>
+        </div>
+        <div class="camera-bottom">
+          <span class="mini" id="fpsState">AI: -- fps</span>
+          <span class="mini" id="calState">Non calibrato</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="side">
+      <div class="status-card">
+        <div class="metric">
+          <span class="label">Volto</span>
+          <span class="value neutral" id="faceValue">--</span>
+        </div>
+        <div class="metric">
+          <span class="label">Occhi</span>
+          <span class="value neutral" id="eyesValue">--</span>
+        </div>
+        <div class="metric">
+          <span class="label">Testa</span>
+          <span class="value neutral" id="headValue">--</span>
+        </div>
+        <div class="metric">
+          <span class="label">Sguardo</span>
+          <span class="value neutral" id="gazeValue">--</span>
+        </div>
+      </div>
+
+      <div class="attention">
+        <div class="attention-row">
+          <strong>ATTENZIONE</strong>
+          <span class="score" id="attentionScore">--%</span>
+        </div>
+        <div class="bar"><div id="attentionBar"></div></div>
+      </div>
+
+      <div class="controls">
+        <button class="primary" id="startBtn">AVVIA</button>
+        <button class="secondary" id="calibrateBtn" disabled>CALIBRA</button>
+        <button class="secondary" id="testAlarmBtn">TEST ALLARME</button>
+        <button class="danger-btn" id="stopBtn" disabled>STOP</button>
+      </div>
+
+      <details class="settings">
+        <summary>Impostazioni sensibilità</summary>
+        <div class="settings-grid">
+          <div class="range-row">
+            <label for="lookAwaySec">Sguardo lontano prima dell'allarme</label>
+            <output id="lookAwayOut">2.5 s</output>
+            <input id="lookAwaySec" type="range" min="1.0" max="5.0" step="0.1" value="2.5">
+          </div>
+
+          <div class="range-row">
+            <label for="eyesClosedSec">Occhi chiusi prima dell'allarme</label>
+            <output id="eyesClosedOut">1.5 s</output>
+            <input id="eyesClosedSec" type="range" min="0.6" max="3.0" step="0.1" value="1.5">
+          </div>
+
+          <div class="range-row">
+            <label for="noFaceSec">Volto assente prima dell'allarme</label>
+            <output id="noFaceOut">2.0 s</output>
+            <input id="noFaceSec" type="range" min="0.8" max="5.0" step="0.1" value="2.0">
+          </div>
+
+          <div class="range-row">
+            <label for="headSensitivity">Sensibilità rotazione testa</label>
+            <output id="headSensitivityOut">25%</output>
+            <input id="headSensitivity" type="range" min="10" max="60" step="1" value="25">
+          </div>
+
+          <div class="hint">
+            Monta il telefono in posizione stabile, anche lateralmente, ma rivolto verso il volto.
+            Dopo averlo fissato, premi <b>CALIBRA</b> e guarda normalmente la strada.
+          </div>
+        </div>
+      </details>
+
+      <div class="hint" id="secureHint">
+        La fotocamera richiede normalmente una pagina aperta in HTTPS. Se il file viene pubblicato su GitHub Pages, funziona in ambiente sicuro.
+      </div>
+    </section>
+
+    <div class="footer">ToraGuardian · assistenza sperimentale alla guida · non sostituisce un sistema DMS omologato</div>
+  </main>
+
+  <div class="calib" id="calibOverlay">
+    <div>
+      <h2>CALIBRAZIONE</h2>
+      <p>Guarda la strada nella tua posizione normale. Tieni testa e occhi fermi finché termina il conto alla rovescia.</p>
+      <div class="countdown" id="countdown">3</div>
+    </div>
+  </div>
+
+  <div class="alarm" id="alarmOverlay">
+    <div class="alarm-box">
+      <div class="alarm-icon" id="alarmIcon">⚠️</div>
+      <h2 class="alarm-title" id="alarmTitle">ATTENZIONE</h2>
+      <div class="alarm-text" id="alarmText">GUARDA LA STRADA</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import {
+      FaceLandmarker,
+      FilesetResolver,
+      DrawingUtils
+    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm";
+
+    const $ = id => document.getElementById(id);
+
+    const video = $("video");
+    const canvas = $("overlay");
+    const ctx = canvas.getContext("2d");
+    const draw = new DrawingUtils(ctx);
+
+    const state = {
+      faceLandmarker: null,
+      stream: null,
+      running: false,
+      wakeLock: null,
+      calibrated: false,
+      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0 },
+      timers: {
+        noFace: null,
+        eyesClosed: null,
+        lookAway: null,
+        headDown: null
+      },
+      lastVideoTime: -1,
+      lastFrameTs: 0,
+      frameCount: 0,
+      fpsWindowTs: performance.now(),
+      currentAlarm: null,
+      alarmCooldownUntil: 0,
+      attention: 100,
+      audioCtx: null,
+      voiceEnabled: true
+    };
+
+    const settings = {
+      get lookAwayMs(){ return Number($("lookAwaySec").value) * 1000; },
+      get eyesClosedMs(){ return Number($("eyesClosedSec").value) * 1000; },
+      get noFaceMs(){ return Number($("noFaceSec").value) * 1000; },
+      get headThreshold(){ return Number($("headSensitivity").value) / 100; }
+    };
+
+    function setValue(el, text, mode="neutral"){
+      el.textContent = text;
+      el.className = "value " + mode;
+    }
+
+    function toast(msg){
+      const el = $("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=>el.classList.remove("show"),2600);
+    }
+
+    function updateSystem(text, mode=""){
+      $("systemText").textContent = text;
+      $("systemDot").className = "dot " + mode;
+    }
+
+    function setTimer(name, condition){
+      const now = performance.now();
+      if(condition){
+        if(state.timers[name] == null) state.timers[name] = now;
+        return now - state.timers[name];
+      }else{
+        state.timers[name] = null;
+        return 0;
+      }
+    }
+
+    function dist(a,b){
+      const dx=a.x-b.x, dy=a.y-b.y;
+      return Math.hypot(dx,dy);
+    }
+
+    function avgPoint(...pts){
+      return {
+        x: pts.reduce((s,p)=>s+p.x,0)/pts.length,
+        y: pts.reduce((s,p)=>s+p.y,0)/pts.length
+      };
+    }
+
+    function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+    function eyeAspectRatio(lm, topA, topB, botA, botB, leftCorner, rightCorner){
+      const vertical = (
+        dist(lm[topA],lm[botA]) +
+        dist(lm[topB],lm[botB])
+      ) / 2;
+      const horizontal = dist(lm[leftCorner],lm[rightCorner]);
+      return horizontal > 0 ? vertical / horizontal : 0;
+    }
+
+    // Proxy geometrici robusti a camera laterale:
+    // usiamo proporzioni relative del volto, poi la calibrazione sottrae la posizione neutra.
+    function headMetrics(lm){
+      const leftEye = avgPoint(lm[33],lm[133]);
+      const rightEye = avgPoint(lm[362],lm[263]);
+      const nose = lm[1];
+      const mouth = avgPoint(lm[13],lm[14]);
+      const eyeMid = avgPoint(leftEye,rightEye);
+
+      const faceWidth = dist(lm[234],lm[454]) || dist(leftEye,rightEye) || 0.001;
+      const eyeSpan = dist(leftEye,rightEye) || 0.001;
+
+      const yawProxy = (nose.x - eyeMid.x) / faceWidth;
+      const pitchProxy = (nose.y - eyeMid.y) / eyeSpan;
+      const rollProxy = Math.atan2(rightEye.y-leftEye.y, rightEye.x-leftEye.x);
+
+      return { yawProxy, pitchProxy, rollProxy };
+    }
+
+    function gazeMetrics(lm){
+      // Iris landmarks FaceMesh:
+      // sx: 468-472, dx: 473-477.
+      const leftIris = avgPoint(lm[468],lm[469],lm[470],lm[471],lm[472]);
+      const rightIris = avgPoint(lm[473],lm[474],lm[475],lm[476],lm[477]);
+
+      const leftInner = lm[133], leftOuter = lm[33];
+      const rightInner = lm[362], rightOuter = lm[263];
+
+      const lxMin=Math.min(leftInner.x,leftOuter.x), lxMax=Math.max(leftInner.x,leftOuter.x);
+      const rxMin=Math.min(rightInner.x,rightOuter.x), rxMax=Math.max(rightInner.x,rightOuter.x);
+
+      const lPos=(leftIris.x-lxMin)/Math.max(.0001,lxMax-lxMin);
+      const rPos=(rightIris.x-rxMin)/Math.max(.0001,rxMax-rxMin);
+
+      const horizontal=((lPos+rPos)/2)-0.5;
+
+      const lTop=(lm[159].y+lm[160].y)/2, lBottom=(lm[145].y+lm[144].y)/2;
+      const rTop=(lm[386].y+lm[385].y)/2, rBottom=(lm[374].y+lm[380].y)/2;
+
+      const lv=(leftIris.y-lTop)/Math.max(.0001,lBottom-lTop);
+      const rv=(rightIris.y-rTop)/Math.max(.0001,rBottom-rTop);
+      const vertical=((lv+rv)/2)-0.5;
+
+      return {horizontal,vertical};
+    }
+
+    function updateAttention({faceOk,eyesOpen,headAway,gazeAway}){
+      let score=100;
+      if(!faceOk) score-=55;
+      if(!eyesOpen) score-=45;
+      if(headAway) score-=30;
+      if(gazeAway) score-=25;
+      state.attention = Math.round(clamp(score,0,100));
+      $("attentionScore").textContent = state.attention + "%";
+      $("attentionBar").style.width = state.attention + "%";
+    }
+
+    async function initAI(){
+      if(state.faceLandmarker) return;
+
+      updateSystem("CARICAMENTO AI","warn");
+      toast("Caricamento modello di riconoscimento...");
+
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm"
+      );
+
+      state.faceLandmarker = await FaceLandmarker.createFromOptions(vision,{
+        baseOptions:{
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          delegate:"GPU"
+        },
+        runningMode:"VIDEO",
+        numFaces:1,
+        minFaceDetectionConfidence:0.55,
+        minFacePresenceConfidence:0.55,
+        minTrackingConfidence:0.55,
+        outputFaceBlendshapes:false,
+        outputFacialTransformationMatrixes:false
+      });
+    }
+
+    async function startCamera(){
+      if(!navigator.mediaDevices?.getUserMedia){
+        throw new Error("Fotocamera web non disponibile su questo browser.");
+      }
+
+      state.stream = await navigator.mediaDevices.getUserMedia({
+        audio:false,
+        video:{
+          facingMode:"user",
+          width:{ideal:1280},
+          height:{ideal:720},
+          frameRate:{ideal:30,max:30}
+        }
+      });
+
+      video.srcObject = state.stream;
+      await video.play();
+
+      resizeCanvas();
+      $("cameraState").textContent = "Fotocamera attiva";
+    }
+
+    function resizeCanvas(){
+      // Mantiene il canvas nella stessa risoluzione del flusso video:
+      // i landmark MediaPipe rimangono così allineati al volto anche
+      // con fotocamera frontale e schermo ruotato.
+      canvas.width = Math.max(1, video.videoWidth || 1280);
+      canvas.height = Math.max(1, video.videoHeight || 720);
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+
+    async function requestWakeLock(){
+      if(!("wakeLock" in navigator)){
+        $("wakeState").textContent="Wake Lock: non supportato";
+        return;
+      }
+      try{
+        state.wakeLock = await navigator.wakeLock.request("screen");
+        $("wakeState").textContent="Wake Lock: ON";
+        state.wakeLock.addEventListener("release",()=>{
+          $("wakeState").textContent="Wake Lock: OFF";
+          state.wakeLock=null;
+        });
+      }catch(err){
+        $("wakeState").textContent="Wake Lock: errore";
+        console.warn(err);
+      }
+    }
+
+    async function releaseWakeLock(){
+      if(state.wakeLock){
+        try{ await state.wakeLock.release(); }catch{}
+        state.wakeLock=null;
+      }
+      $("wakeState").textContent="Wake Lock: OFF";
+    }
+
+    document.addEventListener("visibilitychange", async ()=>{
+      if(document.visibilityState==="visible" && state.running && !state.wakeLock){
+        await requestWakeLock();
+      }
+    });
+
+    function ensureAudio(){
+      if(!state.audioCtx){
+        state.audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      }
+      if(state.audioCtx.state==="suspended") state.audioCtx.resume();
+    }
+
+    function beep(pattern="danger"){
+      ensureAudio();
+      const ctxA=state.audioCtx;
+      const now=ctxA.currentTime;
+
+      const seq = pattern==="danger"
+        ? [[0,880,.18],[.24,880,.18],[.48,1050,.28]]
+        : [[0,700,.12],[.18,700,.12]];
+
+      seq.forEach(([offset,freq,dur])=>{
+        const osc=ctxA.createOscillator();
+        const gain=ctxA.createGain();
+        osc.type="square";
+        osc.frequency.value=freq;
+        gain.gain.setValueAtTime(0.0001,now+offset);
+        gain.gain.exponentialRampToValueAtTime(.28,now+offset+.01);
+        gain.gain.exponentialRampToValueAtTime(.0001,now+offset+dur);
+        osc.connect(gain);
+        gain.connect(ctxA.destination);
+        osc.start(now+offset);
+        osc.stop(now+offset+dur+.03);
+      });
+    }
+
+    function speak(text){
+      if(!("speechSynthesis" in window)) return;
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang="it-IT";
+      u.rate=1.08;
+      u.pitch=.95;
+      u.volume=1;
+      speechSynthesis.speak(u);
+    }
+
+    function triggerAlarm(type,title,text,icon="⚠️"){
+      const now=performance.now();
+      if(state.currentAlarm===type) return;
+      if(now < state.alarmCooldownUntil) return;
+
+      state.currentAlarm=type;
+      state.alarmCooldownUntil=now+2200;
+
+      $("alarmIcon").textContent=icon;
+      $("alarmTitle").textContent=title;
+      $("alarmText").textContent=text;
+      $("alarmOverlay").classList.add("show");
+
+      beep("danger");
+      if(navigator.vibrate) navigator.vibrate([250,120,250,120,450]);
+      speak(text);
+
+      clearTimeout(triggerAlarm._t);
+      triggerAlarm._t=setTimeout(()=>{
+        $("alarmOverlay").classList.remove("show");
+        state.currentAlarm=null;
+      },2200);
+    }
+
+    function drawFace(lm){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      // Disegno leggero per non rallentare.
+      draw.drawConnectors(
+        lm,
+        FaceLandmarker.FACE_LANDMARKS_FACE_OVAL,
+        {color:"rgba(25,167,255,.65)",lineWidth:1.5}
+      );
+      draw.drawConnectors(
+        lm,
+        FaceLandmarker.FACE_LANDMARKS_LEFT_EYE,
+        {color:"rgba(52,211,153,.85)",lineWidth:1.5}
+      );
+      draw.drawConnectors(
+        lm,
+        FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE,
+        {color:"rgba(52,211,153,.85)",lineWidth:1.5}
+      );
+    }
+
+    function processFace(lm){
+      const leftEAR = eyeAspectRatio(lm,159,160,145,144,33,133);
+      const rightEAR = eyeAspectRatio(lm,386,385,374,380,362,263);
+      const ear=(leftEAR+rightEAR)/2;
+
+      // Soglia empirica FaceMesh. La calibrazione riguarda testa,
+      // gli occhi vengono valutati sulle proporzioni relative del volto.
+      const eyesOpen = ear > 0.16;
+
+      const hm=headMetrics(lm);
+      const gm=gazeMetrics(lm);
+
+      const dyaw = state.calibrated ? hm.yawProxy-state.neutral.yawProxy : 0;
+      const dpitch = state.calibrated ? hm.pitchProxy-state.neutral.pitchProxy : 0;
+      const droll = state.calibrated ? hm.rollProxy-state.neutral.rollProxy : 0;
+
+      const sensitivity=settings.headThreshold;
+      const headTurned = state.calibrated && Math.abs(dyaw) > sensitivity;
+      const headDown = state.calibrated && dpitch > 0.18;
+      const headAway = headTurned || headDown || Math.abs(droll) > 0.42;
+
+      // Lo sguardo puro è intenzionalmente meno aggressivo.
+      // La testa deve pesare di più per evitare falsi positivi dagli specchietti.
+      const gazeAway = Math.abs(gm.horizontal) > 0.28 || gm.vertical > 0.34;
+
+      setValue($("faceValue"),"OK","ok");
+      setValue($("eyesValue"),eyesOpen?"APERTI":"CHIUSI",eyesOpen?"ok":"danger");
+
+      if(headDown){
+        setValue($("headValue"),"BASSA","danger");
+      }else if(headTurned){
+        setValue($("headValue"),"GIRATA","warn");
+      }else{
+        setValue($("headValue"),state.calibrated?"OK":"CALIBRA","ok");
+      }
+
+      setValue($("gazeValue"),gazeAway?"FUORI":"AVANTI",gazeAway?"warn":"ok");
+
+      const eyesClosedFor=setTimer("eyesClosed",!eyesOpen);
+      const lookAwayFor=setTimer("lookAway",state.calibrated && (headAway || gazeAway));
+      const headDownFor=setTimer("headDown",state.calibrated && headDown);
+      setTimer("noFace",false);
+
+      updateAttention({
+        faceOk:true,
+        eyesOpen,
+        headAway,
+        gazeAway
+      });
+
+      if(eyesClosedFor >= settings.eyesClosedMs){
+        triggerAlarm("eyes","ATTENZIONE","APRI GLI OCCHI","😴");
+      }else if(headDownFor >= Math.min(settings.lookAwayMs,1800)){
+        triggerAlarm("down","ATTENZIONE","GUARDA LA STRADA","📱");
+      }else if(lookAwayFor >= settings.lookAwayMs){
+        triggerAlarm("away","ATTENZIONE","GUARDA LA STRADA","👀");
+      }
+    }
+
+    function processNoFace(){
+      setValue($("faceValue"),"ASSENTE","danger");
+      setValue($("eyesValue"),"--","neutral");
+      setValue($("headValue"),"--","neutral");
+      setValue($("gazeValue"),"--","neutral");
+
+      setTimer("eyesClosed",false);
+      setTimer("lookAway",false);
+      setTimer("headDown",false);
+      const missingFor=setTimer("noFace",true);
+
+      updateAttention({
+        faceOk:false,
+        eyesOpen:false,
+        headAway:false,
+        gazeAway:false
+      });
+
+      if(missingFor >= settings.noFaceMs){
+        triggerAlarm("noface","ATTENZIONE","VOLTO NON VISIBILE","⚠️");
+      }
+    }
+
+    async function loop(){
+      if(!state.running) return;
+
+      try{
+        if(video.readyState>=2 && video.currentTime!==state.lastVideoTime){
+          state.lastVideoTime=video.currentTime;
+
+          const now=performance.now();
+          const result=state.faceLandmarker.detectForVideo(video,now);
+
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+
+          if(result.faceLandmarks?.length){
+            const lm=result.faceLandmarks[0];
+            drawFace(lm);
+            processFace(lm);
+          }else{
+            processNoFace();
+          }
+
+          state.frameCount++;
+          if(now-state.fpsWindowTs>=1000){
+            const fps=Math.round(state.frameCount*1000/(now-state.fpsWindowTs));
+            $("fpsState").textContent=`AI: ${fps} fps`;
+            state.frameCount=0;
+            state.fpsWindowTs=now;
+          }
+        }
+      }catch(err){
+        console.error(err);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    async function start(){
+      try{
+        $("startBtn").disabled=true;
+        updateSystem("AVVIO","warn");
+        ensureAudio();
+
+        await initAI();
+        await startCamera();
+        await requestWakeLock();
+
+        state.running=true;
+        $("stopBtn").disabled=false;
+        $("calibrateBtn").disabled=false;
+        updateSystem("MONITORAGGIO","ok");
+        toast("Monitoraggio attivo. Ora calibra il sistema.");
+
+        loop();
+      }catch(err){
+        console.error(err);
+        updateSystem("ERRORE","danger");
+        $("startBtn").disabled=false;
+        toast(err.message || "Errore durante l'avvio.");
+      }
+    }
+
+    async function stop(){
+      state.running=false;
+      state.calibrated=false;
+      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0};
+      $("calState").textContent="Non calibrato";
+
+      if(state.stream){
+        state.stream.getTracks().forEach(t=>t.stop());
+        state.stream=null;
+      }
+
+      await releaseWakeLock();
+
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      video.srcObject=null;
+
+      $("cameraState").textContent="Fotocamera inattiva";
+      $("fpsState").textContent="AI: -- fps";
+      $("startBtn").disabled=false;
+      $("stopBtn").disabled=true;
+      $("calibrateBtn").disabled=true;
+
+      setValue($("faceValue"),"--");
+      setValue($("eyesValue"),"--");
+      setValue($("headValue"),"--");
+      setValue($("gazeValue"),"--");
+
+      $("attentionScore").textContent="--%";
+      $("attentionBar").style.width="0%";
+
+      updateSystem("PRONTO","");
+      toast("Monitoraggio arrestato.");
+    }
+
+    async function calibrate(){
+      if(!state.running) return;
+
+      const overlay=$("calibOverlay");
+      const cd=$("countdown");
+      overlay.classList.add("show");
+
+      const samples=[];
+      let endAt=performance.now()+3400;
+
+      for(let n=3;n>=1;n--){
+        cd.textContent=n;
+        await new Promise(r=>setTimeout(r,800));
+      }
+
+      cd.textContent="●";
+
+      while(performance.now()<endAt+1600){
+        if(video.readyState>=2){
+          try{
+            const r=state.faceLandmarker.detectForVideo(video,performance.now());
+            if(r.faceLandmarks?.length){
+              samples.push(headMetrics(r.faceLandmarks[0]));
+            }
+          }catch{}
+        }
+        await new Promise(r=>setTimeout(r,70));
+      }
+
+      overlay.classList.remove("show");
+
+      if(samples.length<8){
+        toast("Calibrazione fallita: volto non rilevato bene.");
+        return;
+      }
+
+      const avg=key=>samples.reduce((s,x)=>s+x[key],0)/samples.length;
+      state.neutral={
+        yawProxy:avg("yawProxy"),
+        pitchProxy:avg("pitchProxy"),
+        rollProxy:avg("rollProxy")
+      };
+
+      state.calibrated=true;
+      $("calState").textContent="Calibrato";
+      toast("Calibrazione completata.");
+    }
+
+    function bindRange(id,out,format){
+      const el=$(id), o=$(out);
+      const update=()=>o.textContent=format(el.value);
+      el.addEventListener("input",update);
+      update();
+    }
+
+    bindRange("lookAwaySec","lookAwayOut",v=>Number(v).toFixed(1)+" s");
+    bindRange("eyesClosedSec","eyesClosedOut",v=>Number(v).toFixed(1)+" s");
+    bindRange("noFaceSec","noFaceOut",v=>Number(v).toFixed(1)+" s");
+    bindRange("headSensitivity","headSensitivityOut",v=>v+"%");
+
+    $("startBtn").addEventListener("click",start);
+    $("stopBtn").addEventListener("click",stop);
+    $("calibrateBtn").addEventListener("click",calibrate);
+    $("testAlarmBtn").addEventListener("click",()=>{
+      ensureAudio();
+      triggerAlarm("test","TEST ALLARME","GUARDA LA STRADA","⚠️");
+    });
+
+    window.addEventListener("resize",resizeCanvas);
+    window.addEventListener("orientationchange",()=>setTimeout(resizeCanvas,300));
+
+    window.addEventListener("beforeunload",()=>{
+      if(state.stream) state.stream.getTracks().forEach(t=>t.stop());
+    });
+
+    if(!window.isSecureContext){
+      $("secureHint").innerHTML =
+        "<b>Attenzione:</b> questa pagina non è in un contesto sicuro. Per usare la fotocamera su Android, pubblicala in HTTPS (per esempio GitHub Pages).";
+    }
+  </script>
+</body>
+</html>
