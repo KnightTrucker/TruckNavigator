@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.47';
+<script>window.KTN_APP_VERSION='0.0.70.48';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
 <script id="ktnPlannerBootstrap">
 (function(){
   'use strict';
-  window.KTN_STARTUP_VERSION='0.0.70.47';
+  window.KTN_STARTUP_VERSION='0.0.70.48';
   var q=new URLSearchParams(location.search);
   window.KTN_LAUNCH_MODE=String(q.get('mode')||sessionStorage.getItem('ktn_launch_mode')||'skip');
   window.__KTN_STARTUP_MODE__=window.KTN_LAUNCH_MODE;
@@ -100,7 +100,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.47 OBSERVER FIX</title>
+<title>KnightTruckerNavy - 0.0.70.48 GPS HANDOFF FIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
 
 
@@ -1666,7 +1666,7 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 <header class="app-header">
   <div class="brand">
     <img src="assets/ui/logo.png" class="brand-mark" alt="Emblema Z" id="brandVersionLogo" title="Mostra versione" loading="lazy" decoding="async">
-    <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3 · 0.70.47</span> <em>/ Rubrica</em></div>
+    <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3 · 0.70.48</span> <em>/ Rubrica</em></div>
   </div>
   <div id="fileStatus" class="file-status"></div>
   <div id="driveStatus" class="drive-status"></div>
@@ -7822,7 +7822,60 @@ function ktn53QuickBgClose(e){
   if(e&&e.target===ktn53Q('ktn53QuickOverlay'))ktn53CloseQuickNav();
 }
 
-function ktn53CurrentGps(){return new Promise(function(resolve,reject){try{var c=typeof window.ktnGattoGpsNow==='function'?window.ktnGattoGpsNow(20000):null;if(c){resolve({lat:+c.lat,lng:+c.lng,accuracy:+c.accuracy||0,label:'Posizione GPS corrente',nazione:''});return}if(typeof window.ktnGattoEnsureGps==='function')window.ktnGattoEnsureGps()}catch(e){}if(!navigator.geolocation){reject(new Error('GPS non disponibile su questo dispositivo.'));return}navigator.geolocation.getCurrentPosition(function(p){try{if(window.KTN_GATTO_GPS){KTN_GATTO_GPS.lat=+p.coords.latitude;KTN_GATTO_GPS.lng=+p.coords.longitude;KTN_GATTO_GPS.accuracy=+p.coords.accuracy||0;KTN_GATTO_GPS.at=Date.now()}}catch(e){}resolve({lat:+p.coords.latitude,lng:+p.coords.longitude,accuracy:+p.coords.accuracy||0,label:'Posizione GPS corrente',nazione:''})},function(err){reject(new Error(err&&err.code===1?'Permesso GPS negato.':'Non riesco a ottenere la posizione GPS corrente.'))},{enableHighAccuracy:true,timeout:20000,maximumAge:15000})})}
+function ktn53CurrentGps(){
+  return new Promise(function(resolve,reject){
+    var finished=false,watchId=null,hardTimer=null,best=null;
+    function saveFix(c){
+      try{
+        if(!c||!isFinite(c.latitude)||!isFinite(c.longitude))return;
+        var acc=isFinite(c.accuracy)?+c.accuracy:9999;
+        if(!best||acc<best.accuracy)best={lat:+c.latitude,lng:+c.longitude,accuracy:acc};
+        if(window.KTN_GATTO_GPS){KTN_GATTO_GPS.lat=+c.latitude;KTN_GATTO_GPS.lng=+c.longitude;KTN_GATTO_GPS.accuracy=acc;KTN_GATTO_GPS.at=Date.now();}
+      }catch(_e){}
+    }
+    function cleanup(){
+      try{if(watchId!==null)navigator.geolocation.clearWatch(watchId)}catch(_e){}
+      watchId=null;
+      if(hardTimer!==null){clearTimeout(hardTimer);hardTimer=null;}
+    }
+    function finishOk(fix){
+      if(finished)return;finished=true;cleanup();
+      resolve({lat:+fix.lat,lng:+fix.lng,accuracy:+fix.accuracy||0,label:'Posizione GPS corrente',nazione:''});
+    }
+    function finishErr(msg){if(finished)return;finished=true;cleanup();reject(new Error(msg));}
+
+    /* Use cache only when it is both recent and reasonably accurate. */
+    try{
+      var c=typeof window.ktnGattoGpsNow==='function'?window.ktnGattoGpsNow(5000):null;
+      if(c&&isFinite(c.lat)&&isFinite(c.lng)&&(+c.accuracy||9999)<=80){
+        finishOk({lat:+c.lat,lng:+c.lng,accuracy:+c.accuracy||0});return;
+      }
+    }catch(_e){}
+
+    if(!navigator.geolocation){finishErr('GPS non disponibile su questo dispositivo.');return;}
+    try{if(typeof window.__ktnLocateStop==='function')window.__ktnLocateStop()}catch(_e){}
+
+    hardTimer=setTimeout(function(){
+      if(best&&best.accuracy<=250)finishOk(best);
+      else if(best)finishErr('GPS troppo impreciso (±'+Math.round(best.accuracy)+' m). Attendi qualche secondo e riprova.');
+      else finishErr('Non riesco a ottenere la posizione GPS corrente.');
+    },6500);
+
+    try{
+      watchId=navigator.geolocation.watchPosition(function(p){
+        if(!p||!p.coords)return;
+        saveFix(p.coords);
+        var acc=isFinite(p.coords.accuracy)?+p.coords.accuracy:9999;
+        if(acc<=50&&best)finishOk(best);
+      },function(err){
+        if(best&&best.accuracy<=250){finishOk(best);return;}
+        if(err&&err.code===1)finishErr('Permesso GPS negato.');
+        else if(err&&err.code===2)finishErr('GPS non disponibile: prova in un punto più aperto.');
+        else finishErr('Non riesco a ottenere la posizione GPS corrente.');
+      },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    }catch(e){finishErr('Non riesco ad avviare il GPS.');}
+  });
+}
 
 function ktnBaseQuickResolveDestination(){
   if(ktn53QuickModeValue==='client'){
@@ -9068,14 +9121,28 @@ function ktn55CancelSearchChoice(){
   };
 
   /* Quick calculator replacement. */
-  window.ktn53QuickCalculate=function(){
-    ktn53QuickClearError();
-    Promise.all([ktn53CurrentGps(),ktn53ResolveQuickDestination()]).then(function(points){
-      var from=points[0],to=points[1];
-      ktn53ShowLoading(true);
+  function ktn53FetchQuickRoutes(from,to){
+    function once(){
       return Promise.all(['fastest','shortest','recommended'].map(function(p){
         return b10FetchSmart(from,to,[],p).catch(function(){return null});
-      })).then(function(rows){
+      }));
+    }
+    return once().then(function(rows){
+      if(rows.some(Boolean))return rows;
+      return new Promise(function(res){setTimeout(res,650)}).then(once);
+    }).then(function(rows){
+      if(rows.some(Boolean))return rows;
+      /* One final non-swallowed request gives the real ORS error instead of a generic message. */
+      return fetchRoute(from,to,[],'recommended','strict').then(function(r){return [null,null,r]});
+    });
+  }
+
+  window.ktn53QuickCalculate=function(){
+    ktn53QuickClearError();
+    ktn53ShowLoading(true);
+    Promise.all([ktn53CurrentGps(),ktn53ResolveQuickDestination()]).then(function(points){
+      var from=points[0],to=points[1];
+      return ktn53FetchQuickRoutes(from,to).then(function(rows){
         routes=rows.filter(Boolean);
         if(!routes.length)throw new Error('Nessun percorso HGV trovato.');
         var rec=routes.findIndex(function(r){return r.pref==='recommended'});selected=rec>=0?rec:0;

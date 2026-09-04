@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+<script>window.KTN_NAV_BUILD="0.70.48";</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>KnightTruckerNavy Professional Navigator v47.3 TOMTOM PRO TRAFFIC COLLAPSIBLE COMMAND GROUP</title>
@@ -5121,19 +5122,36 @@ setTimeout(function(){proDrivingFocus(true)},700);
    ktn00722RoadsideEngine is the sole camera data/projection owner. */
 
 
-var ktnGpsStartPending=false;
+var ktnGpsStartPending=false,ktnGpsStartTimer=null,ktnGpsStartSince=0;
 function ktnRequestGpsStart(){
+  window.__KTN_GPS_START_REQUESTED__=true;
   var g=window.KTN_NAV_RUNTIME&&window.KTN_NAV_RUNTIME.gps;
-  if(g&&g.ready&&typeof g.start==='function')return g.start();
-  if(ktnGpsStartPending)return null;
-  ktnGpsStartPending=true;
-  setTimeout(function(){
+  if(g&&g.ready&&typeof g.start==='function'){
     ktnGpsStartPending=false;
-    try{
-      var gg=window.KTN_NAV_RUNTIME&&window.KTN_NAV_RUNTIME.gps;
-      if(gg&&gg.ready&&typeof gg.start==='function')gg.start();
-    }catch(e){}
-  },0);
+    if(ktnGpsStartTimer!==null){clearTimeout(ktnGpsStartTimer);ktnGpsStartTimer=null;}
+    window.__KTN_GPS_START_REQUESTED__=false;
+    return g.start();
+  }
+  if(ktnGpsStartPending)return null;
+  ktnGpsStartPending=true;ktnGpsStartSince=Date.now();
+  (function waitRuntime(){
+    var gg=window.KTN_NAV_RUNTIME&&window.KTN_NAV_RUNTIME.gps;
+    if(gg&&gg.ready&&typeof gg.start==='function'){
+      ktnGpsStartPending=false;ktnGpsStartTimer=null;window.__KTN_GPS_START_REQUESTED__=false;
+      try{gg.start()}catch(e){
+        var lm=document.getElementById('loadingMsg');if(lm)lm.textContent='Errore avvio GPS: '+(e&&e.message?e.message:e);
+        var sb=document.getElementById('startBtn');if(sb){sb.style.display='block';sb.textContent='RIPROVA GPS';}
+      }
+      return;
+    }
+    if(Date.now()-ktnGpsStartSince>15000){
+      ktnGpsStartPending=false;ktnGpsStartTimer=null;
+      var lm=document.getElementById('loadingMsg');if(lm)lm.textContent='GPS non ancora inizializzato. Tocca per riprovare.';
+      var sb=document.getElementById('startBtn');if(sb){sb.style.display='block';sb.textContent='AVVIA GPS';}
+      return;
+    }
+    ktnGpsStartTimer=setTimeout(waitRuntime,60);
+  })();
   return null;
 }
 
