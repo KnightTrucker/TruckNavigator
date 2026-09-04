@@ -489,10 +489,10 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.6</small>
+        <small>Driver Attention Monitor · v1.7</small>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-        <div class="version-badge">VERSIONE 1.6</div>
+        <div class="version-badge">VERSIONE 1.7</div>
         <div class="pill" id="systemPill">
           <span class="dot" id="systemDot"></span>
           <span id="systemText">PRONTO</span>
@@ -512,7 +512,7 @@
         </div>
         <div class="camera-bottom">
           <span class="mini" id="fpsState">AI: -- fps</span>
-          <span class="mini" id="calState">Da calibrare</span>
+          <span class="mini" id="calState">Non calibrato</span>
           <span class="mini" id="headLive">Testa Δ: --</span>
           <span class="mini" id="objectAIState">Oggetti: --</span>
         </div>
@@ -571,6 +571,12 @@
             <label for="eyesClosedSec">Occhi chiusi prima dell'allarme</label>
             <output id="eyesClosedOut">1.2 s</output>
             <input id="eyesClosedSec" type="range" min="0.6" max="3.0" step="0.1" value="1.2">
+          </div>
+
+          <div class="range-row">
+            <label for="noFaceSec">Testa fuori inquadratura prima dell'allarme</label>
+            <output id="noFaceOut">1.4 s</output>
+            <input id="noFaceSec" type="range" min="0.8" max="5.0" step="0.1" value="1.4">
           </div>
 
           <div class="range-row">
@@ -649,7 +655,7 @@
       running: false,
       wakeLock: null,
       calibrated: false,
-      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0, leftEAR: 0, rightEAR: 0 },
+      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0 },
       timers: {
         noFace: null,
         eyesClosed: null,
@@ -670,24 +676,23 @@
       fpsWindowTs: performance.now(),
       currentAlarm: null,
       alarmCooldownUntil: 0,
+      alarmLatched: {
+        eyes: false,
+        down: false,
+        away: false,
+        tracking: false,
+        phone: false,
+        drink: false
+      },
       attention: 100,
       audioCtx: null,
-      voiceEnabled: true,
-      eyeFilter: { left: null, right: null },
-      eyesClosedLatched: false,
-      lastFaceSeenTs: 0,
-      lastFaceWasAway: false,
-      lastFaceWasDown: false,
-      lastFaceDirection: null,
-      lastFaceYawDelta: 0,
-      lastFacePitchDelta: 0,
-      everFaceSeen: false,
-      faceTrackingGraceMs: 2200
+      voiceEnabled: true
     };
 
     const settings = {
       get lookAwayMs(){ return Number($("lookAwaySec").value) * 1000; },
       get eyesClosedMs(){ return Number($("eyesClosedSec").value) * 1000; },
+      get noFaceMs(){ return Number($("noFaceSec").value) * 1000; },
       get headThreshold(){ return Number($("headSensitivity").value) / 100; },
       get phoneHeldMs(){ return Number($("phoneHeldSec").value) * 1000; },
       get drinkHeldMs(){ return Number($("drinkHeldSec").value) * 1000; }
@@ -747,20 +752,6 @@
 
     // Proxy geometrici robusti a camera laterale:
     // usiamo proporzioni relative del volto, poi la calibrazione sottrae la posizione neutra.
-    function eyeMetrics(lm){
-      return {
-        left: eyeAspectRatio(lm,159,160,145,144,33,133),
-        right: eyeAspectRatio(lm,386,385,374,380,362,263)
-      };
-    }
-
-    function median(values){
-      const a=values.filter(Number.isFinite).slice().sort((x,y)=>x-y);
-      if(!a.length) return 0;
-      const m=Math.floor(a.length/2);
-      return a.length%2 ? a[m] : (a[m-1]+a[m])/2;
-    }
-
     function headMetrics(lm){
       const leftEye = avgPoint(lm[33],lm[133]);
       const rightEye = avgPoint(lm[362],lm[263]);
@@ -835,9 +826,9 @@
         },
         runningMode:"VIDEO",
         numFaces:1,
-        minFaceDetectionConfidence:0.35,
-        minFacePresenceConfidence:0.35,
-        minTrackingConfidence:0.40,
+        minFaceDetectionConfidence:0.55,
+        minFacePresenceConfidence:0.55,
+        minTrackingConfidence:0.55,
         outputFaceBlendshapes:false,
         outputFacialTransformationMatrixes:false
       });
@@ -988,11 +979,11 @@
 
     function triggerAlarm(type,title,text,icon="⚠️"){
       const now=performance.now();
-      if(state.currentAlarm===type) return;
-      if(now < state.alarmCooldownUntil) return;
+      if(state.currentAlarm!==null) return false;
+      if(now < state.alarmCooldownUntil) return false;
 
       state.currentAlarm=type;
-      state.alarmCooldownUntil=now+2200;
+      state.alarmCooldownUntil=now+2300;
 
       $("alarmIcon").textContent=icon;
       $("alarmTitle").textContent=title;
@@ -1007,7 +998,20 @@
       triggerAlarm._t=setTimeout(()=>{
         $("alarmOverlay").classList.remove("show");
         state.currentAlarm=null;
-      },2200);
+      },2100);
+
+      return true;
+    }
+
+    function alarmOnce(type,title,text,icon="⚠️"){
+      if(state.alarmLatched[type]) return false;
+      const fired=triggerAlarm(type,title,text,icon);
+      if(fired) state.alarmLatched[type]=true;
+      return fired;
+    }
+
+    function resetAlarm(type){
+      state.alarmLatched[type]=false;
     }
 
     function pointInsideBox(point, box, margin=0){
@@ -1074,13 +1078,16 @@
         const phoneFor=setTimer("phoneHeld",phoneHeld);
         const drinkFor=setTimer("drinkHeld",!phoneHeld && drinkHeld);
 
+        if(!phoneHeld) resetAlarm("phone");
+        if(!drinkHeld) resetAlarm("drink");
+
         if(phoneHeld){
           state.objectRisk=35;
           state.objectLabel="TELEFONO IN MANO";
           setValue($("objectValue"),"📱 IN MANO","danger");
           $("objectAIState").textContent=`Oggetti: telefono + mano${bestScore ? ` · ${Math.round(bestScore*100)}%` : ""}`;
           if(phoneFor>=settings.phoneHeldMs){
-            triggerAlarm("phone","TELEFONO","POSA IL TELEFONO","📱");
+            alarmOnce("phone","TELEFONO","POSA IL TELEFONO","📱");
           }
         }else if(drinkHeld){
           state.objectRisk=12;
@@ -1088,7 +1095,7 @@
           setValue($("objectValue"),"🥤 IN MANO","warn");
           $("objectAIState").textContent="Oggetti: bottiglia/tazza + mano";
           if(drinkFor>=settings.drinkHeldMs){
-            triggerAlarm("drink","ATTENZIONE","GUARDA LA STRADA","🥤");
+            alarmOnce("drink","ATTENZIONE","GUARDA LA STRADA","🥤");
           }
         }else if(phoneVisible){
           state.objectRisk=0;
@@ -1163,7 +1170,9 @@
     }
 
     function processFace(lm){
-      const em=eyeMetrics(lm);
+      const leftEAR = eyeAspectRatio(lm,159,160,145,144,33,133);
+      const rightEAR = eyeAspectRatio(lm,386,385,374,380,362,263);
+
       const hm=headMetrics(lm);
       const gm=gazeMetrics(lm);
 
@@ -1172,109 +1181,51 @@
       const droll = state.calibrated ? hm.rollProxy-state.neutral.rollProxy : 0;
 
       const sensitivity=settings.headThreshold;
+
+      // Logica semplice delle prime versioni:
+      // direzione e testa bassa vengono determinate SOLO dal frame corrente.
       const headTurned = state.calibrated && Math.abs(dyaw) > sensitivity;
-      const headDown = state.calibrated && dpitch > 0.085;
-      const headAway = headTurned || headDown || Math.abs(droll) > 0.38;
+      const headDown = state.calibrated && dpitch > 0.11;
+      const headTilted = state.calibrated && Math.abs(droll) > 0.40;
+      const headAway = headTurned || headDown || headTilted;
 
-      // Memoria dell'ultimo volto valido. Serve quando il modello perde
-      // temporaneamente il tracking con testa molto girata o abbassata.
-      state.lastFaceSeenTs = performance.now();
-      state.everFaceSeen = true;
-      state.lastFaceYawDelta = dyaw;
-      state.lastFacePitchDelta = dpitch;
+      const gazeAway = state.calibrated &&
+        (Math.abs(gm.horizontal) > 0.30 || gm.vertical > 0.36);
 
-      // Memorizziamo il movimento PRIMA che raggiunga la soglia piena:
-      // se MediaPipe perde il volto durante la rotazione, sappiamo comunque
-      // in quale direzione stava andando la testa.
-      const turningEarly = state.calibrated && Math.abs(dyaw) > Math.max(0.028, sensitivity * 0.42);
-      const downEarly = state.calibrated && dpitch > 0.050;
+      // Occhi: entrambi devono risultare realmente chiusi.
+      // Inoltre il controllo occhi è sospeso quando la testa è girata/abbassata,
+      // perché l'occhio più lontano dalla camera può sembrare chiuso.
+      const bothEyesClosed =
+        state.calibrated &&
+        !headAway &&
+        leftEAR < 0.125 &&
+        rightEAR < 0.125;
 
-      state.lastFaceWasAway = headAway || turningEarly || downEarly;
-      state.lastFaceWasDown = headDown || downEarly;
-      state.lastFaceDirection = turningEarly
-        ? (dyaw < 0 ? "DESTRA" : "SINISTRA")
-        : null;
-
-      // Lo sguardo puro resta meno aggressivo della rotazione testa.
-      const gazeAway = Math.abs(gm.horizontal) > 0.28 || gm.vertical > 0.34;
-
-      // --- OCCHI v1.4 ---
-      // La soglia non è più assoluta: confrontiamo ogni occhio con quanto
-      // misurato durante CALIBRA. Questo compensa distanza, angolo del telefono,
-      // conformazione del viso, occhiali e illuminazione.
-      let eyesClosed=false;
-      let eyesVisiblyClosed=false;
-
-      if(state.calibrated && state.neutral.leftEAR>0 && state.neutral.rightEAR>0){
-        const rawLeft = em.left / state.neutral.leftEAR;
-        const rawRight = em.right / state.neutral.rightEAR;
-
-        // Filtro esponenziale: elimina i picchi di un singolo fotogramma.
-        const alpha=0.28;
-        state.eyeFilter.left = state.eyeFilter.left==null
-          ? rawLeft
-          : state.eyeFilter.left + alpha*(rawLeft-state.eyeFilter.left);
-        state.eyeFilter.right = state.eyeFilter.right==null
-          ? rawRight
-          : state.eyeFilter.right + alpha*(rawRight-state.eyeFilter.right);
-
-        // Se la testa è girata/abbassata, non giudichiamo gli occhi:
-        // la prospettiva può far sembrare chiuso l'occhio più lontano.
-        const eyeGeometryReliable =
-          !headAway &&
-          Math.abs(dyaw) < sensitivity*1.15 &&
-          Math.abs(droll) < 0.28;
-
-        if(!eyeGeometryReliable){
-          state.eyesClosedLatched=false;
-        }else{
-          const closeNow =
-            state.eyeFilter.left < 0.50 &&
-            state.eyeFilter.right < 0.50;
-
-          const clearlyOpen =
-            state.eyeFilter.left > 0.66 &&
-            state.eyeFilter.right > 0.66;
-
-          // Isteresi: serve una chiusura netta per entrare nello stato CHIUSI
-          // e una riapertura netta per uscirne.
-          if(!state.eyesClosedLatched && closeNow){
-            state.eyesClosedLatched=true;
-          }else if(state.eyesClosedLatched && clearlyOpen){
-            state.eyesClosedLatched=false;
-          }
-        }
-
-        eyesClosed = state.eyesClosedLatched;
-      }else{
-        // Prima della calibrazione niente allarmi occhi: evitiamo soglie arbitrarie.
-        state.eyesClosedLatched=false;
-        state.eyeFilter.left=null;
-        state.eyeFilter.right=null;
-      }
-
-      const eyesClosedFor=setTimer("eyesClosed",eyesClosed);
-      eyesVisiblyClosed = eyesClosedFor >= 350;
-
+      const eyesClosedFor=setTimer("eyesClosed",bothEyesClosed);
       const lookAwayFor=setTimer("lookAway",state.calibrated && (headAway || gazeAway));
       const headDownFor=setTimer("headDown",state.calibrated && headDown);
+
+      // Il volto è tornato: azzera immediatamente la perdita inquadratura.
       setTimer("noFace",false);
+      resetAlarm("tracking");
+
+      if(!bothEyesClosed) resetAlarm("eyes");
+      if(!headDown) resetAlarm("down");
+      if(!(headAway || gazeAway)) resetAlarm("away");
 
       setValue($("faceValue"),"OK","ok");
 
-      if(!state.calibrated){
-        setValue($("eyesValue"),"IN ATTESA","neutral");
-      }else{
-        setValue(
-          $("eyesValue"),
-          eyesVisiblyClosed ? "CHIUSI" : "APERTI",
-          eyesVisiblyClosed ? "danger" : "ok"
-        );
-      }
+      const eyesVisiblyClosed = eyesClosedFor >= 320;
+      setValue(
+        $("eyesValue"),
+        eyesVisiblyClosed ? "CHIUSI" : "APERTI",
+        eyesVisiblyClosed ? "danger" : "ok"
+      );
 
       if(state.calibrated){
         const deltaPct=(Math.abs(dyaw)*100).toFixed(1);
-        $("headLive").textContent=`Testa Δ: ${deltaPct}% · soglia ${(sensitivity*100).toFixed(0)}%`;
+        $("headLive").textContent=
+          `Testa Δ: ${deltaPct}% · soglia ${(sensitivity*100).toFixed(0)}%`;
       }else{
         $("headLive").textContent="Testa Δ: --";
       }
@@ -1282,13 +1233,24 @@
       if(headDown){
         setValue($("headValue"),"BASSA","danger");
       }else if(headTurned){
+        // Fotocamera frontale specchiata: verso corretto per il conducente.
         const direction = dyaw < 0 ? "DESTRA" : "SINISTRA";
         setValue($("headValue"),direction,"warn");
+      }else if(headTilted){
+        setValue($("headValue"),"INCLINATA","warn");
       }else{
-        setValue($("headValue"),state.calibrated?"OK":"IN ATTESA",state.calibrated?"ok":"neutral");
+        setValue(
+          $("headValue"),
+          state.calibrated ? "OK" : "CALIBRA",
+          state.calibrated ? "ok" : "neutral"
+        );
       }
 
-      setValue($("gazeValue"),gazeAway?"FUORI":"AVANTI",gazeAway?"warn":"ok");
+      setValue(
+        $("gazeValue"),
+        gazeAway ? "FUORI" : "AVANTI",
+        gazeAway ? "warn" : "ok"
+      );
 
       updateAttention({
         faceOk:true,
@@ -1297,85 +1259,41 @@
         gazeAway
       });
 
-      // L'allarme occhi parte solo se:
-      // 1) entrambi gli occhi risultano realmente chiusi;
-      // 2) la geometria del volto è affidabile;
-      // 3) la condizione dura oltre il tempo impostato.
+      // Priorità: occhi -> testa bassa -> testa/sguardo.
+      // Ogni allarme suona UNA SOLA VOLTA finché non torni in condizione normale.
       if(eyesClosedFor >= settings.eyesClosedMs){
-        triggerAlarm("eyes","ATTENZIONE","APRI GLI OCCHI","😴");
-      }else if(headDownFor >= Math.min(settings.lookAwayMs,1500)){
-        triggerAlarm("down","ATTENZIONE","GUARDA LA STRADA","📱");
+        alarmOnce("eyes","ATTENZIONE","APRI GLI OCCHI","😴");
+      }else if(headDownFor >= Math.min(settings.lookAwayMs,1300)){
+        alarmOnce("down","ATTENZIONE","GUARDA LA STRADA","📱");
       }else if(lookAwayFor >= settings.lookAwayMs){
-        triggerAlarm("away","ATTENZIONE","GUARDA LA STRADA","👀");
+        alarmOnce("away","ATTENZIONE","GUARDA LA STRADA","👀");
       }
     }
     function processNoFace(){
-      const now=performance.now();
-      const sinceLastFace = state.lastFaceSeenTs
-        ? now-state.lastFaceSeenTs
-        : Number.POSITIVE_INFINITY;
+      // Nessuna deduzione artificiale sulla direzione:
+      // se il landmarker perde il volto mentre giri/abbassi la testa,
+      // consideriamo semplicemente che la testa è fuori dall'angolo utile.
+      const lostFor=setTimer("noFace",true);
 
-      // OCCHI: quando non abbiamo landmark affidabili, nessun giudizio.
-      setValue($("eyesValue"),"--","neutral");
+      // Se l'allarme testa/sguardo era già stato emesso nello stesso episodio,
+      // la perdita dei landmark non deve produrre un secondo "GUARDA LA STRADA".
+      if(state.alarmLatched.away || state.alarmLatched.down){
+        state.alarmLatched.tracking=true;
+      }
+
       setTimer("eyesClosed",false);
-      state.eyesClosedLatched=false;
-      state.eyeFilter.left=null;
-      state.eyeFilter.right=null;
+      setTimer("lookAway",false);
+      setTimer("headDown",false);
+
+      resetAlarm("eyes");
+      resetAlarm("down");
+      resetAlarm("away");
+
+      setValue($("faceValue"),"PARZIALE","warn");
+      setValue($("eyesValue"),"--","neutral");
+      setValue($("headValue"),"FUORI ANGOLO","warn");
       setValue($("gazeValue"),"--","neutral");
-
-      // Se non abbiamo ancora visto il conducente dall'avvio, non facciamo
-      // alcun allarme: chiediamo semplicemente di entrare nell'inquadratura.
-      if(!state.everFaceSeen){
-        setValue($("faceValue"),"INQUADRA","warn");
-        setValue($("headValue"),"--","neutral");
-        $("headLive").textContent="Inquadra il volto e poi calibra";
-        setTimer("lookAway",false);
-        setTimer("headDown",false);
-        setTimer("noFace",false);
-        updateAttention({
-          faceOk:false,
-          eyesOpen:true,
-          headAway:false,
-          gazeAway:false
-        });
-        return;
-      }
-
-      // REGOLA v1.6:
-      // dopo che il volto è stato riconosciuto, una perdita di landmark NON
-      // diventa più "VOLTO NON TROVATO". Con testa girata o abbassata MediaPipe
-      // può perdere il viso pur essendo ancora perfettamente davanti alla camera.
-      //
-      // La perdita viene quindi interpretata come TESTA FUORI CAMPO / distrazione
-      // e continua il timer "GUARDA LA STRADA".
-      setValue($("faceValue"),"OK","ok");
-
-      const likelyDown =
-        state.lastFaceWasDown ||
-        state.lastFacePitchDelta > 0.050;
-
-      const likelyDirection =
-        state.lastFaceDirection ||
-        (Math.abs(state.lastFaceYawDelta) > 0.028
-          ? (state.lastFaceYawDelta < 0 ? "DESTRA" : "SINISTRA")
-          : null);
-
-      if(likelyDown){
-        setValue($("headValue"),"BASSA","warn");
-        $("headLive").textContent="Testa abbassata · tracking parziale";
-      }else if(likelyDirection){
-        setValue($("headValue"),likelyDirection,"warn");
-        $("headLive").textContent=`Testa ${likelyDirection.toLowerCase()} · tracking parziale`;
-      }else{
-        setValue($("headValue"),"FUORI CAMPO","warn");
-        $("headLive").textContent="Testa fuori dall'angolo ottimale";
-      }
-
-      // Qualunque perdita prolungata DOPO un volto valido è una distrazione:
-      // nessuna voce "ricerca", nessun allarme "volto non visibile".
-      const awayFor=setTimer("lookAway",true);
-      const downFor=setTimer("headDown",likelyDown);
-      setTimer("noFace",false);
+      $("headLive").textContent="Testa fuori dall'angolo della camera";
 
       updateAttention({
         faceOk:true,
@@ -1384,10 +1302,11 @@
         gazeAway:false
       });
 
-      if(downFor >= Math.min(settings.lookAwayMs,1300)){
-        triggerAlarm("down","ATTENZIONE","GUARDA LA STRADA","📱");
-      }else if(awayFor >= settings.lookAwayMs){
-        triggerAlarm("away","ATTENZIONE","GUARDA LA STRADA","👀");
+      // Non pronuncia mai "volto non trovato".
+      // Se perdiamo l'inquadratura abbastanza a lungo, l'unico messaggio è
+      // quello utile alla guida: GUARDA LA STRADA, una sola volta.
+      if(lostFor >= settings.noFaceMs){
+        alarmOnce("tracking","ATTENZIONE","GUARDA LA STRADA","👀");
       }
     }
     async function loop(){
@@ -1444,13 +1363,10 @@
         await requestWakeLock();
 
         state.running=true;
-        state.lastFaceSeenTs=0;
-        state.lastFaceWasAway=false;
-        state.lastFaceWasDown=false;
-        state.lastFaceDirection=null;
-        state.lastFaceYawDelta=0;
-        state.lastFacePitchDelta=0;
-        state.everFaceSeen=false;
+        Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
+        Object.keys(state.timers).forEach(k=>state.timers[k]=null);
+        state.currentAlarm=null;
+        state.alarmCooldownUntil=0;
         $("stopBtn").disabled=false;
         $("calibrateBtn").disabled=false;
         updateSystem("MONITORAGGIO","ok");
@@ -1467,19 +1383,16 @@
 
     async function stop(){
       state.running=false;
+      window.speechSynthesis?.cancel?.();
+      $("alarmOverlay").classList.remove("show");
+      clearTimeout(triggerAlarm._t);
+      state.currentAlarm=null;
+      state.alarmCooldownUntil=0;
+      Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
+      Object.keys(state.timers).forEach(k=>state.timers[k]=null);
       state.calibrated=false;
-      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0,leftEAR:0,rightEAR:0};
-      state.eyeFilter.left=null;
-      state.eyeFilter.right=null;
-      state.eyesClosedLatched=false;
-      state.lastFaceSeenTs=0;
-      state.lastFaceWasAway=false;
-      state.lastFaceWasDown=false;
-      state.lastFaceDirection=null;
-      state.lastFaceYawDelta=0;
-      state.lastFacePitchDelta=0;
-      state.everFaceSeen=false;
-      $("calState").textContent="Da calibrare";
+      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0};
+      $("calState").textContent="Non calibrato";
 
       if(state.stream){
         state.stream.getTracks().forEach(t=>t.stop());
@@ -1540,10 +1453,7 @@
           try{
             const r=state.faceLandmarker.detectForVideo(video,performance.now());
             if(r.faceLandmarks?.length){
-              const lm=r.faceLandmarks[0];
-              const h=headMetrics(lm);
-              const e=eyeMetrics(lm);
-              samples.push({...h,leftEAR:e.left,rightEAR:e.right});
+              samples.push(headMetrics(r.faceLandmarks[0]));
             }
           }catch{}
         }
@@ -1561,21 +1471,9 @@
       state.neutral={
         yawProxy:avg("yawProxy"),
         pitchProxy:avg("pitchProxy"),
-        rollProxy:avg("rollProxy"),
-        leftEAR:median(samples.map(x=>x.leftEAR)),
-        rightEAR:median(samples.map(x=>x.rightEAR))
+        rollProxy:avg("rollProxy")
       };
 
-      // Se durante la calibrazione gli occhi non sono stati rilevati in modo
-      // affidabile, non attiviamo il controllo occhi.
-      if(state.neutral.leftEAR<=0 || state.neutral.rightEAR<=0){
-        toast("Calibrazione occhi non valida: riprova guardando diritto.");
-        return;
-      }
-
-      state.eyeFilter.left=null;
-      state.eyeFilter.right=null;
-      state.eyesClosedLatched=false;
       state.calibrated=true;
       $("calState").textContent="Calibrato";
       toast("Posizione di guida calibrata.");
@@ -1590,6 +1488,7 @@
 
     bindRange("lookAwaySec","lookAwayOut",v=>Number(v).toFixed(1)+" s");
     bindRange("eyesClosedSec","eyesClosedOut",v=>Number(v).toFixed(1)+" s");
+    bindRange("noFaceSec","noFaceOut",v=>Number(v).toFixed(1)+" s");
     bindRange("headSensitivity","headSensitivityOut",v=>v+"%");
     bindRange("phoneHeldSec","phoneHeldOut",v=>Number(v).toFixed(1)+" s");
     bindRange("drinkHeldSec","drinkHeldOut",v=>Number(v).toFixed(1)+" s");
