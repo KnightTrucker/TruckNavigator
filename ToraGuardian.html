@@ -489,10 +489,10 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.9</small>
+        <small>Driver Attention Monitor · v1.10</small>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-        <div class="version-badge">VERSIONE 1.9</div>
+        <div class="version-badge">VERSIONE 1.10</div>
         <div class="pill" id="systemPill">
           <span class="dot" id="systemDot"></span>
           <span id="systemText">PRONTO</span>
@@ -673,7 +673,7 @@
       lastVideoTime: -1,
       lastFrameTs: 0,
       lastObjectScanTs: 0,
-      objectScanIntervalMs: 350,
+      objectScanIntervalMs: 1000,
       lastObjectDetections: [],
       lastHands: [],
       objectRisk: 0,
@@ -1289,6 +1289,8 @@
         $("headLive").textContent="Premi CALIBRA POSIZIONE";
         $("attentionScore").textContent="--%";
         $("attentionBar").style.width="0%";
+        setValue($("objectValue"),"IN ATTESA","neutral");
+        $("objectAIState").textContent="Oggetti: si attivano dopo la calibrazione";
         return;
       }
 
@@ -1379,6 +1381,8 @@
         $("headLive").textContent="Premi CALIBRA POSIZIONE";
         $("attentionScore").textContent="--%";
         $("attentionBar").style.width="0%";
+        setValue($("objectValue"),"IN ATTESA","neutral");
+        $("objectAIState").textContent="Oggetti: si attivano dopo la calibrazione";
         return;
       }
 
@@ -1430,7 +1434,11 @@
 
           const now=performance.now();
 
-          if(now-state.lastObjectScanTs >= state.objectScanIntervalMs){
+          // Prima della calibrazione dedichiamo tutta la potenza al volto.
+          // Hand/Object detector sono pesanti e sul telefono possono far scendere
+          // il monitoraggio a circa 1 fps.
+          if(state.calibrationReady &&
+             now-state.lastObjectScanTs >= state.objectScanIntervalMs){
             state.lastObjectScanTs=now;
             processObjects(now);
           }
@@ -1480,6 +1488,9 @@
         state.calibrating=false;
         state.latestFaceMetrics=null;
         state.latestFaceMetricsTs=0;
+        state.lastObjectScanTs=0;
+        state.lastObjectDetections=[];
+        state.lastHands=[];
         Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
         Object.keys(state.timers).forEach(k=>state.timers[k]=null);
         state.currentAlarm=null;
@@ -1559,10 +1570,14 @@
       state.calibrated=false;
       state.calibrationReady=false;
 
-      // Durante la calibrazione tutto resta completamente muto.
+      // In calibrazione: volto soltanto. Oggetti completamente spenti.
       Object.keys(state.timers).forEach(k=>state.timers[k]=null);
       Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
       state.currentAlarm=null;
+      state.lastObjectDetections=[];
+      state.lastHands=[];
+      state.objectRisk=0;
+      state.objectLabel=null;
       $("alarmOverlay").classList.remove("show");
       window.speechSynthesis?.cancel?.();
 
@@ -1572,10 +1587,12 @@
 
       btn.disabled=true;
       $("calState").textContent="CALIBRAZIONE...";
+      $("objectAIState").textContent="Oggetti: sospesi durante la calibrazione";
+      setValue($("objectValue"),"IN ATTESA","neutral");
       overlay.classList.add("show");
 
       try{
-        // Prima dai il tempo al conducente di tornare nella posizione normale.
+        // 3 secondi per mettersi nella posizione normale di guida.
         for(let n=3;n>=1;n--){
           cd.textContent=n;
           await new Promise(r=>setTimeout(r,850));
@@ -1584,74 +1601,88 @@
         cd.textContent="●";
         const samples=[];
         let lastSampleTs=0;
-        const collectUntil=performance.now()+2200;
 
-        // Usiamo i landmark già calcolati dal loop principale.
+        // Finestra più lunga: funziona anche su telefoni lenti.
+        const collectUntil=performance.now()+3200;
+
         while(performance.now()<collectUntil){
           const sample=state.latestFaceMetrics;
           const ts=state.latestFaceMetricsTs;
 
-          // Accetta solo campioni nuovi e recenti.
-          if(sample && ts>lastSampleTs && performance.now()-ts<300){
+          // A 1 fps un campione può avere quasi 1 secondo:
+          // accettiamo dati recenti fino a 1.4 s.
+          if(sample && ts>lastSampleTs && performance.now()-ts<1400){
             samples.push({...sample});
             lastSampleTs=ts;
           }
 
-          await new Promise(r=>setTimeout(r,45));
+          await new Promise(r=>setTimeout(r,70));
         }
 
-        if(samples.length<12){
+        // Se il volto è ancora visibile, anche 2 campioni sono sufficienti:
+        // la calibrazione serve a stabilire una posizione neutra, non a fare
+        // una misura medica di precisione.
+        const latestFresh =
+          state.latestFaceMetrics &&
+          performance.now()-state.latestFaceMetricsTs < 1600;
+
+        if(samples.length<2 && latestFresh){
+          samples.push({...state.latestFaceMetrics});
+        }
+
+        if(samples.length<2){
           state.calibrated=false;
           state.calibrationReady=false;
           $("calState").textContent="RIPETI CALIBRAZIONE";
           cd.textContent="✕";
-          toast("Calibrazione non riuscita: tieni il volto visibile e riprova.");
-          await new Promise(r=>setTimeout(r,700));
+          toast("Non riesco a leggere il volto con continuità. Riprova senza muovere il telefono.");
+          await new Promise(r=>setTimeout(r,750));
           return;
         }
 
-        // Media robusta: eliminiamo il 15% dei valori estremi per ogni misura.
-        const trimmedMean=key=>{
+        const robustMean=key=>{
           const a=samples
             .map(s=>s[key])
             .filter(Number.isFinite)
             .sort((x,y)=>x-y);
 
           if(!a.length) return 0;
+          if(a.length<5) return a.reduce((sum,v)=>sum+v,0)/a.length;
+
           const cut=Math.floor(a.length*0.15);
-          const b=a.slice(cut, Math.max(cut+1,a.length-cut));
+          const b=a.slice(cut,a.length-cut);
           return b.reduce((sum,v)=>sum+v,0)/b.length;
         };
 
         state.neutral={
-          yawProxy:trimmedMean("yawProxy"),
-          pitchProxy:trimmedMean("pitchProxy"),
-          rollProxy:trimmedMean("rollProxy"),
-          noseY:trimmedMean("noseY")
+          yawProxy:robustMean("yawProxy"),
+          pitchProxy:robustMean("pitchProxy"),
+          rollProxy:robustMean("rollProxy"),
+          noseY:robustMean("noseY")
         };
 
-        // SOLO QUI la calibrazione diventa realmente valida.
         state.calibrated=true;
         state.calibrationReady=true;
 
-        // Tutto riparte da zero dopo la calibrazione.
+        // Da questo momento, e solo da questo momento, attiviamo anche oggetti.
+        state.lastObjectScanTs=performance.now();
         Object.keys(state.timers).forEach(k=>state.timers[k]=null);
         Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
         state.currentAlarm=null;
-        state.alarmCooldownUntil=performance.now()+700;
+        state.alarmCooldownUntil=performance.now()+900;
 
         $("calState").textContent="CALIBRATO";
+        $("objectAIState").textContent="Oggetti: attivi";
         cd.textContent="✓";
-        toast(`Posizione calibrata correttamente (${samples.length} campioni).`);
+        toast(`CALIBRATO · ${samples.length} campioni validi`);
 
-        await new Promise(r=>setTimeout(r,650));
+        await new Promise(r=>setTimeout(r,700));
       }finally{
         overlay.classList.remove("show");
         state.calibrating=false;
         btn.disabled=!state.running;
       }
     }
-
     function bindRange(id,out,format){
       const el=$(id), o=$(out);
       const update=()=>o.textContent=format(el.value);

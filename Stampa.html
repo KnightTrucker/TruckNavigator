@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#06101A">
-<title>Stampa · v1.8.11</title>
+<title>Stampa · v1.8.12</title>
 <style>
 :root{--bg:#020b13;--panel:#041827;--line:#0d5b91;--text:#eef6ff;--muted:#9aaabd;--blue:#2389ff;--green:#53c82f;--yellow:#ffc400;--red:#ff4242}
 *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
@@ -130,12 +130,26 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
  .dirtyLevel{margin-top:12px;padding-top:9px}
 }
 
+
+
+/* v1.8.12 — pannello riferimenti normativi */
+.lawPanel{padding:0;overflow:hidden}
+.lawPanel summary{list-style:none;cursor:pointer;padding:16px 18px;font-size:18px;font-weight:950;color:#dcecff;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lawPanel summary::-webkit-details-marker{display:none}
+.lawPanel summary::after{content:'+';font-size:26px;color:var(--blue);line-height:1}
+.lawPanel[open] summary::after{content:'−'}
+.lawBody{padding:0 18px 16px;border-top:1px solid rgba(31,137,220,.35);color:#c6d3de;font-size:13px;line-height:1.5}
+.lawBody h4{margin:14px 0 5px;color:#6bb6ff;font-size:14px}
+.lawBody b{color:#eef6ff}
+.lawNote{margin-top:12px;padding:10px 12px;border:1px solid #7f6a18;border-radius:9px;background:#251f06;color:#f4d76b}
+@media(max-width:700px){.lawPanel summary{font-size:16px;padding:14px}.lawBody{padding:0 14px 14px;font-size:12px}}
+
 </style>
 </head>
 <body>
 <div class="app">
   <section class="panel head">
-    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.10</div></div>
+    <div><div class="title">Stampa</div><div class="sub">DTCO · LETTURA GIORNALIERA CONDUCENTE · v1.8.12</div></div>
     <div id="connPill" class="pill">SCOLLEGATO</div>
   </section>
 
@@ -198,6 +212,29 @@ main,.wrap,.panel,.print,#printArea{max-width:100%;box-sizing:border-box}
     <div id="dirtyResult" style="display:none;margin-top:14px"></div>
   </section>
 
+  <details class="panel lawPanel" id="lawPanel">
+    <summary>LEGGI E REGOLAMENTI DI RIFERIMENTO</summary>
+    <div class="lawBody">
+      <h4>Regolamento (CE) n. 561/2006</h4>
+      <div><b>Art. 6</b> — guida giornaliera 9h, estendibile a 10h non più di due volte nella settimana; massimo 56h di guida settimanale e 90h complessive in due settimane consecutive.</div>
+      <div><b>Art. 7</b> — interruzione dopo 4h30 di guida: almeno 45 minuti, oppure 15 + 30 minuti nell'ordine previsto.</div>
+      <div><b>Art. 8</b> — riposi giornalieri e settimanali, riposi ridotti e relative compensazioni.</div>
+      <div><b>Art. 12</b> — deroghe eccezionali: la sola carta non consente di stabilire automaticamente se la deroga sia giustificata.</div>
+
+      <h4>Regolamento (UE) n. 165/2014 sul tachigrafo</h4>
+      <div><b>Art. 34</b> — uso della carta del conducente e registrazione delle attività.</div>
+      <div><b>Art. 36</b> — documentazione controllabile: giorno corrente e 56 giorni precedenti. Per questo “Scheda sporca?” analizza 57 giorni di calendario complessivi.</div>
+
+      <h4>Pacchetto Mobilità I</h4>
+      <div><b>Regolamento (UE) 2020/1054</b> — modifica i regolamenti 561/2006 e 165/2014, comprese varie regole su riposi e controlli tachigrafici.</div>
+
+      <h4>Classificazione delle infrazioni</h4>
+      <div><b>Direttiva 2006/22/CE, Allegato III</b>, come sostituito dalla <b>Direttiva delegata (UE) 2024/846</b> — livelli di gravità e codici utilizzati nella sezione “Scheda sporca?”.</div>
+
+      <div class="lawNote"><b>Nota:</b> Stampa esegue un controllo automatico sui dati disponibili nella carta. Non sostituisce un controllo ufficiale e non può verificare elementi esterni ai dati tachigrafici, come la motivazione di una deroga o documenti giustificativi.</div>
+    </div>
+  </details>
+
   <section class="panel" id="pdfExportPanel">
     <div class="actions" style="grid-template-columns:1fr 1fr">
       <button id="exportErrorsPdfBtn" class="btn">ESPORTA ERRORI PDF</button>
@@ -220,9 +257,12 @@ let device,server;
 let dfifo,dcred,dtx=0,dBusy=false,dExp=0,dGot=0,dBuf=[],dWait=null;
 let lfifo,lcred,ltx=0,lBusy=false,lExp=0,lGot=0,lBuf=[],lWait=null;
 let stage='idle',driverName='—',targetDate='',rawBlocks=[],downloadData=[],cardBytes=[],lastMsgCounter=-1,cardComplete=false,cardStartedAt=0,cardSource='',partialUpdate=false,baseCardBytes=[],streamScanFrom=0,updatedActivity=false,updatedEFs=new Set(),partialLastRelevantSeen=false,archiveDirty=false,openedFileName='';
+let liveDailyDriveMin=null,liveTotalKm=null,liveActivityCode=null,liveActivityDurationMin=null,liveDiagUpdatedAt=0;
 const $=id=>document.getElementById(id);
 function log(m){console.log(`[${new Date().toLocaleTimeString('it-IT')}] ${m}`)}
 function hex(a){return Array.from(a).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ')}
+function romeTodayISO(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),g=k=>(p.find(x=>x.type===k)||{}).value||'';return `${g('year')}-${g('month')}-${g('day')}`}
+function formatKm1(v){return Number.isFinite(Number(v))?Number(v).toFixed(1).replace('.',','):'—'}
 function setStatus(t,c=''){$('status').textContent=t;$('status').className='status '+c}
 function setArchiveDirty(v,msg=''){
  archiveDirty=!!v;
@@ -283,10 +323,19 @@ async function dRx(e){
  else if(dExp>1&&num===dGot+1){dGot++;dBuf.push(...a.slice(2))}
  if(dExp&&dGot>=dExp){
    clearTimeout(dWait);dBusy=false;const m=dBuf.slice();dExp=dGot=0;dBuf=[];
-   if(m[0]===0x62){const did=(m[1]<<8)|m[2],data=m.slice(3);if(did===0xF931)driverName=decodeName(data)}
+   if(m[0]===0x62){
+     const did=(m[1]<<8)|m[2],data=m.slice(3);
+     if(did===0xF931)driverName=decodeName(data);
+     else if(did===0xF903&&data.length>=1){liveActivityCode=data[0]&7;liveDiagUpdatedAt=Date.now();log('LIVE F903 attività '+liveActivityCode)}
+     else if(did===0xF927&&data.length>=2){liveActivityDurationMin=be16(data,0);liveDiagUpdatedAt=Date.now();log('LIVE F927 durata attività '+durationText(liveActivityDurationMin))}
+     else if(did===0xF99A&&data.length>=2){liveDailyDriveMin=be16(data,0);liveDiagUpdatedAt=Date.now();log('LIVE F99A guida giornaliera '+durationText(liveDailyDriveMin))}
+     else if(did===0xF912&&data.length>=4){liveTotalKm=be32(data,0)*0.005;liveDiagUpdatedAt=Date.now();log('LIVE F912 odometro '+liveTotalKm.toFixed(3)+' km')}
+     if([0xF903,0xF927,0xF99A,0xF912].includes(did)&&cardComplete&&targetDate===romeTodayISO())setTimeout(renderLoadedDay,0)
+   }
  }
 }
 function dCred(e){const a=new Uint8Array(e.target.value.buffer,e.target.value.byteOffset,e.target.value.byteLength);if(a[0]===255)dtx=0;else dtx+=a[0]||0}
+function queueDiagDids(dids,delay=0){let i=0;const run=async()=>{if(!device?.gatt?.connected||i>=dids.length)return;if(dBusy){setTimeout(run,140);return}const did=dids[i++];try{await dSendDid(did)}catch(e){log('DIAG DID 0x'+did.toString(16).toUpperCase()+' ERROR '+(e.message||e))}setTimeout(run,260)};setTimeout(run,delay)}
 function decodeName(d){
  const latin=x=>Array.from(x).map(b=>(b>=32&&b!==255)?String.fromCharCode(b):'').join('').replace(/\0/g,'').trim();
  if(d.length>=72){const sur=latin(d.slice(1,36)),first=latin(d.slice(37,72));return [sur,first].filter(Boolean).join(' ')||'—'}
@@ -487,7 +536,10 @@ async function handleFrame(frame){
  if(stage==='stop'&&sid===0xC2){
    step(6,'done');
    setStatus('Sessione Download chiusa · copia carta pronta per esportazione.','ok');
-   stage='idle';partialUpdate=false;setTransferUi(false);setExportReady(true)
+   stage='idle';partialUpdate=false;setTransferUi(false);setExportReady(true);
+   // Per la giornata corrente il record attività della carta può essere ancora parziale.
+   // Rileggiamo dal DTCO il contatore guida giornaliera e l'odometro live, poi la schermata si aggiorna.
+   queueDiagDids([0xF903,0xF927,0xF99A,0xF912],250)
  }
 }
 function be16(a,o){return ((a[o]||0)<<8)|(a[o+1]||0)}
@@ -1159,21 +1211,34 @@ function renderAcquisition(data){
    // 1) DETTAGLIO ATTIVITÀ: solo guida/lavoro/disponibilità/riposo.
    const ch=rec.changes.filter(x=>x.minute<=1439).sort((a,b)=>a.minute-b.minute);
    const activityRows=[];
-   let totalDriveMin=0;
+   let totalDriveMin=0,partialActivityGap=false;
+   const isToday=targetDate===romeTodayISO();
+   const liveSource=/DTCO/i.test(cardSource||'') && device?.gatt?.connected;
+   const liveActivityNames=['RIPOSO','DISPONIBILITÀ','LAVORO','GUIDA'];
    for(let i=0;i<ch.length;i++){
      const cur=ch[i],next=ch[i+1];
      let end=next?next.minute:1440;
-     // Se è la giornata corrente, l'ultima attività termina "adesso", non a mezzanotte.
      const nowSec=Math.floor(Date.now()/1000);
-     if(!next && nowSec>=rec.dateSec && nowSec<rec.dateSec+86400){
-       end=Math.max(cur.minute,Math.min(1440,(nowSec-rec.dateSec)/60));
+     if(!next && isToday && nowSec>=rec.dateSec && nowSec<rec.dateSec+86400){
+       // Il record EF 0504 della giornata corrente può essere non ancora consolidato.
+       // NON prolunghiamo più automaticamente l'ultima attività fino all'ora attuale.
+       // Lo facciamo solo se F903/F927 live confermano che è davvero la stessa attività
+       // e che il suo inizio coincide con l'ultimo cambio registrato sulla carta.
+       const nowMinute=Math.max(0,Math.min(1440,(nowSec-rec.dateSec)/60));
+       const liveName=liveActivityNames[liveActivityCode]||null;
+       const expectedStart=(Number.isFinite(liveActivityDurationMin)?nowMinute-liveActivityDurationMin:null);
+       const aligned=liveSource&&liveName===cur.activity&&Number.isFinite(expectedStart)&&Math.abs(expectedStart-cur.minute)<=3;
+       if(aligned)end=nowMinute;
+       else{end=cur.minute;partialActivityGap=true}
      }
      const mins=Math.max(0,end-cur.minute);
      if(cur.activity==='GUIDA')totalDriveMin+=mins;
+     if(!next&&partialActivityGap&&mins===0)continue;
      const st=romeTimeForActivity(rec.dateSec,cur.minute);
      const en=romeTimeForActivity(rec.dateSec,end);
      activityRows.push(`<tr><td>${st.time}</td><td><b>${pictogram(cur.activity)} ${cur.activity}</b></td><td>${durationText(mins)}</td><td>${en.time}</td></tr>`)
    }
+   if(partialActivityGap)activityRows.push(`<tr><td colspan="4" style="font-size:12px;color:#555"><b>GIORNATA IN CORSO:</b> le ultime attività non ancora consolidate sulla carta non vengono prolungate artificialmente. Il totale guida usa il contatore DTCO live quando disponibile.</td></tr>`);
    $('rows').innerHTML=activityRows.join('')||'<tr><td colspan="4">Nessuna attività.</td></tr>';
 
    // 2) APERTURE / CAMBI NAZIONE / CHIUSURE: sezione separata.
@@ -1225,13 +1290,21 @@ function renderAcquisition(data){
    const finalClose=closings.length?closings[closings.length-1]:null;
    $('totOpen').textContent=firstOpen?firstOpen.time:'—';
    $('totClose').textContent=finalClose?finalClose.time:'—';
-   $('totDrive').textContent=durationText(totalDriveMin);
+   // Nei record giornalieri ancora aperti la carta può non aver consolidato tutti i cambi attività.
+   // Per oggi, quando siamo collegati al DTCO, F99A è la fonte corretta del totale guida corrente.
+   const driveTotal=(isToday&&liveSource&&Number.isFinite(liveDailyDriveMin))?liveDailyDriveMin:totalDriveMin;
+   $('totDrive').textContent=durationText(driveTotal);
    if(firstOpen&&finalClose){
      const km=Math.max(0,Number(finalClose.odo)-Number(firstOpen.odo));
-     $('totKm').textContent=String(km);
+     $('totKm').textContent=formatKm1(km);
      $('totDuty').textContent=durationText(Math.round(Math.max(0,(finalClose.sec-firstOpen.sec)/60)));
    }else{
-     $('totKm').textContent='—';
+     // Giornata ancora aperta: se il DTCO è collegato usiamo l'odometro F912 ad alta risoluzione.
+     // In assenza del live, il campo distance del record giornaliero è il fallback disponibile sulla carta.
+     let partialKm=null;
+     if(isToday&&liveSource&&firstOpen&&Number.isFinite(liveTotalKm))partialKm=Math.max(0,liveTotalKm-Number(firstOpen.odo));
+     else if(Number.isFinite(Number(rec.distance)))partialKm=Math.max(0,Number(rec.distance));
+     $('totKm').textContent=partialKm==null?'—':formatKm1(partialKm);
      $('totDuty').textContent='—';
    }
 
@@ -1280,11 +1353,11 @@ async function connect(){
    await lfifo.startNotifications();await lcred.startNotifications();ltx=0;await write(lcred,new Uint8Array([8]));
 
    setConn(true);step(1,'done');setStatus('DTCO collegato.','ok');log('Servizi Diagnostics + Download pronti');
-   setTimeout(()=>dSendDid(0xF931),500);
+   queueDiagDids([0xF931,0xF903,0xF927,0xF99A,0xF912],500);
  }catch(e){setStatus('Connessione fallita: '+e.message,'err');log('CONNECT ERROR '+e.message);disconnectState()}
 }
 function disconnectState(){
- clearTimeout(dWait);dtx=ltx=0;dBusy=lBusy=false;dfifo=dcred=lfifo=lcred=server=null;stage='idle';setConn(false);setTransferUi(false);setExportReady(cardComplete);setStatus('Scollegato.','');log('DTCO scollegato')
+ clearTimeout(dWait);dtx=ltx=0;dBusy=lBusy=false;dfifo=dcred=lfifo=lcred=server=null;liveDailyDriveMin=null;liveTotalKm=null;liveActivityCode=null;liveActivityDurationMin=null;liveDiagUpdatedAt=0;stage='idle';setConn(false);setTransferUi(false);setExportReady(cardComplete);setStatus('Scollegato.','');log('DTCO scollegato')
 }
 
 function pdfDateCompactFromTs(ts){
