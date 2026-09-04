@@ -1,11 +1,89 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.42';
+<script>window.KTN_APP_VERSION='0.0.70.43';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
+<script id="ktnStartupBootstrap">
+(function(){
+  'use strict';
+  window.KTN_STARTUP_VERSION='0.0.70.43';
+  window.__KTN_STARTUP_MODE__='';
+  window.__KTN_STARTUP_CLOSED__=false;
+  window.__KTN_STARTUP_MAIN_READY__=false;
+
+  function diag(msg,isError){
+    try{
+      var el=document.getElementById('ktnStartupDiag');
+      if(el){el.textContent=msg;el.style.color=isError?'#fca5a5':'#86efac';}
+      if(window.console)console[isError?'error':'log']('[KTN STARTUP]',msg);
+    }catch(_e){}
+  }
+  window.ktnStartupDiag=diag;
+
+  function closeNow(){
+    window.__KTN_STARTUP_CLOSED__=true;
+    var el=document.getElementById('startupOverlay');
+    if(!el)return;
+    el.style.pointerEvents='none';
+    el.style.opacity='0';
+    el.style.transition='opacity .12s linear';
+    setTimeout(function(){try{el.remove()}catch(_e){}},140);
+  }
+  window.__ktnStartupCloseNow=closeNow;
+
+  function waitFor(test,done,label,tries){
+    tries=tries||0;
+    try{if(test()){done();return;}}catch(_e){}
+    if(tries>=80){
+      diag('ERRORE: '+label+' non disponibile',true);
+      try{alert(label+' non disponibile. Ricarica la pagina.')}catch(_e){}
+      return;
+    }
+    setTimeout(function(){waitFor(test,done,label,tries+1)},100);
+  }
+
+  window.ktnStartupChoose=function(mode){
+    if(window.__KTN_STARTUP_MODE__)return;
+    window.__KTN_STARTUP_MODE__=mode;
+    diag('v0.70.43 - scelta '+mode+' - avvio...',false);
+    closeNow();
+    try{document.dispatchEvent(new CustomEvent('ktn:startup-selected',{detail:{mode:mode}}))}catch(_e){}
+
+    setTimeout(function(){
+      try{
+        if(typeof window.ktnInitPlannerMapAfterStartup==='function')
+          window.ktnInitPlannerMapAfterStartup();
+      }catch(e){diag('Mappa: '+(e&&e.message?e.message:e),true);}
+
+      if(mode==='open'){
+        waitFor(function(){return window.FS&&typeof window.FS.openFile==='function'},
+          function(){try{window.FS.openFile()}catch(e){diag('Apri file: '+e.message,true)}},'APRI FILE');
+      }else if(mode==='drive'){
+        waitFor(function(){return window.GDRIVE&&typeof window.GDRIVE.connect==='function'},
+          function(){try{window.GDRIVE.connect()}catch(e){diag('Google Drive: '+e.message,true)}},'GOOGLE DRIVE');
+      }
+    },0);
+  };
+
+  /* API startup disponibili immediatamente, prima dei moduli pesanti. */
+  window.startupSkip=function(){window.ktnStartupChoose('skip')};
+  window.startupOpen=function(){window.ktnStartupChoose('open')};
+  window.startupDriveConnect=function(){window.ktnStartupChoose('drive')};
+
+  window.addEventListener('error',function(ev){
+    var m=(ev&&ev.message)||'errore JavaScript';
+    diag('ERRORE JS: '+m,true);
+  },true);
+  window.addEventListener('unhandledrejection',function(ev){
+    var r=ev&&ev.reason;
+    diag('ERRORE PROMISE: '+(r&&r.message?r.message:String(r||'sconosciuto')),true);
+  });
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.42 HOTFIX</title>
+<title>KnightTruckerNavy - 0.0.70.43 HOTFIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1570,13 +1648,13 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
   <div class="startup-box">
     <img src="assets/ui/logo.png" class="startup-logo" alt="Logo">
     <div class="startup-title">KnightTruckerNavy</div>
-    <div class="startup-sub">Scegli come avviare KnightTruckerNavy</div>
+    <div class="startup-sub">Scegli come avviare KnightTruckerNavy<br><strong style="color:#7dd3fc;letter-spacing:.5px">VERSIONE 0.70.43</strong><br><span id="ktnStartupDiag" style="display:inline-block;margin-top:5px;font-size:11px;color:#86efac">Bootstrap pronto</span></div>
     <div class="startup-btns">
-<button type="button" class="btn btn-primary" onclick="startupDriveConnect()">☁ Connetti Google Drive</button>
-      <button type="button" class="btn btn-primary" onclick="startupOpen()">
+<button type="button" class="btn btn-primary" onclick="ktnStartupChoose('drive')">☁ Connetti Google Drive</button>
+      <button type="button" class="btn btn-primary" onclick="ktnStartupChoose('open')">
         &#128194; Apri file esistente
       </button>
-      <button type="button" class="btn btn-ghost" onclick="startupSkip()">
+      <button type="button" class="btn btn-ghost" onclick="ktnStartupChoose('skip')">
         &#10011; Inizia con lista vuota
       </button>
     </div>
@@ -4713,29 +4791,20 @@ function ktnInitPlannerMapAfterStartup(){
     try{ initMap(); }
     catch(e){
       __ktnPlannerMapInitStarted=false;
-      try{console.error('[KTN 0.70.42] initMap',e)}catch(_){}
+      try{console.error('[KTN 0.70.43] initMap',e)}catch(_){}
       toast('Mappa non disponibile. Il resto dell’app resta utilizzabile.');
     }
   },40);
 }
 
-/* ── Startup ────────────────────────────────────────────────────────────── */
-function startupClose() {
-  var el = document.getElementById('startupOverlay');
-  if (el) { el.style.opacity='0'; el.style.transition='opacity .18s'; setTimeout(function(){el.remove();},190); }
-  ktnInitPlannerMapAfterStartup();
+/* ── Startup compatibility — owner: early ktnStartupBootstrap ───────── */
+function startupClose(){
+  try{window.__ktnStartupCloseNow&&window.__ktnStartupCloseNow()}catch(_e){}
+  try{ktnInitPlannerMapAfterStartup()}catch(_e){}
 }
-function startupDriveConnect() {
-  startupClose();
-  setTimeout(function(){ GDRIVE.connect(); }, 220);
-}
-function startupOpen() {
-  startupClose();
-  setTimeout(function(){ FS.openFile(); }, 280);
-}
-function startupSkip() {
-  startupClose();
-}
+function startupDriveConnect(){ window.ktnStartupChoose('drive'); }
+function startupOpen(){ window.ktnStartupChoose('open'); }
+function startupSkip(){ window.ktnStartupChoose('skip'); }
 
 /* ── Auto-rileva paese, città e regione dalle coordinate GPS ─────────────── */
 function autoDetectRegion() {
@@ -4834,7 +4903,9 @@ function autoDetectRegion() {
 
 render();
 FS._ui();
-/* 0.70.42: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
+window.__KTN_STARTUP_MAIN_READY__=true;
+try{window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.43 - JS principale pronto',false)}catch(_e){}
+/* 0.70.43: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
 if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.add("collapsed");}
 </script>
 </div>
@@ -8049,9 +8120,10 @@ function ktn55CancelSearchChoice(){
      files still work normally, just without service-worker installation. */
   if('serviceWorker' in navigator &&
      (location.protocol==='https:' || location.hostname==='localhost')){
-    var regSw=function(){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){})};
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',regSw,{once:true});
-    else regSw();
+    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7043',{scope:'./'}).catch(function(){})};
+    var armSw=function(){setTimeout(regSw,700)};
+    if(window.__KTN_STARTUP_MODE__) armSw();
+    else document.addEventListener('ktn:startup-selected',armSw,{once:true});
   }
 })();
 </script>
