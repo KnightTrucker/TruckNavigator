@@ -474,7 +474,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.3</small>
+        <small>Driver Attention Monitor · v1.4</small>
       </div>
       <div class="pill" id="systemPill">
         <span class="dot" id="systemDot"></span>
@@ -637,7 +637,7 @@
       running: false,
       wakeLock: null,
       calibrated: false,
-      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0 },
+      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0, leftEAR: 0, rightEAR: 0 },
       timers: {
         noFace: null,
         eyesClosed: null,
@@ -660,7 +660,9 @@
       alarmCooldownUntil: 0,
       attention: 100,
       audioCtx: null,
-      voiceEnabled: true
+      voiceEnabled: true,
+      eyeFilter: { left: null, right: null },
+      eyesClosedLatched: false
     };
 
     const settings = {
@@ -726,6 +728,20 @@
 
     // Proxy geometrici robusti a camera laterale:
     // usiamo proporzioni relative del volto, poi la calibrazione sottrae la posizione neutra.
+    function eyeMetrics(lm){
+      return {
+        left: eyeAspectRatio(lm,159,160,145,144,33,133),
+        right: eyeAspectRatio(lm,386,385,374,380,362,263)
+      };
+    }
+
+    function median(values){
+      const a=values.filter(Number.isFinite).slice().sort((x,y)=>x-y);
+      if(!a.length) return 0;
+      const m=Math.floor(a.length/2);
+      return a.length%2 ? a[m] : (a[m-1]+a[m])/2;
+    }
+
     function headMetrics(lm){
       const leftEye = avgPoint(lm[33],lm[133]);
       const rightEye = avgPoint(lm[362],lm[263]);
@@ -1128,14 +1144,7 @@
     }
 
     function processFace(lm){
-      const leftEAR = eyeAspectRatio(lm,159,160,145,144,33,133);
-      const rightEAR = eyeAspectRatio(lm,386,385,374,380,362,263);
-      const ear=(leftEAR+rightEAR)/2;
-
-      // Un battito di ciglia normale dura poco: lo rileviamo internamente,
-      // ma non facciamo lampeggiare subito la UI "CHIUSI".
-      const eyesOpenRaw = ear > 0.16;
-
+      const em=eyeMetrics(lm);
       const hm=headMetrics(lm);
       const gm=gazeMetrics(lm);
 
@@ -1148,21 +1157,82 @@
       const headDown = state.calibrated && dpitch > 0.15;
       const headAway = headTurned || headDown || Math.abs(droll) > 0.38;
 
-      // Lo sguardo puro resta un po' meno aggressivo della rotazione testa.
+      // Lo sguardo puro resta meno aggressivo della rotazione testa.
       const gazeAway = Math.abs(gm.horizontal) > 0.28 || gm.vertical > 0.34;
 
-      const eyesClosedFor=setTimer("eyesClosed",!eyesOpenRaw);
-      const eyesVisiblyClosed = eyesClosedFor >= 280;
+      // --- OCCHI v1.4 ---
+      // La soglia non è più assoluta: confrontiamo ogni occhio con quanto
+      // misurato durante CALIBRA. Questo compensa distanza, angolo del telefono,
+      // conformazione del viso, occhiali e illuminazione.
+      let eyesClosed=false;
+      let eyesVisiblyClosed=false;
+
+      if(state.calibrated && state.neutral.leftEAR>0 && state.neutral.rightEAR>0){
+        const rawLeft = em.left / state.neutral.leftEAR;
+        const rawRight = em.right / state.neutral.rightEAR;
+
+        // Filtro esponenziale: elimina i picchi di un singolo fotogramma.
+        const alpha=0.28;
+        state.eyeFilter.left = state.eyeFilter.left==null
+          ? rawLeft
+          : state.eyeFilter.left + alpha*(rawLeft-state.eyeFilter.left);
+        state.eyeFilter.right = state.eyeFilter.right==null
+          ? rawRight
+          : state.eyeFilter.right + alpha*(rawRight-state.eyeFilter.right);
+
+        // Se la testa è girata/abbassata, non giudichiamo gli occhi:
+        // la prospettiva può far sembrare chiuso l'occhio più lontano.
+        const eyeGeometryReliable =
+          !headAway &&
+          Math.abs(dyaw) < sensitivity*1.15 &&
+          Math.abs(droll) < 0.28;
+
+        if(!eyeGeometryReliable){
+          state.eyesClosedLatched=false;
+        }else{
+          const closeNow =
+            state.eyeFilter.left < 0.50 &&
+            state.eyeFilter.right < 0.50;
+
+          const clearlyOpen =
+            state.eyeFilter.left > 0.66 &&
+            state.eyeFilter.right > 0.66;
+
+          // Isteresi: serve una chiusura netta per entrare nello stato CHIUSI
+          // e una riapertura netta per uscirne.
+          if(!state.eyesClosedLatched && closeNow){
+            state.eyesClosedLatched=true;
+          }else if(state.eyesClosedLatched && clearlyOpen){
+            state.eyesClosedLatched=false;
+          }
+        }
+
+        eyesClosed = state.eyesClosedLatched;
+      }else{
+        // Prima della calibrazione niente allarmi occhi: evitiamo soglie arbitrarie.
+        state.eyesClosedLatched=false;
+        state.eyeFilter.left=null;
+        state.eyeFilter.right=null;
+      }
+
+      const eyesClosedFor=setTimer("eyesClosed",eyesClosed);
+      eyesVisiblyClosed = eyesClosedFor >= 350;
+
       const lookAwayFor=setTimer("lookAway",state.calibrated && (headAway || gazeAway));
       const headDownFor=setTimer("headDown",state.calibrated && headDown);
       setTimer("noFace",false);
 
       setValue($("faceValue"),"OK","ok");
-      setValue(
-        $("eyesValue"),
-        eyesVisiblyClosed ? "CHIUSI" : "APERTI",
-        eyesVisiblyClosed ? "danger" : "ok"
-      );
+
+      if(!state.calibrated){
+        setValue($("eyesValue"),"CALIBRA","neutral");
+      }else{
+        setValue(
+          $("eyesValue"),
+          eyesVisiblyClosed ? "CHIUSI" : "APERTI",
+          eyesVisiblyClosed ? "danger" : "ok"
+        );
+      }
 
       if(state.calibrated){
         const deltaPct=(Math.abs(dyaw)*100).toFixed(1);
@@ -1174,8 +1244,6 @@
       if(headDown){
         setValue($("headValue"),"BASSA","danger");
       }else if(headTurned){
-        // La scritta rende immediatamente evidente che il movimento è stato rilevato.
-        // Il verso è riferito allo spostamento rilevato dalla camera.
         const direction = dyaw < 0 ? "DESTRA" : "SINISTRA";
         setValue($("headValue"),direction,"warn");
       }else{
@@ -1191,6 +1259,10 @@
         gazeAway
       });
 
+      // L'allarme occhi parte solo se:
+      // 1) entrambi gli occhi risultano realmente chiusi;
+      // 2) la geometria del volto è affidabile;
+      // 3) la condizione dura oltre il tempo impostato.
       if(eyesClosedFor >= settings.eyesClosedMs){
         triggerAlarm("eyes","ATTENZIONE","APRI GLI OCCHI","😴");
       }else if(headDownFor >= Math.min(settings.lookAwayMs,1500)){
@@ -1207,6 +1279,9 @@
       $("headLive").textContent="Testa Δ: --";
 
       setTimer("eyesClosed",false);
+      state.eyesClosedLatched=false;
+      state.eyeFilter.left=null;
+      state.eyeFilter.right=null;
       setTimer("lookAway",false);
       setTimer("headDown",false);
       const missingFor=setTimer("noFace",true);
@@ -1294,7 +1369,10 @@
     async function stop(){
       state.running=false;
       state.calibrated=false;
-      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0};
+      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0,leftEAR:0,rightEAR:0};
+      state.eyeFilter.left=null;
+      state.eyeFilter.right=null;
+      state.eyesClosedLatched=false;
       $("calState").textContent="Non calibrato";
 
       if(state.stream){
@@ -1356,7 +1434,10 @@
           try{
             const r=state.faceLandmarker.detectForVideo(video,performance.now());
             if(r.faceLandmarks?.length){
-              samples.push(headMetrics(r.faceLandmarks[0]));
+              const lm=r.faceLandmarks[0];
+              const h=headMetrics(lm);
+              const e=eyeMetrics(lm);
+              samples.push({...h,leftEAR:e.left,rightEAR:e.right});
             }
           }catch{}
         }
@@ -1374,9 +1455,21 @@
       state.neutral={
         yawProxy:avg("yawProxy"),
         pitchProxy:avg("pitchProxy"),
-        rollProxy:avg("rollProxy")
+        rollProxy:avg("rollProxy"),
+        leftEAR:median(samples.map(x=>x.leftEAR)),
+        rightEAR:median(samples.map(x=>x.rightEAR))
       };
 
+      // Se durante la calibrazione gli occhi non sono stati rilevati in modo
+      // affidabile, non attiviamo il controllo occhi.
+      if(state.neutral.leftEAR<=0 || state.neutral.rightEAR<=0){
+        toast("Calibrazione occhi non valida: riprova guardando diritto.");
+        return;
+      }
+
+      state.eyeFilter.left=null;
+      state.eyeFilter.right=null;
+      state.eyesClosedLatched=false;
       state.calibrated=true;
       $("calState").textContent="Calibrato";
       toast("Calibrazione completata.");
