@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_NAV_BUILD="0.70.49";</script>
+<script>window.KTN_NAV_BUILD="0.70.50";</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>KnightTruckerNavy Professional Navigator v47.3 TOMTOM PRO TRAFFIC COLLAPSIBLE COMMAND GROUP</title>
@@ -3677,6 +3677,7 @@ function applyRoute(feat){
  if(!lastPos)MAP.fitBounds(routeLayer.getBounds().pad(.1));
  updateStopUI();
  proMapUpdateRoute();setTimeout(proCameraFetchRoute,500);
+ try{ktn07050RouteReadyUI();ktn07050ArmMapFallback();ktn07050RevealNavigation()}catch(e){}
  document.getElementById('routeInfo').textContent=(cfg.toName.split(',')[0]||'Arrivo')+' • H '+cfg.alt+'m • '+cfg.pes+'t';saveOfflineRoute();
  try{window.dispatchEvent(new CustomEvent('ktn:route-applied',{detail:{routeEpoch:Number(window.KTN_ROUTE_EPOCH)||0,points:routeCoords.length,totalMeters:Number(totalMeters)||0}}))}catch(e){}
 }
@@ -5182,6 +5183,75 @@ setTimeout(function(){proDrivingFocus(true)},700);
    ktn00722RoadsideEngine is the sole camera data/projection owner. */
 
 
+/* === 0.70.50 MAP STARTUP GUARD ===
+   Do not reveal a black cockpit. Navigation becomes visible only when
+   either MapLibre is really ready or the already-rendered Leaflet map is
+   explicitly promoted as fallback. One timeout, no polling loop. */
+function ktn07050HasRoute(){
+  try{return Array.isArray(routeCoords)&&routeCoords.length>=2&&Number(totalMeters)>0}catch(e){return false}
+}
+function ktn07050IsExplorer(){
+  try{return !!(window.KTN_GATTO_EXPLORER||gattoExplorerMode)}catch(e){return !!window.KTN_GATTO_EXPLORER}
+}
+function ktn07050MapVisibleReady(){
+  return !!(window.PRO_MAP_READY||document.body.classList.contains('pro-map-fallback'));
+}
+function ktn07050FmtSec(sec){
+  sec=Math.max(0,Number(sec)||0);var m=Math.round(sec/60),h=Math.floor(m/60);m%=60;
+  return h>0?(h+':'+String(m).padStart(2,'0')):(m+' min');
+}
+function ktn07050RouteReadyUI(){
+  if(!ktn07050HasRoute())return;
+  try{
+    if(!lastPos){
+      var e=document.getElementById('turnInstruction');if(e)e.textContent='Percorso pronto · attesa GPS…';
+      e=document.getElementById('turnRoad');if(e)e.textContent=String((cfg&&cfg.toName)||'Arrivo').split(',')[0];
+      e=document.getElementById('remaining');if(e)e.textContent=fmtKm(totalMeters);
+      var sec=Math.max(0,Number(window.ktn51PlannedDurationSec)||0);
+      e=document.getElementById('ktn51TimeRemaining');if(e)e.textContent=sec?ktn07050FmtSec(sec):'--:--';
+      e=document.getElementById('ktn51ArrivalTime');if(e&&sec)e.textContent=new Date(Date.now()+sec*1000).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    }
+  }catch(e){}
+}
+function ktn07050RevealNavigation(){
+  var contentReady=ktn07050IsExplorer()||ktn07050HasRoute();
+  if(!contentReady||!ktn07050MapVisibleReady())return false;
+  try{ktn07050RouteReadyUI()}catch(e){}
+  var ld=document.getElementById('loading');if(ld)ld.style.display='none';
+  return true;
+}
+function ktn07050PromoteLeafletFallback(reason){
+  if(window.PRO_MAP_READY){
+    try{if(typeof window.proMapUpdateRoute==='function')window.proMapUpdateRoute()}catch(e){}
+    ktn07050RevealNavigation();
+    return;
+  }
+  document.body.classList.add('pro-map-fallback');
+  try{
+    if(typeof MAP!=='undefined'&&MAP){
+      MAP.invalidateSize(true);
+      if(typeof routeLayer!=='undefined'&&routeLayer&&routeLayer.getBounds){var b=routeLayer.getBounds();if(b&&b.isValid&&b.isValid())MAP.fitBounds(b.pad(.08));}
+    }
+  }catch(e){}
+  try{console.warn('KTN 0.70.50 Leaflet fallback:',reason||'MapLibre not ready')}catch(e){}
+  ktn07050RevealNavigation();
+}
+function ktn07050ArmMapFallback(){
+  if(window.__KTN_07050_MAP_TIMER__)clearTimeout(window.__KTN_07050_MAP_TIMER__);
+  if(window.PRO_MAP_READY){ktn07050RevealNavigation();return;}
+  window.__KTN_07050_MAP_TIMER__=setTimeout(function(){
+    window.__KTN_07050_MAP_TIMER__=null;
+    if(!window.PRO_MAP_READY)ktn07050PromoteLeafletFallback('startup timeout');
+    else ktn07050RevealNavigation();
+  },1600);
+}
+window.ktn07050OnMapReady=function(){
+  if(window.__KTN_07050_MAP_TIMER__){clearTimeout(window.__KTN_07050_MAP_TIMER__);window.__KTN_07050_MAP_TIMER__=null;}
+  try{if(typeof window.proMapUpdateRoute==='function')window.proMapUpdateRoute()}catch(e){}
+  try{if(typeof proCameraFetchRoute==='function'&&ktn07050HasRoute())proCameraFetchRoute()}catch(e){}
+  ktn07050RevealNavigation();
+};
+
 function ktnRequestGpsStart(){
   window.__KTN_GPS_START_REQUESTED__=true;
 
@@ -6037,6 +6107,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     E.map.on('load',()=>{
       E.ready=true;window.PRO_MAP_READY=true;
       hybrid();ensureRoute();ensureMarker();gestures();setMode('GUIDA');
+      try{if(typeof window.ktn07050OnMapReady==='function')queueMicrotask(window.ktn07050OnMapReady)}catch(_e){}
       /* 0.0.39: style/layer recovery redraws the EXISTING route only.
          It never asks ORS for a new route. */
       E.map.on('styledata',function(){setTimeout(function(){try{ensureRoute()}catch(_){ }},40)});
@@ -14939,7 +15010,7 @@ function runtimeStartGPS(){
   if(window.__KTN_GPS_READY_WATCHDOG__){clearTimeout(window.__KTN_GPS_READY_WATCHDOG__);window.__KTN_GPS_READY_WATCHDOG__=null;}
   window.__KTN_GPS_START_REQUESTED__=false;
   var sb0=document.getElementById('startBtn');if(sb0)sb0.style.display='none';
-  var ld=document.getElementById('loading');if(ld)ld.style.display='none';
+  try{ktn07050ArmMapFallback();ktn07050RevealNavigation()}catch(e){}
   if(!navigator.geolocation){try{toast('GPS non supportato')}catch(e){}return null}
   var had=false;
   try{had=(typeof watchId!=='undefined'&&watchId!==null&&watchId!==undefined)}catch(e){}

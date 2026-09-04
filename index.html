@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#07111c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>KnightTruckerNavy 0.70.49</title>
-<link rel="manifest" href="./manifest.json?v=7049">
+<title>KnightTruckerNavy 0.70.50</title>
+<link rel="manifest" href="./manifest.json?v=7050">
 <link rel="icon" href="./assets/ui/favicon.png" type="image/png">
 <style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:#07111c;color:#eef2f7;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{display:grid;place-items:center;padding:22px;background:radial-gradient(circle at 50% 22%,#11263b 0,#07111c 42%,#04090e 100%)}
@@ -19,7 +19,7 @@
 <img class="logo" src="./assets/ui/logo.png" alt="KnightTruckerNavy" decoding="async">
 <div class="title">KnightTruckerNavy</div>
 <div class="sub">Scegli come avviare KnightTruckerNavy</div>
-<div class="ver">VERSIONE 0.70.49</div>
+<div class="ver">VERSIONE 0.70.50</div>
 <div id="state" class="state">PRONTO</div>
 <button id="drive" class="btn" type="button">☁ Connetti Google Drive</button>
 <button id="open" class="btn" type="button">📂 Apri file esistente</button>
@@ -48,7 +48,7 @@ function requestDrive(){tokenClient=google.accounts.oauth2.initTokenClient({clie
 document.getElementById('drive').addEventListener('click',function(){if(busy)return;busy=true;setState('Preparazione Google Drive…');loadGsi().then(function(){setState('Autorizzazione Google Drive…');try{requestDrive()}catch(e){busy=false;setState('Tocca di nuovo Google Drive',true)}}).catch(function(){busy=false;setState('Google Drive non disponibile. Riprova.',true)})});
 
 /* Il service worker viene aggiornato dopo che il launcher e gia interattivo. */
-if('serviceWorker' in navigator&&location.protocol==='https:')setTimeout(function(){navigator.serviceWorker.register('./sw.js?v=7049',{scope:'./'}).catch(function(){})},1200);
+if('serviceWorker' in navigator&&location.protocol==='https:')setTimeout(function(){navigator.serviceWorker.register('./sw.js?v=7050',{scope:'./'}).catch(function(){})},1200);
 })();
 </script>
 </body>
