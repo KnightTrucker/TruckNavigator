@@ -1,5 +1,5 @@
-/* KnightTruckerNavy 0.70.41 HOTFIX — non-blocking service worker */
-const CACHE='ktn-007041-hotfix-v1';
+/* KnightTruckerNavy 0.70.42 STARTUP-FIX — non-blocking service worker */
+const CACHE='ktn-007042-startup-fix-v1';
 const CORE=[
   './',
   './index.html',
@@ -31,7 +31,7 @@ self.addEventListener('activate',event=>{
       k!==CACHE && (
         k==='ktn-0066-landscape-shell' ||
         k.startsWith('ktn-007040-split-assets-') ||
-        k.startsWith('ktn-007041-hotfix-')
+        (k.startsWith('ktn-007041-hotfix-') || k.startsWith('ktn-007042-startup-fix-'))
       )
     ).map(k=>caches.delete(k)));
     await self.clients.claim();
