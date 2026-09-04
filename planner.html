@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.48';
+<script>window.KTN_APP_VERSION='0.0.70.49';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
 <script id="ktnPlannerBootstrap">
 (function(){
   'use strict';
-  window.KTN_STARTUP_VERSION='0.0.70.48';
+  window.KTN_STARTUP_VERSION='0.0.70.49';
   var q=new URLSearchParams(location.search);
   window.KTN_LAUNCH_MODE=String(q.get('mode')||sessionStorage.getItem('ktn_launch_mode')||'skip');
   window.__KTN_STARTUP_MODE__=window.KTN_LAUNCH_MODE;
@@ -100,7 +100,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.48 GPS HANDOFF FIX</title>
+<title>KnightTruckerNavy - 0.0.70.49 GPS RESTORE FIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
 
 
@@ -1666,7 +1666,7 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 <header class="app-header">
   <div class="brand">
     <img src="assets/ui/logo.png" class="brand-mark" alt="Emblema Z" id="brandVersionLogo" title="Mostra versione" loading="lazy" decoding="async">
-    <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3 · 0.70.48</span> <em>/ Rubrica</em></div>
+    <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3 · 0.70.49</span> <em>/ Rubrica</em></div>
   </div>
   <div id="fileStatus" class="file-status"></div>
   <div id="driveStatus" class="drive-status"></div>
@@ -2446,6 +2446,17 @@ function _ensureMapVisible(cb) {
 }
 
 function _placeUserOnMap(lat, lng, acc) {
+  /* 0.70.49: every successful planner GPS fix is published to the shared GPS cache.
+     Quick Navigation must be able to reuse the exact position already found by the map. */
+  try {
+    var _lat=Number(lat),_lng=Number(lng),_acc=Number(acc);
+    if(isFinite(_lat)&&isFinite(_lng)){
+      window.KTN_PLANNER_GPS={lat:_lat,lng:_lng,accuracy:isFinite(_acc)?_acc:0,at:Date.now(),source:'planner-map'};
+      window.KTN_GATTO_GPS=window.KTN_GATTO_GPS||{};
+      window.KTN_GATTO_GPS.lat=_lat;window.KTN_GATTO_GPS.lng=_lng;
+      window.KTN_GATTO_GPS.accuracy=isFinite(_acc)?_acc:0;window.KTN_GATTO_GPS.at=Date.now();
+    }
+  } catch(_e) {}
   if (userMarker)     { MAP.removeLayer(userMarker);     userMarker     = null; }
   if (accuracyCircle) { MAP.removeLayer(accuracyCircle); accuracyCircle = null; }
   accuracyCircle = L.circle([lat, lng], {
@@ -7823,57 +7834,75 @@ function ktn53QuickBgClose(e){
 }
 
 function ktn53CurrentGps(){
+  /* 0.70.49 GPS RESTORE:
+     - reuse a position already acquired by the planner/map;
+     - never stop the manual "Posizione" watcher;
+     - use the browser's proven one-shot high-accuracy request used before 0.70.48;
+     - publish every valid result to the shared cache for all planner entry points. */
   return new Promise(function(resolve,reject){
-    var finished=false,watchId=null,hardTimer=null,best=null;
-    function saveFix(c){
+    var done=false;
+    function publish(lat,lng,acc,source){
+      lat=Number(lat);lng=Number(lng);acc=Number(acc);
+      if(!isFinite(lat)||!isFinite(lng))return null;
+      var fix={lat:lat,lng:lng,accuracy:isFinite(acc)?acc:0,at:Date.now(),source:source||'quick'};
+      try{window.KTN_PLANNER_GPS=fix;}catch(_e){}
       try{
-        if(!c||!isFinite(c.latitude)||!isFinite(c.longitude))return;
-        var acc=isFinite(c.accuracy)?+c.accuracy:9999;
-        if(!best||acc<best.accuracy)best={lat:+c.latitude,lng:+c.longitude,accuracy:acc};
-        if(window.KTN_GATTO_GPS){KTN_GATTO_GPS.lat=+c.latitude;KTN_GATTO_GPS.lng=+c.longitude;KTN_GATTO_GPS.accuracy=acc;KTN_GATTO_GPS.at=Date.now();}
+        window.KTN_GATTO_GPS=window.KTN_GATTO_GPS||{};
+        window.KTN_GATTO_GPS.lat=lat;window.KTN_GATTO_GPS.lng=lng;
+        window.KTN_GATTO_GPS.accuracy=fix.accuracy;window.KTN_GATTO_GPS.at=fix.at;
       }catch(_e){}
+      return fix;
     }
-    function cleanup(){
-      try{if(watchId!==null)navigator.geolocation.clearWatch(watchId)}catch(_e){}
-      watchId=null;
-      if(hardTimer!==null){clearTimeout(hardTimer);hardTimer=null;}
-    }
-    function finishOk(fix){
-      if(finished)return;finished=true;cleanup();
+    function ok(fix){
+      if(done||!fix)return;
+      done=true;
       resolve({lat:+fix.lat,lng:+fix.lng,accuracy:+fix.accuracy||0,label:'Posizione GPS corrente',nazione:''});
     }
-    function finishErr(msg){if(finished)return;finished=true;cleanup();reject(new Error(msg));}
+    function fail(err){
+      if(done)return;done=true;
+      var msg='Non riesco a ottenere la posizione GPS corrente.';
+      if(err&&err.code===1)msg='Permesso GPS negato.';
+      else if(err&&err.code===2)msg='GPS non disponibile. Riprova in un punto più aperto.';
+      else if(err&&err.code===3)msg='Timeout GPS. Riprova.';
+      reject(new Error(msg));
+    }
 
-    /* Use cache only when it is both recent and reasonably accurate. */
+    /* 1) Fresh position already found by the planner itself. */
     try{
-      var c=typeof window.ktnGattoGpsNow==='function'?window.ktnGattoGpsNow(5000):null;
-      if(c&&isFinite(c.lat)&&isFinite(c.lng)&&(+c.accuracy||9999)<=80){
-        finishOk({lat:+c.lat,lng:+c.lng,accuracy:+c.accuracy||0});return;
+      var pg=window.KTN_PLANNER_GPS;
+      if(pg&&isFinite(pg.lat)&&isFinite(pg.lng)&&Date.now()-Number(pg.at||0)<=60000){
+        ok(publish(pg.lat,pg.lng,pg.accuracy,'planner-cache'));return;
       }
     }catch(_e){}
 
-    if(!navigator.geolocation){finishErr('GPS non disponibile su questo dispositivo.');return;}
-    try{if(typeof window.__ktnLocateStop==='function')window.__ktnLocateStop()}catch(_e){}
-
-    hardTimer=setTimeout(function(){
-      if(best&&best.accuracy<=250)finishOk(best);
-      else if(best)finishErr('GPS troppo impreciso (±'+Math.round(best.accuracy)+' m). Attendi qualche secondo e riprova.');
-      else finishErr('Non riesco a ottenere la posizione GPS corrente.');
-    },6500);
-
+    /* 2) Visible map marker: this is exactly the position the user forced with "Posizione". */
     try{
-      watchId=navigator.geolocation.watchPosition(function(p){
-        if(!p||!p.coords)return;
-        saveFix(p.coords);
-        var acc=isFinite(p.coords.accuracy)?+p.coords.accuracy:9999;
-        if(acc<=50&&best)finishOk(best);
-      },function(err){
-        if(best&&best.accuracy<=250){finishOk(best);return;}
-        if(err&&err.code===1)finishErr('Permesso GPS negato.');
-        else if(err&&err.code===2)finishErr('GPS non disponibile: prova in un punto più aperto.');
-        else finishErr('Non riesco a ottenere la posizione GPS corrente.');
-      },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
-    }catch(e){finishErr('Non riesco ad avviare il GPS.');}
+      if(window.userMarker&&typeof window.userMarker.getLatLng==='function'){
+        var ll=window.userMarker.getLatLng();
+        if(ll&&isFinite(ll.lat)&&isFinite(ll.lng)){
+          var a=(window.KTN_PLANNER_GPS&&isFinite(window.KTN_PLANNER_GPS.accuracy))?+window.KTN_PLANNER_GPS.accuracy:0;
+          ok(publish(ll.lat,ll.lng,a,'planner-marker'));return;
+        }
+      }
+    }catch(_e){}
+
+    /* 3) Shared Gatto cache, if recent. */
+    try{
+      var c=typeof window.ktnGattoGpsNow==='function'?window.ktnGattoGpsNow(30000):null;
+      if(c&&isFinite(c.lat)&&isFinite(c.lng)){
+        ok(publish(c.lat,c.lng,c.accuracy,'gatto-cache'));return;
+      }
+    }catch(_e){}
+
+    /* 4) Browser GPS. Do NOT cancel locateMe(): both paths may coexist briefly. */
+    if(!navigator.geolocation){fail({code:2});return;}
+    try{
+      navigator.geolocation.getCurrentPosition(function(p){
+        if(!p||!p.coords){fail({code:2});return;}
+        var fix=publish(p.coords.latitude,p.coords.longitude,p.coords.accuracy,'browser-current');
+        if(fix)ok(fix);else fail({code:2});
+      },fail,{enableHighAccuracy:true,timeout:20000,maximumAge:30000});
+    }catch(e){fail({code:2});}
   });
 }
 
