@@ -489,10 +489,10 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.8</small>
+        <small>Driver Attention Monitor · v1.9</small>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-        <div class="version-badge">VERSIONE 1.8</div>
+        <div class="version-badge">VERSIONE 1.9</div>
         <div class="pill" id="systemPill">
           <span class="dot" id="systemDot"></span>
           <span id="systemText">PRONTO</span>
@@ -692,7 +692,10 @@
       },
       attention: 100,
       audioCtx: null,
-      voiceEnabled: true
+      voiceEnabled: true,
+      calibrating: false,
+      latestFaceMetrics: null,
+      latestFaceMetricsTs: 0
     };
 
     const settings = {
@@ -1232,6 +1235,11 @@
       const hm=headMetrics(lm);
       const gm=gazeMetrics(lm);
 
+      // Unica sorgente dei dati di calibrazione: il normale loop video.
+      // Evita di richiamare FaceLandmarker due volte contemporaneamente.
+      state.latestFaceMetrics={...hm};
+      state.latestFaceMetricsTs=performance.now();
+
       const dyaw = state.calibrated ? hm.yawProxy-state.neutral.yawProxy : 0;
       const dpitch = state.calibrated ? hm.pitchProxy-state.neutral.pitchProxy : 0;
       const droll = state.calibrated ? hm.rollProxy-state.neutral.rollProxy : 0;
@@ -1469,6 +1477,9 @@
         state.running=true;
         state.calibrated=false;
         state.calibrationReady=false;
+        state.calibrating=false;
+        state.latestFaceMetrics=null;
+        state.latestFaceMetricsTs=0;
         Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
         Object.keys(state.timers).forEach(k=>state.timers[k]=null);
         state.currentAlarm=null;
@@ -1498,6 +1509,9 @@
       Object.keys(state.timers).forEach(k=>state.timers[k]=null);
       state.calibrated=false;
       state.calibrationReady=false;
+      state.calibrating=false;
+      state.latestFaceMetrics=null;
+      state.latestFaceMetricsTs=0;
       state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0,noseY:0};
       $("calState").textContent="CALIBRAZIONE RICHIESTA";
 
@@ -1539,58 +1553,103 @@
     }
 
     async function calibrate(){
-      if(!state.running) return;
+      if(!state.running || state.calibrating) return;
 
-      const overlay=$("calibOverlay");
-      const cd=$("countdown");
-      overlay.classList.add("show");
+      state.calibrating=true;
+      state.calibrated=false;
+      state.calibrationReady=false;
 
-      const samples=[];
-      let endAt=performance.now()+3400;
-
-      for(let n=3;n>=1;n--){
-        cd.textContent=n;
-        await new Promise(r=>setTimeout(r,800));
-      }
-
-      cd.textContent="●";
-
-      while(performance.now()<endAt+1600){
-        if(video.readyState>=2){
-          try{
-            const r=state.faceLandmarker.detectForVideo(video,performance.now());
-            if(r.faceLandmarks?.length){
-              samples.push(headMetrics(r.faceLandmarks[0]));
-            }
-          }catch{}
-        }
-        await new Promise(r=>setTimeout(r,70));
-      }
-
-      overlay.classList.remove("show");
-
-      if(samples.length<8){
-        toast("Calibrazione fallita: volto non rilevato bene.");
-        return;
-      }
-
-      const avg=key=>samples.reduce((s,x)=>s+x[key],0)/samples.length;
-      state.neutral={
-        yawProxy:avg("yawProxy"),
-        pitchProxy:avg("pitchProxy"),
-        rollProxy:avg("rollProxy"),
-        noseY:avg("noseY")
-      };
-
-      state.calibrated=true;
-      state.calibrationReady=true;
-
-      // Tutti i timer partono da zero DOPO la calibrazione.
+      // Durante la calibrazione tutto resta completamente muto.
       Object.keys(state.timers).forEach(k=>state.timers[k]=null);
       Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
+      state.currentAlarm=null;
+      $("alarmOverlay").classList.remove("show");
+      window.speechSynthesis?.cancel?.();
 
-      $("calState").textContent="CALIBRATO";
-      toast("Posizione di guida calibrata.");
+      const btn=$("calibrateBtn");
+      const overlay=$("calibOverlay");
+      const cd=$("countdown");
+
+      btn.disabled=true;
+      $("calState").textContent="CALIBRAZIONE...";
+      overlay.classList.add("show");
+
+      try{
+        // Prima dai il tempo al conducente di tornare nella posizione normale.
+        for(let n=3;n>=1;n--){
+          cd.textContent=n;
+          await new Promise(r=>setTimeout(r,850));
+        }
+
+        cd.textContent="●";
+        const samples=[];
+        let lastSampleTs=0;
+        const collectUntil=performance.now()+2200;
+
+        // Usiamo i landmark già calcolati dal loop principale.
+        while(performance.now()<collectUntil){
+          const sample=state.latestFaceMetrics;
+          const ts=state.latestFaceMetricsTs;
+
+          // Accetta solo campioni nuovi e recenti.
+          if(sample && ts>lastSampleTs && performance.now()-ts<300){
+            samples.push({...sample});
+            lastSampleTs=ts;
+          }
+
+          await new Promise(r=>setTimeout(r,45));
+        }
+
+        if(samples.length<12){
+          state.calibrated=false;
+          state.calibrationReady=false;
+          $("calState").textContent="RIPETI CALIBRAZIONE";
+          cd.textContent="✕";
+          toast("Calibrazione non riuscita: tieni il volto visibile e riprova.");
+          await new Promise(r=>setTimeout(r,700));
+          return;
+        }
+
+        // Media robusta: eliminiamo il 15% dei valori estremi per ogni misura.
+        const trimmedMean=key=>{
+          const a=samples
+            .map(s=>s[key])
+            .filter(Number.isFinite)
+            .sort((x,y)=>x-y);
+
+          if(!a.length) return 0;
+          const cut=Math.floor(a.length*0.15);
+          const b=a.slice(cut, Math.max(cut+1,a.length-cut));
+          return b.reduce((sum,v)=>sum+v,0)/b.length;
+        };
+
+        state.neutral={
+          yawProxy:trimmedMean("yawProxy"),
+          pitchProxy:trimmedMean("pitchProxy"),
+          rollProxy:trimmedMean("rollProxy"),
+          noseY:trimmedMean("noseY")
+        };
+
+        // SOLO QUI la calibrazione diventa realmente valida.
+        state.calibrated=true;
+        state.calibrationReady=true;
+
+        // Tutto riparte da zero dopo la calibrazione.
+        Object.keys(state.timers).forEach(k=>state.timers[k]=null);
+        Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
+        state.currentAlarm=null;
+        state.alarmCooldownUntil=performance.now()+700;
+
+        $("calState").textContent="CALIBRATO";
+        cd.textContent="✓";
+        toast(`Posizione calibrata correttamente (${samples.length} campioni).`);
+
+        await new Promise(r=>setTimeout(r,650));
+      }finally{
+        overlay.classList.remove("show");
+        state.calibrating=false;
+        btn.disabled=!state.running;
+      }
     }
 
     function bindRange(id,out,format){
