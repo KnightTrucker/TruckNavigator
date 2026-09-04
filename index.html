@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.41';
+<script>window.KTN_APP_VERSION='0.0.70.42';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.41 HOTFIX</title>
+<title>KnightTruckerNavy - 0.0.70.42 HOTFIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1094,7 +1094,6 @@ body.ktn28-clean.ktn28-hide-trust .ktn23-offline-trust{display:none!important}
 }
 </style>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
 
@@ -2607,6 +2606,30 @@ function importLocalJSON(input) {
   reader.readAsText(file, 'utf-8');
 }
 
+/* ── Google Identity lazy loader: non deve bloccare lo startup ─────── */
+var __ktnGsiPromise=null;
+function ktnLoadGoogleIdentity(){
+  if(window.google && google.accounts && google.accounts.oauth2) return Promise.resolve(true);
+  if(__ktnGsiPromise) return __ktnGsiPromise;
+  __ktnGsiPromise=new Promise(function(resolve,reject){
+    var old=document.querySelector('script[data-ktn-gsi="1"]');
+    if(old){
+      old.addEventListener('load',function(){resolve(true)},{once:true});
+      old.addEventListener('error',function(){reject(new Error('Google Identity non disponibile.'))},{once:true});
+      return;
+    }
+    var sc=document.createElement('script');
+    sc.src='https://accounts.google.com/gsi/client';
+    sc.async=true;sc.defer=true;sc.dataset.ktnGsi='1';
+    var done=false;
+    var timer=setTimeout(function(){if(done)return;done=true;reject(new Error('Timeout Google Identity.'));},8000);
+    sc.onload=function(){if(done)return;done=true;clearTimeout(timer);resolve(true)};
+    sc.onerror=function(){if(done)return;done=true;clearTimeout(timer);reject(new Error('Google Identity non disponibile.'))};
+    document.head.appendChild(sc);
+  });
+  return __ktnGsiPromise;
+}
+
 /* ── Google Drive sync ─────────────────────────────────────────────── */
 const GDRIVE = {
   clientId: '239044648260-dpn2l35dhjk1md1okn8nc7fob7fqnvrq.apps.googleusercontent.com',
@@ -2631,8 +2654,15 @@ const GDRIVE = {
   connect() {
     this.init();
     if (!this.tokenClient) {
-      toast('Google non è ancora pronto. Riprova tra qualche secondo.');
-      setTimeout(() => this.init(), 1200);
+      this._setUiState('sync');
+      ktnLoadGoogleIdentity().then(() => {
+        this.init();
+        if (!this.tokenClient) throw new Error('Google Identity non inizializzato.');
+        this.tokenClient.requestAccessToken({prompt: this.accessToken ? '' : 'consent'});
+      }).catch((e) => {
+        this._setUiState('error');
+        toast((e&&e.message)||'Google Drive non disponibile.');
+      });
       return;
     }
     this.tokenClient.requestAccessToken({prompt: this.accessToken ? '' : 'consent'});
@@ -2830,16 +2860,8 @@ const GDRIVE = {
   }
 };
 
-// Load GIS asynchronously; initialize when available.
-(function waitForGoogleIdentity(attempt) {
-  if (window.google && google.accounts && google.accounts.oauth2) {
-    GDRIVE.init();
-  } else if ((attempt||0) < 40) {
-    setTimeout(() => waitForGoogleIdentity((attempt||0)+1), 250);
-  } else {
-    GDRIVE._ui();
-  }
-})(0);
+// Google Identity viene caricato solo quando l'utente preme Drive.
+try{ GDRIVE._ui(); }catch(e){}
 
 async function persist() {
   lsSave();
@@ -4682,14 +4704,30 @@ function shareWhatsApp(id) {
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
+var __ktnPlannerMapInitStarted=false;
+function ktnInitPlannerMapAfterStartup(){
+  if(MAP || __ktnPlannerMapInitStarted) return;
+  __ktnPlannerMapInitStarted=true;
+  /* Avvia dopo aver restituito il controllo al browser: l'overlay viene tolto subito. */
+  setTimeout(function(){
+    try{ initMap(); }
+    catch(e){
+      __ktnPlannerMapInitStarted=false;
+      try{console.error('[KTN 0.70.42] initMap',e)}catch(_){}
+      toast('Mappa non disponibile. Il resto dell’app resta utilizzabile.');
+    }
+  },40);
+}
+
 /* ── Startup ────────────────────────────────────────────────────────────── */
 function startupClose() {
   var el = document.getElementById('startupOverlay');
-  if (el) { el.style.opacity='0'; el.style.transition='opacity .25s'; setTimeout(function(){el.remove();},260); }
+  if (el) { el.style.opacity='0'; el.style.transition='opacity .18s'; setTimeout(function(){el.remove();},190); }
+  ktnInitPlannerMapAfterStartup();
 }
 function startupDriveConnect() {
   startupClose();
-  setTimeout(function(){ GDRIVE.connect(); }, 300);
+  setTimeout(function(){ GDRIVE.connect(); }, 220);
 }
 function startupOpen() {
   startupClose();
@@ -4796,7 +4834,7 @@ function autoDetectRegion() {
 
 render();
 FS._ui();
-initMap();
+/* 0.70.42: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
 if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.add("collapsed");}
 </script>
 </div>
@@ -8011,9 +8049,9 @@ function ktn55CancelSearchChoice(){
      files still work normally, just without service-worker installation. */
   if('serviceWorker' in navigator &&
      (location.protocol==='https:' || location.hostname==='localhost')){
-    window.addEventListener('load',function(){
-      navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){});
-    });
+    var regSw=function(){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){})};
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',regSw,{once:true});
+    else regSw();
   }
 })();
 </script>
