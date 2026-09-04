@@ -489,10 +489,10 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.7</small>
+        <small>Driver Attention Monitor · v1.8</small>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-        <div class="version-badge">VERSIONE 1.7</div>
+        <div class="version-badge">VERSIONE 1.8</div>
         <div class="pill" id="systemPill">
           <span class="dot" id="systemDot"></span>
           <span id="systemText">PRONTO</span>
@@ -512,7 +512,7 @@
         </div>
         <div class="camera-bottom">
           <span class="mini" id="fpsState">AI: -- fps</span>
-          <span class="mini" id="calState">Non calibrato</span>
+          <span class="mini" id="calState">CALIBRAZIONE RICHIESTA</span>
           <span class="mini" id="headLive">Testa Δ: --</span>
           <span class="mini" id="objectAIState">Oggetti: --</span>
         </div>
@@ -655,7 +655,13 @@
       running: false,
       wakeLock: null,
       calibrated: false,
-      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0 },
+      calibrationReady: false,
+      neutral: { yawProxy: 0, pitchProxy: 0, rollProxy: 0, noseY: 0 },
+      objectMotion: {
+        "cell phone": {x:null,y:null,size:null,ts:0,heldUntil:0},
+        "bottle": {x:null,y:null,size:null,ts:0,heldUntil:0},
+        "cup": {x:null,y:null,size:null,ts:0,heldUntil:0}
+      },
       timers: {
         noFace: null,
         eyesClosed: null,
@@ -766,7 +772,7 @@
       const pitchProxy = (nose.y - eyeMid.y) / eyeSpan;
       const rollProxy = Math.atan2(rightEye.y-leftEye.y, rightEye.x-leftEye.x);
 
-      return { yawProxy, pitchProxy, rollProxy };
+      return { yawProxy, pitchProxy, rollProxy, noseY:nose.y };
     }
 
     function gazeMetrics(lm){
@@ -978,6 +984,10 @@
     }
 
     function triggerAlarm(type,title,text,icon="⚠️"){
+      // Regola fondamentale v1.8:
+      // nessun allarme prima del completamento della calibrazione.
+      if(!state.calibrated || !state.calibrationReady) return false;
+
       const now=performance.now();
       if(state.currentAlarm!==null) return false;
       if(now < state.alarmCooldownUntil) return false;
@@ -1026,7 +1036,7 @@
     function isObjectNearHand(detection, hands){
       const box=detection.boundingBox;
       if(!box || !hands?.length) return false;
-      const margin=Math.max(28, Math.max(box.width,box.height)*0.45);
+      const margin=Math.max(55, Math.max(box.width,box.height)*0.85);
       const keyPoints=[0,4,5,8,9,12,13,16,17,20];
       return hands.some(hand=>keyPoints.some(i=>hand[i] && pointInsideBox(hand[i],box,margin)));
     }
@@ -1038,6 +1048,34 @@
 
     function getDetectionScore(detection){
       return detection.categories?.[0]?.score || 0;
+    }
+
+    function objectMovedLikeHeld(detection,name,now){
+      const box=detection.boundingBox;
+      const track=state.objectMotion[name];
+      if(!box || !track || !video.videoWidth || !video.videoHeight) return false;
+
+      const x=(box.originX+box.width/2)/video.videoWidth;
+      const y=(box.originY+box.height/2)/video.videoHeight;
+      const size=Math.sqrt(Math.max(1,box.width*box.height)/
+                           Math.max(1,video.videoWidth*video.videoHeight));
+
+      if(track.x!=null && now-track.ts < 1100){
+        const movement=Math.hypot(x-track.x,y-track.y);
+        const scaleChange=track.size ? Math.abs(size-track.size)/track.size : 0;
+
+        // Un oggetto che viene preso tende a spostarsi o ad avvicinarsi alla camera.
+        if(movement>0.028 || scaleChange>0.16){
+          track.heldUntil=now+2600;
+        }
+      }
+
+      track.x=x;
+      track.y=y;
+      track.size=size;
+      track.ts=now;
+
+      return now < track.heldUntil;
     }
 
     function processObjects(now){
@@ -1061,8 +1099,14 @@
 
         for(const d of detections){
           const name=getDetectionName(d);
-          const held=isObjectNearHand(d,hands);
           const score=getDetectionScore(d);
+          const nearHand=isObjectNearHand(d,hands);
+          const movingHeld=objectMovedLikeHeld(d,name,now);
+
+          // Dopo la calibrazione un oggetto è considerato "preso" se:
+          // - è vicino a una mano rilevata, oppure
+          // - si è mosso/avvicinato come un oggetto appena afferrato.
+          const held=state.calibrationReady && (nearHand || movingHeld);
 
           if(score>bestScore){ bestScore=score; bestLabel=name; }
 
@@ -1075,13 +1119,25 @@
           }
         }
 
-        const phoneFor=setTimer("phoneHeld",phoneHeld);
-        const drinkFor=setTimer("drinkHeld",!phoneHeld && drinkHeld);
+        // Prima della calibrazione azzeriamo SEMPRE i timer:
+        // un oggetto preso mentre si raggiunge il pulsante CALIBRA non deve
+        // accumulare tempo e far partire un allarme subito dopo.
+        const phoneFor=setTimer("phoneHeld",state.calibrationReady && phoneHeld);
+        const drinkFor=setTimer("drinkHeld",state.calibrationReady && !phoneHeld && drinkHeld);
 
         if(!phoneHeld) resetAlarm("phone");
         if(!drinkHeld) resetAlarm("drink");
 
-        if(phoneHeld){
+        if(!state.calibrationReady){
+          state.objectRisk=0;
+          state.objectLabel=null;
+          resetAlarm("phone");
+          resetAlarm("drink");
+          setValue($("objectValue"),detections.length ? "RILEVATO" : "IN ATTESA","neutral");
+          $("objectAIState").textContent=detections.length
+            ? "Oggetti: rilevati · allarmi disattivati fino alla calibrazione"
+            : "Oggetti: in attesa calibrazione";
+        }else if(phoneHeld){
           state.objectRisk=35;
           state.objectLabel="TELEFONO IN MANO";
           setValue($("objectValue"),"📱 IN MANO","danger");
@@ -1185,7 +1241,13 @@
       // Logica semplice delle prime versioni:
       // direzione e testa bassa vengono determinate SOLO dal frame corrente.
       const headTurned = state.calibrated && Math.abs(dyaw) > sensitivity;
-      const headDown = state.calibrated && dpitch > 0.11;
+
+      const noseDown = state.calibrated &&
+        (hm.noseY - state.neutral.noseY) > 0.035;
+
+      const headDown = state.calibrated &&
+        (dpitch > 0.050 || noseDown || gm.vertical > 0.31);
+
       const headTilted = state.calibrated && Math.abs(droll) > 0.40;
       const headAway = headTurned || headDown || headTilted;
 
@@ -1200,6 +1262,27 @@
         !headAway &&
         leftEAR < 0.125 &&
         rightEAR < 0.125;
+
+      if(!state.calibrationReady){
+        setTimer("eyesClosed",false);
+        setTimer("lookAway",false);
+        setTimer("headDown",false);
+        setTimer("noFace",false);
+
+        resetAlarm("eyes");
+        resetAlarm("down");
+        resetAlarm("away");
+        resetAlarm("tracking");
+
+        setValue($("faceValue"),"OK","ok");
+        setValue($("eyesValue"),"IN ATTESA","neutral");
+        setValue($("headValue"),"IN ATTESA","neutral");
+        setValue($("gazeValue"),"IN ATTESA","neutral");
+        $("headLive").textContent="Premi CALIBRA POSIZIONE";
+        $("attentionScore").textContent="--%";
+        $("attentionBar").style.width="0%";
+        return;
+      }
 
       const eyesClosedFor=setTimer("eyesClosed",bothEyesClosed);
       const lookAwayFor=setTimer("lookAway",state.calibrated && (headAway || gazeAway));
@@ -1270,6 +1353,27 @@
       }
     }
     function processNoFace(){
+      if(!state.calibrationReady){
+        setTimer("eyesClosed",false);
+        setTimer("lookAway",false);
+        setTimer("headDown",false);
+        setTimer("noFace",false);
+
+        resetAlarm("eyes");
+        resetAlarm("down");
+        resetAlarm("away");
+        resetAlarm("tracking");
+
+        setValue($("faceValue"),"INQUADRA","neutral");
+        setValue($("eyesValue"),"IN ATTESA","neutral");
+        setValue($("headValue"),"IN ATTESA","neutral");
+        setValue($("gazeValue"),"IN ATTESA","neutral");
+        $("headLive").textContent="Premi CALIBRA POSIZIONE";
+        $("attentionScore").textContent="--%";
+        $("attentionBar").style.width="0%";
+        return;
+      }
+
       // Nessuna deduzione artificiale sulla direzione:
       // se il landmarker perde il volto mentre giri/abbassi la testa,
       // consideriamo semplicemente che la testa è fuori dall'angolo utile.
@@ -1363,6 +1467,8 @@
         await requestWakeLock();
 
         state.running=true;
+        state.calibrated=false;
+        state.calibrationReady=false;
         Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
         Object.keys(state.timers).forEach(k=>state.timers[k]=null);
         state.currentAlarm=null;
@@ -1370,7 +1476,7 @@
         $("stopBtn").disabled=false;
         $("calibrateBtn").disabled=false;
         updateSystem("MONITORAGGIO","ok");
-        toast("Monitoraggio attivo. Premi CALIBRA POSIZIONE guardando normalmente la strada.");
+        toast("Monitoraggio attivo. Gli allarmi sono disattivati finché non completi CALIBRA POSIZIONE.");
 
         loop();
       }catch(err){
@@ -1391,8 +1497,9 @@
       Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
       Object.keys(state.timers).forEach(k=>state.timers[k]=null);
       state.calibrated=false;
-      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0};
-      $("calState").textContent="Non calibrato";
+      state.calibrationReady=false;
+      state.neutral={yawProxy:0,pitchProxy:0,rollProxy:0,noseY:0};
+      $("calState").textContent="CALIBRAZIONE RICHIESTA";
 
       if(state.stream){
         state.stream.getTracks().forEach(t=>t.stop());
@@ -1471,11 +1578,18 @@
       state.neutral={
         yawProxy:avg("yawProxy"),
         pitchProxy:avg("pitchProxy"),
-        rollProxy:avg("rollProxy")
+        rollProxy:avg("rollProxy"),
+        noseY:avg("noseY")
       };
 
       state.calibrated=true;
-      $("calState").textContent="Calibrato";
+      state.calibrationReady=true;
+
+      // Tutti i timer partono da zero DOPO la calibrazione.
+      Object.keys(state.timers).forEach(k=>state.timers[k]=null);
+      Object.keys(state.alarmLatched).forEach(k=>state.alarmLatched[k]=false);
+
+      $("calState").textContent="CALIBRATO";
       toast("Posizione di guida calibrata.");
     }
 
