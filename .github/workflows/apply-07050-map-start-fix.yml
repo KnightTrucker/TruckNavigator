@@ -1,0 +1,45 @@
+name: Apply KTN 0.70.50 Map Start Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-hotfix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Apply 0.70.50 map startup fix
+        run: python KTN_07050_MAP_START_FIX.py
+
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -q 'KTN_NAV_BUILD="0.70.50"' navigator.html
+          grep -q 'ktn07050ArmMapFallback' navigator.html
+          grep -q "ktn-007050-launcher-v3" sw.js
+          grep -q 'sw.js?v=7050' index.html
+          grep -q 'sw.js?v=7050' planner.html
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html planner.html navigator.html sw.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "KTN 0.70.50: robust map startup and fallback"
+            git push
+          fi
