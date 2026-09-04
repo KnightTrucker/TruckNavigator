@@ -5259,7 +5259,7 @@ function ktnRequestGpsStart(){
   try{
     if(window.__ktnGpsOwnerActive && typeof watchId!=='undefined' && watchId!==null && watchId!==undefined){
       window.__KTN_GPS_START_REQUESTED__=false;
-      var ld0=document.getElementById('loading');if(ld0)ld0.style.display='none';
+      try{ktn07050ArmMapFallback();ktn07050RevealNavigation()}catch(e){}
       return watchId;
     }
   }catch(_e){}

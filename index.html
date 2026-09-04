@@ -32,7 +32,7 @@
 'use strict';
 var state=document.getElementById('state'),busy=false;
 function setState(t,err){state.textContent=t;state.className='state'+(err?' err':'')}
-function go(mode){try{sessionStorage.setItem('ktn_launch_mode',mode)}catch(_e){}location.href='./planner.html?mode='+encodeURIComponent(mode)+'&v=7049'}
+function go(mode){try{sessionStorage.setItem('ktn_launch_mode',mode)}catch(_e){}location.href='./planner.html?mode='+encodeURIComponent(mode)+'&v=7050'}
 function openDb(name,ver,upgrade){return new Promise(function(res,rej){var r=indexedDB.open(name,ver);r.onupgradeneeded=function(){upgrade&&upgrade(r.result)};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
 async function storePending(text,name){var db=await openDb('KTNLauncher',1,function(d){if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv')});await new Promise(function(res,rej){var tx=db.transaction('kv','readwrite');tx.objectStore('kv').put({text:text,name:name||'rubrica.json',at:Date.now()},'pendingImport');tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});db.close()}
 async function storeHandle(handle){try{var db=await openDb('DistributoriFS',1,function(d){if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv')});await new Promise(function(res,rej){var tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(handle,'distFileHandle');tx.oncomplete=res;tx.onerror=function(){rej(tx.error)}});db.close()}catch(_e){}}
@@ -48,7 +48,7 @@ function requestDrive(){tokenClient=google.accounts.oauth2.initTokenClient({clie
 document.getElementById('drive').addEventListener('click',function(){if(busy)return;busy=true;setState('Preparazione Google Drive…');loadGsi().then(function(){setState('Autorizzazione Google Drive…');try{requestDrive()}catch(e){busy=false;setState('Tocca di nuovo Google Drive',true)}}).catch(function(){busy=false;setState('Google Drive non disponibile. Riprova.',true)})});
 
 /* Il service worker viene aggiornato dopo che il launcher e gia interattivo. */
-if('serviceWorker' in navigator&&location.protocol==='https:')setTimeout(function(){navigator.serviceWorker.register('./sw.js?v=7050',{scope:'./'}).catch(function(){})},1200);
+if('serviceWorker' in navigator&&location.protocol==='https:')setTimeout(function(){navigator.serviceWorker.register('./sw.js?v=7050b',{scope:'./'}).catch(function(){})},1200);
 })();
 </script>
 </body>

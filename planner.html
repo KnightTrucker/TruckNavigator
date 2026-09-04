@@ -3966,6 +3966,7 @@ function startNavigation(){
     tripId:String(Date.now())
   });
   if(window.__gattoExplorerMode){p.set('explorer','1');window.__gattoExplorerMode=false;}
+  p.set('v','7050');
 
   try{localStorage.setItem('ktn34_active_navigation',JSON.stringify({active:true,savedAt:Date.now(),toLat:+window.orsToLat,toLng:+window.orsToLng,toName:String(window.orsToLab||'Arrivo'),stops:(window.orsStops||[]).map(function(s){return{lat:+s.lat,lng:+s.lng,label:s.label||'Sosta'}}),pref:String(window.b10SelectedPreference||'recommended'),routeMode:String(window.b10SelectedRouteMode||'strict'),vehicle:{alt:alt,lar:lar,lun:lun,pes:pes,ass:ass}}));}catch(e){}
   var navigatorUrl='navigator.html'+(p.toString()?'?'+p.toString():'');
@@ -8245,7 +8246,7 @@ function ktn55CancelSearchChoice(){
      files still work normally, just without service-worker installation. */
   if('serviceWorker' in navigator &&
      (location.protocol==='https:' || location.hostname==='localhost')){
-    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7050',{scope:'./'}).catch(function(){})};
+    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7050b',{scope:'./'}).catch(function(){})};
     var armSw=function(){setTimeout(regSw,700)};
     if(window.__KTN_STARTUP_MODE__) armSw();
     else document.addEventListener('ktn:startup-selected',armSw,{once:true});

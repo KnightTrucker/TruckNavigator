@@ -1,5 +1,5 @@
-/* KnightTruckerNavy 0.70.50 — release-safe service worker */
-const CACHE='ktn-007050-launcher-v3';
+/* KnightTruckerNavy 0.70.50 — release-safe service worker · coherence fix */
+const CACHE='ktn-007050-launcher-v4';
 const SHELL=['./index.html','./planner.html','./navigator.html','./manifest.json'];
 
 function canonicalRequest(reqOrUrl){
