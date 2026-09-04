@@ -1,5 +1,5 @@
-/* KnightTruckerNavy 0.70.42 STARTUP-FIX — non-blocking service worker */
-const CACHE='ktn-007042-startup-fix-v1';
+/* KnightTruckerNavy 0.70.43 STARTUP-FIX — non-blocking service worker */
+const CACHE='ktn-007043-bootstrap-diag-v1';
 const CORE=[
   './',
   './index.html',
