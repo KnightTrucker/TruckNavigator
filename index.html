@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.44';
+<script>window.KTN_APP_VERSION='0.0.70.45';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
 <script id="ktnStartupBootstrap">
 (function(){
   'use strict';
-  window.KTN_STARTUP_VERSION='0.0.70.44';
+  window.KTN_STARTUP_VERSION='0.0.70.45';
   window.__KTN_STARTUP_MODE__='';
   window.__KTN_STARTUP_CLOSED__=false;
   window.__KTN_STARTUP_MAIN_READY__=false;
@@ -19,6 +19,47 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
     }catch(_e){}
   }
   window.ktnStartupDiag=diag;
+
+  /* 0.70.45 STABLE: le librerie cartografiche NON fanno parte del critical path.
+     La schermata iniziale e i pulsanti sono completamente indipendenti dalla rete. */
+  var __ktnLibPromises={};
+  function loadCssOnce(key,href){
+    if(document.querySelector('link[data-ktn-lib="'+key+'"]'))return;
+    var l=document.createElement('link');l.rel='stylesheet';l.href=href;l.setAttribute('data-ktn-lib',key);
+    document.head.appendChild(l);
+  }
+  function loadScriptOnce(key,src,test,timeoutMs){
+    try{if(test&&test())return Promise.resolve(true)}catch(_e){}
+    if(__ktnLibPromises[key])return __ktnLibPromises[key];
+    __ktnLibPromises[key]=new Promise(function(resolve,reject){
+      var old=document.querySelector('script[data-ktn-lib="'+key+'"]');
+      if(old&&old.dataset.loaded==='1'){resolve(true);return}
+      var s=old||document.createElement('script');
+      var done=false,t=setTimeout(function(){if(done)return;done=true;reject(new Error(key+' timeout'))},timeoutMs||8000);
+      function ok(){if(done)return;done=true;clearTimeout(t);s.dataset.loaded='1';resolve(true)}
+      function bad(){if(done)return;done=true;clearTimeout(t);reject(new Error(key+' non disponibile'))}
+      s.addEventListener('load',function(){try{if(!test||test())ok();else bad()}catch(_e){bad()}},{once:true});
+      s.addEventListener('error',bad,{once:true});
+      if(!old){s.src=src;s.async=true;s.setAttribute('data-ktn-lib',key);document.head.appendChild(s)}
+    });
+    __ktnLibPromises[key].catch(function(){delete __ktnLibPromises[key]});
+    return __ktnLibPromises[key];
+  }
+  window.ktnEnsureLeaflet=function(){
+    loadCssOnce('leaflet-css','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');
+    return loadScriptOnce('leaflet','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',function(){return !!window.L},7000)
+      .catch(function(){return loadScriptOnce('leaflet-fallback','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',function(){return !!window.L},7000)});
+  };
+  window.ktnEnsureMapLibre=function(){
+    loadCssOnce('maplibre-css','https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css');
+    return loadScriptOnce('maplibre','https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js',function(){return !!window.maplibregl},8000)
+      .catch(function(){return loadScriptOnce('maplibre-fallback','https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.js',function(){return !!window.maplibregl},8000)});
+  };
+  window.ktnLoadOptionalFonts=function(){
+    if(document.querySelector('link[data-ktn-fonts]'))return;
+    var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap';
+    l.media='print';l.onload=function(){this.media='all'};l.setAttribute('data-ktn-fonts','1');document.head.appendChild(l);
+  };
 
   function closeNow(){
     window.__KTN_STARTUP_CLOSED__=true;
@@ -46,8 +87,9 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
   window.ktnStartupChoose=function(mode){
     if(window.__KTN_STARTUP_MODE__)return;
     window.__KTN_STARTUP_MODE__=mode;
-    diag('v0.70.44 - scelta '+mode+' - avvio...',false);
+    diag('v0.70.45 - scelta '+mode+' - avvio...',false);
     closeNow();
+    try{window.ktnLoadOptionalFonts&&window.ktnLoadOptionalFonts()}catch(_e){}
     try{document.dispatchEvent(new CustomEvent('ktn:startup-selected',{detail:{mode:mode}}))}catch(_e){}
 
     setTimeout(function(){
@@ -71,7 +113,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
   window.startupOpen=function(){window.ktnStartupChoose('open')};
   window.startupDriveConnect=function(){window.ktnStartupChoose('drive')};
 
-  /* 0.70.44: fallback touch/pointer capture. Anche se un vecchio layer intercetta
+  /* 0.70.45: fallback touch/pointer capture. Anche se un vecchio layer intercetta
      il target, il documento riconosce il punto premuto dentro uno dei 3 pulsanti. */
   function startupHit(ev){
     if(window.__KTN_STARTUP_CLOSED__||window.__KTN_STARTUP_MODE__)return;
@@ -97,13 +139,9 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.44 STARTUP LAYER FIX</title>
+<title>KnightTruckerNavy - 0.0.70.45 STARTUP LAYER FIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 
 <style>
 :root {
@@ -1190,8 +1228,8 @@ body.ktn28-clean.ktn28-hide-trust .ktn23-offline-trust{display:none!important}
 }
 </style>
 
-<link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
-<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+
+
 
 
 <style>
@@ -1418,7 +1456,7 @@ body.ktn28-clean.ktn28-hide-trust .ktn23-offline-trust{display:none!important}
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="application-name" content="KnightTruckerNavy">
-<link rel="manifest" href="./manifest.json?v=007041">
+<link rel="manifest" href="./manifest.json?v=007045">
 <script id="ktn00727ShellOrientationBridge">
 (function(){
 'use strict';
@@ -1664,9 +1702,9 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 <!-- ═══ STARTUP MODAL ══════════════════════════════════════════════ -->
 <div id="startupOverlay" class="startup-overlay">
   <div class="startup-box">
-    <img src="assets/ui/logo.png" class="startup-logo" alt="Logo">
+    <img src="assets/ui/logo.png" class="startup-logo" alt="Logo" decoding="async" fetchpriority="high">
     <div class="startup-title">KnightTruckerNavy</div>
-    <div class="startup-sub">Scegli come avviare KnightTruckerNavy<br><strong style="color:#7dd3fc;letter-spacing:.5px">VERSIONE 0.70.44</strong><br><span id="ktnStartupDiag" style="display:inline-block;margin-top:5px;font-size:11px;color:#86efac">Bootstrap pronto</span></div>
+    <div class="startup-sub">Scegli come avviare KnightTruckerNavy<br><strong style="color:#7dd3fc;letter-spacing:.5px">VERSIONE 0.70.45</strong><br><span id="ktnStartupDiag" style="display:inline-block;margin-top:5px;font-size:11px;color:#86efac">Bootstrap pronto</span></div>
     <div class="startup-btns">
 <button type="button" class="btn btn-primary" onclick="ktnStartupChoose('drive')">☁ Connetti Google Drive</button>
       <button type="button" class="btn btn-primary" onclick="ktnStartupChoose('open')">
@@ -1684,7 +1722,7 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 <!-- HEADER -->
 <header class="app-header">
   <div class="brand">
-    <img src="assets/ui/logo.png" class="brand-mark" alt="Emblema Z" id="brandVersionLogo" title="Mostra versione">
+    <img src="assets/ui/logo.png" class="brand-mark" alt="Emblema Z" id="brandVersionLogo" title="Mostra versione" loading="lazy" decoding="async">
     <div class="brand-name">KnightTruckerNavy <span class="ktn47-version-badge">GATTO 1.3</span> <em>/ Rubrica</em></div>
   </div>
   <div id="fileStatus" class="file-status"></div>
@@ -1737,7 +1775,7 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 <div class="content-area">
 
   <div class="tbl-wrap" id="tblWrap">
-    <div class="bg-emblem"><img src="assets/ui/emblem.jpg" alt="" aria-hidden="true"></div>
+    <div class="bg-emblem"><img src="assets/ui/emblem.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async"></div>
     <div class="tbl-inner">
       <table id="mainTable">
         <thead>
@@ -1754,7 +1792,7 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
       </table>
     </div>
     <div id="emptyState" class="empty" style="display:none">
-      <img src="assets/ui/emblem.jpg" class="empty-emblem" alt="">
+      <img src="assets/ui/emblem.jpg" class="empty-emblem" alt="" loading="lazy" decoding="async">
       <h3>Nessun distributore trovato</h3>
       <p>Aggiungi il primo distributore oppure modifica i filtri.</p>
       <button type="button" class="btn btn-primary" onclick="openModal()" style="margin-top:14px">&#9981; Aggiungi distributore</button>
@@ -2306,17 +2344,23 @@ function lsSave() { localStorage.setItem('distributori_v1', JSON.stringify(DB));
 function uid()    { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function x(v)     { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-/* ── Leaflet icons ──────────────────────────────────────────────────── */
-const fuelIcon = L.divIcon({
+/* ── Leaflet icons — 0.70.45 lazy owner ───────────────────────────── */
+let fuelIcon = null;
+let userIcon = null;
+function ensureLeafletIcons(){
+  if(!window.L||typeof L.divIcon!=='function')return false;
+  if(!fuelIcon) fuelIcon = L.divIcon({
   className:'',
   html:'<div style="width:30px;height:30px;background:#1B1E2B;border:2px solid #f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.5)">&#9981;</div>',
   iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-18]
 });
-const userIcon = L.divIcon({
+  if(!userIcon) userIcon = L.divIcon({
   className:'',
   html:'<div style="width:28px;height:28px;background:#E84042;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(232,64,66,.35),0 2px 8px rgba(0,0,0,.5)"></div>',
   iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-16]
 });
+  return true;
+}
 
 /* ── Map ────────────────────────────────────────────────────────────── */
 
@@ -2375,6 +2419,8 @@ function ktn61OfferMapPoint(latlng){
 }
 
 function initMap() {
+  if(!window.L) throw new Error('Leaflet non caricato');
+  if(!ensureLeafletIcons()) throw new Error('Icone Leaflet non disponibili');
   MAP = L.map('map',{zoomControl:true,attributionControl:true,center:[46.5,10.5],zoom:5});
   var gmRoad=L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:'0123',attribution:'&copy; Google Maps'});
   var gmSat=L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{maxZoom:20,subdomains:'0123',attribution:'&copy; Google Maps'});
@@ -4343,7 +4389,7 @@ fr.addEventListener('load',function(){
 
       var ab=d.createElement('div');
       ab.className='arrival-banner'; ab.id='arrivalBanner';
-      ab.innerHTML='<div class="ktn45-ab-card"><img src="assets/ui/arrival.jpg" alt="Arrivo"><strong>ARRIVATEN A DESTINAZIONEN !!!!</strong><span>Tocca l\'immagine per chiudere</span></div>';
+      ab.innerHTML='<div class="ktn45-ab-card"><img src="assets/ui/arrival.jpg" alt="Arrivo" loading="lazy" decoding="async"><strong>ARRIVATEN A DESTINAZIONEN !!!!</strong><span>Tocca l\'immagine per chiudere</span></div>';
       ab.addEventListener('click',function(){ab.classList.remove('show')});
       d.body.appendChild(ab);
 
@@ -4804,15 +4850,17 @@ var __ktnPlannerMapInitStarted=false;
 function ktnInitPlannerMapAfterStartup(){
   if(MAP || __ktnPlannerMapInitStarted) return;
   __ktnPlannerMapInitStarted=true;
-  /* Avvia dopo aver restituito il controllo al browser: l'overlay viene tolto subito. */
   setTimeout(function(){
-    try{ initMap(); }
-    catch(e){
+    var p=(window.ktnEnsureLeaflet?window.ktnEnsureLeaflet():Promise.reject(new Error('Loader Leaflet assente')));
+    p.then(function(){
+      try{initMap()}
+      catch(e){throw e}
+    }).catch(function(e){
       __ktnPlannerMapInitStarted=false;
-      try{console.error('[KTN 0.70.43] initMap',e)}catch(_){}
-      toast('Mappa non disponibile. Il resto dell’app resta utilizzabile.');
-    }
-  },40);
+      try{console.error('[KTN 0.70.45] initMap',e)}catch(_){}
+      toast('Mappa temporaneamente non disponibile. Il resto dell’app è utilizzabile.');
+    });
+  },20);
 }
 
 /* ── Startup compatibility — owner: early ktnStartupBootstrap ───────── */
@@ -4922,10 +4970,10 @@ function autoDetectRegion() {
 render();
 FS._ui();
 window.__KTN_STARTUP_MAIN_READY__=true;
-try{window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.44 - JS principale pronto',false)}catch(_e){}
-setTimeout(function(){try{if(!window.__KTN_STARTUP_MODE__)window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.44 - EVENT LOOP OK',false)}catch(_e){}},900);
-window.addEventListener('load',function(){try{if(!window.__KTN_STARTUP_MODE__)window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.44 - PAGINA CARICATA',false)}catch(_e){}},{once:true});
-/* 0.70.44: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
+try{window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.45 - PRONTO',false)}catch(_e){}
+setTimeout(function(){try{if(!window.__KTN_STARTUP_MODE__)window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.45 - PRONTO',false)}catch(_e){}},900);
+window.addEventListener('load',function(){try{if(!window.__KTN_STARTUP_MODE__)window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.45 - PRONTO',false)}catch(_e){}},{once:true});
+/* 0.70.45: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
 if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.add("collapsed");}
 </script>
 </div>
@@ -5229,7 +5277,7 @@ if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.
 
 <div id="versionOverlay" class="version-overlay" aria-hidden="true">
   <div class="version-popup" role="dialog" aria-modal="true" aria-labelledby="versionTitle">
-    <div id="versionCrestWrap" class="version-crest-wrap" aria-hidden="true"><img src="assets/ui/version-crest.jpg" alt="Stemma araldico Torakiky"></div>
+    <div id="versionCrestWrap" class="version-crest-wrap" aria-hidden="true"><img src="assets/ui/version-crest.jpg" alt="Stemma araldico Torakiky" loading="lazy" decoding="async"></div>
     <h3 id="versionTitle">KnightTruckerNavy</h3>
     <div class="ver">GATTO 1.3</div>
     <p class="version-tagline">IL VERO NAVIGATORE PER CAMION DI TORAKIKY</p><p style="font-size:11px;color:#9ca3af;margin:-8px 0 16px">Professional Navigator · singolo motore · Hybrid satellitare · singolo GPS · cockpit</p>
@@ -5612,7 +5660,7 @@ function openVer(){
   <div class="ktn3d-status" id="ktn3dStatus">GPS: attesa…</div>
   <div class="ktn22-arrival" id="ktn22Arrival" onclick="ktn22CloseArrival()" title="Tocca per chiudere">
     <div class="ktn45-arrival-card">
-      <img src="assets/ui/arrival.jpg" alt="Arrivo a destinazione">
+      <img src="assets/ui/arrival.jpg" alt="Arrivo a destinazione" loading="lazy" decoding="async">
       <div class="ktn45-arrival-text">ARRIVATEN A DESTINAZIONEN !!!!</div>
       <div class="ktn45-arrival-hint">Tocca l'immagine per chiudere</div>
       <div class="ktn22-summary" style="display:none">
@@ -5712,6 +5760,15 @@ function ktn18HybridStyle(){
 }
 
 function ktn18CreateMap(){
+  if(!window.maplibregl){
+    if(window.ktnEnsureMapLibre){
+      window.ktnEnsureMapLibre().then(function(){ktn18CreateMap()}).catch(function(){try{ktn18SetOffline(true)}catch(_e){}});
+      return;
+    }
+    try{ktn18SetOffline(true)}catch(_e){}
+    return;
+  }
+
   try{
     ktn3dMap=new maplibregl.Map({
       container:'ktn3dMap',
@@ -5888,7 +5945,7 @@ function ktn3dStartGPS(){
 
     if(!ktn3dMarker){
       var el=document.createElement('div');el.className='ktn3d-truck';
-      el.innerHTML='<img src="assets/ui/truck-marker.jpg" alt="Posizione KnightTruckerNavy">';
+      el.innerHTML='<img src="assets/ui/truck-marker.jpg" alt="Posizione KnightTruckerNavy" loading="lazy" decoding="async">';
       ktn3dMarker=new maplibregl.Marker({element:el,rotationAlignment:'map',pitchAlignment:'map'})
         .setLngLat([pos.lng,pos.lat]).addTo(ktn3dMap);
     } else {
@@ -8140,7 +8197,7 @@ function ktn55CancelSearchChoice(){
      files still work normally, just without service-worker installation. */
   if('serviceWorker' in navigator &&
      (location.protocol==='https:' || location.hostname==='localhost')){
-    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7044',{scope:'./'}).catch(function(){})};
+    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7045',{scope:'./'}).catch(function(){})};
     var armSw=function(){setTimeout(regSw,700)};
     if(window.__KTN_STARTUP_MODE__) armSw();
     else document.addEventListener('ktn:startup-selected',armSw,{once:true});

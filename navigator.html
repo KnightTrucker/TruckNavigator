@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>KnightTruckerNavy Professional Navigator v47.3 TOMTOM PRO TRAFFIC COLLAPSIBLE COMMAND GROUP</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
@@ -2930,7 +2929,7 @@ window.KTN_PROGRESS_SINGLE_OWNER=true;
 
 window.KTN_ROAD_SINGLE_OWNER=true;
 window.KTN3_ARCH='clean-arch-final-0.70.39';
-window.KTN_BUILD_VERSION=(function(){try{return String(parent&&parent.KTN_APP_VERSION||'0.0.70.39')}catch(e){return '0.0.70.39'}})();
+window.KTN_BUILD_VERSION=(function(){try{return String(parent&&parent.KTN_APP_VERSION||'0.0.70.45')}catch(e){return '0.0.70.39'}})();
 var K3=window.KTN3=window.KTN3||{};
 K3.state=K3.state||{gps:null,snap:null,road:{name:'',source:'',at:0},limit:{value:null,source:'',at:0},progress:{pct:0,remainingM:0,at:0},offRoute:{candidate:false,confirmed:false,samples:0,at:0}};
 K3.owners=owners;
@@ -2940,7 +2939,7 @@ K4.set=function(name,data){var old=K4.features[name]||{};K4.features[name]=Objec
 K4.get=function(name){return K4.features[name]||null};
 K4.age=function(v){return v&&v.at?Date.now()-Number(v.at):Infinity};
 window.KTN4_OWNERS=owners;
-window.ktn36SyncVersion=function(){var v;try{v=String(parent&&parent.KTN_APP_VERSION||window.KTN_BUILD_VERSION||'0.0.70.39')}catch(e){v=String(window.KTN_BUILD_VERSION||'0.0.70.39')}window.KTN_BUILD_VERSION=v;var el=document.getElementById('ktn36NavVersion');if(el)el.textContent=v;return v};
+window.ktn36SyncVersion=function(){var v;try{v=String(parent&&parent.KTN_APP_VERSION||window.KTN_BUILD_VERSION||'0.0.70.45')}catch(e){v=String(window.KTN_BUILD_VERSION||'0.0.70.45')}window.KTN_BUILD_VERSION=v;var el=document.getElementById('ktn36NavVersion');if(el)el.textContent=v;return v};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',window.ktn36SyncVersion,{once:true});else window.ktn36SyncVersion();
 })();
 </script>
@@ -4388,7 +4387,7 @@ function ktn55ShowStop(stop,index){
    var lab=(stop&&stop.label)||('Tappa '+(index+1));
    sub.textContent=lab+' · ripartenza automatica tra 20 secondi';
  }
- if(o)o.classList.add('on');
+ if(o){try{window.ktn45HydrateImage&&window.ktn45HydrateImage(o)}catch(e){}o.classList.add('on');}
 
  speak('Tappa raggiunta',true);
 
@@ -10040,7 +10039,14 @@ setTimeout(function(){ensureProgress();ensureHud();closePanels17();tick17()},500
 /* Bottom notices must never cover current road/status. */
 #ktn58FlowChip,#ktn47TrafficDelay{max-width:min(72vw,360px)!important;pointer-events:none!important}
 </style>
-<div id="ktn21CameraCop" aria-hidden="true"><img alt="Avviso autovelox" src="assets/navigation/camera-cop.png"></div>
+<div id="ktn21CameraCop" aria-hidden="true"><img alt="Avviso autovelox" data-src="assets/navigation/camera-cop.png" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" loading="lazy" decoding="async"></div>
+<script id="ktn0045LazyMediaOwner">
+(function(){
+  window.ktn45HydrateImage=function(root){
+    try{var r=typeof root==='string'?document.getElementById(root):root;if(!r)return;var imgs=r.querySelectorAll('img[data-src]');for(var i=0;i<imgs.length;i++){if(imgs[i].dataset.src){imgs[i].src=imgs[i].dataset.src;delete imgs[i].dataset.src}}}catch(e){}
+  };
+})();
+</script>
 <script id="ktn22CameraCopOwner">
 (function(){
  'use strict';
@@ -10064,6 +10070,7 @@ setTimeout(function(){ensureProgress();ensureHud();closePanels17();tick17()},500
    }catch(e){}
  }
  function reveal(){
+   try{window.ktn45HydrateImage&&window.ktn45HydrateImage(ov)}catch(e){}
    var wasOn=ov.classList.contains('on');
    ov.classList.add('on');
    ov.setAttribute('aria-hidden','false');
@@ -10455,7 +10462,7 @@ window.addEventListener('ktn4state',render);window.addEventListener('ktn31camera
 </style>
 <div id="ktn53ArrivalOverlay">
   <div id="ktn53ArrivalCard">
-    <img src="assets/navigation/arrival-overlay.png" alt="Arrivo a destinazione">
+    <img data-src="assets/navigation/arrival-overlay.png" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Arrivo a destinazione" loading="lazy" decoding="async">
     <div id="ktn53ArrivalText">ARRIVATEN A DESTINAZIONEN !!!!</div>
     <div id="ktn53ArrivalHint">Tocca l'immagine per chiudere</div>
   </div>
@@ -10490,7 +10497,7 @@ window.addEventListener('ktn4state',render);window.addEventListener('ktn31camera
 </style>
 <div id="ktn55StopOverlay">
  <div id="ktn55StopCard">
-  <img src="assets/navigation/stop-overlay.png" alt="Arrivo alla tappa">
+  <img data-src="assets/navigation/stop-overlay.png" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Arrivo alla tappa" loading="lazy" decoding="async">
   <div id="ktn55StopText">TAPPEN RAGGIUNTEN!!!</div>
   <div id="ktn55StopSub">Ripartenza automatica tra 20 secondi</div>
  </div>
@@ -10595,7 +10602,7 @@ function placeBottomRoadEvents(){
 }
 function normalizeSideHud(){var svc=id('ktn17SvcBtn'),al=id('ktn17AlertBtn');if(svc)svc.style.setProperty('display','flex','important');if(al)al.style.setProperty('display','none','important');try{if(typeof window.ktn61PlacePanels==='function')window.ktn61PlacePanels()}catch(e){}}
 function closeArrival(){var o=id('ktn53ArrivalOverlay');if(o)o.classList.remove('on');window.ktn53ArrivalDismissed=true}
-window.ktn53ShowArrival=function(){if(window.ktn53ArrivalDismissed)return;var o=id('ktn53ArrivalOverlay');if(o)o.classList.add('on')};
+window.ktn53ShowArrival=function(){if(window.ktn53ArrivalDismissed)return;var o=id('ktn53ArrivalOverlay');if(o){try{window.ktn45HydrateImage&&window.ktn45HydrateImage(o)}catch(e){}o.classList.add('on')}};
 window.ktn53ResetArrival=function(){window.ktn53ArrivalDismissed=false;try{ktn53ArrivalLatched=false}catch(e){}var o=id('ktn53ArrivalOverlay');if(o)o.classList.remove('on')};
 function bindArrival(){var c=id('ktn53ArrivalCard');if(c&&!c.dataset.ktn31Bound){c.dataset.ktn31Bound='1';c.addEventListener('click',closeArrival)}}
 function render(){syncSummary();syncTurnEta();placeBottomRoadEvents();normalizeSideHud();bindArrival()}
