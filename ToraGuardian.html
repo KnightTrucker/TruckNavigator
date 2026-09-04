@@ -474,7 +474,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>ToraGuardian</h1>
-        <small>Driver Attention Monitor · v1.1</small>
+        <small>Driver Attention Monitor · v1.2</small>
       </div>
       <div class="pill" id="systemPill">
         <span class="dot" id="systemDot"></span>
@@ -976,7 +976,7 @@
       }else if(headTurned){
         // La scritta rende immediatamente evidente che il movimento è stato rilevato.
         // Il verso è riferito allo spostamento rilevato dalla camera.
-        const direction = dyaw < 0 ? "SINISTRA" : "DESTRA";
+        const direction = dyaw < 0 ? "DESTRA" : "SINISTRA";
         setValue($("headValue"),direction,"warn");
       }else{
         setValue($("headValue"),state.calibrated?"OK":"CALIBRA","ok");
