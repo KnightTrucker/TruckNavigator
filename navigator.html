@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_NAV_BUILD="0.70.48";</script>
+<script>window.KTN_NAV_BUILD="0.70.49";</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>KnightTruckerNavy Professional Navigator v47.3 TOMTOM PRO TRAFFIC COLLAPSIBLE COMMAND GROUP</title>
@@ -3598,7 +3598,7 @@ function routeRequest(startLat,startLng,isReroute){
       var lm=document.getElementById('loadingMsg');
       if(lm)lm.textContent='Percorso pronto. Attivazione GPS…';
       var sb=document.getElementById('startBtn');if(sb)sb.style.display='none';
-      setTimeout(function(){try{ktnRequestGpsStart()}catch(e){}},120);
+      try{ktnRequestGpsStart()}catch(e){}
     }
   })
   .catch(function(e){
@@ -4108,14 +4108,35 @@ var ktn67VoiceCfg={voice:'',style:'professional',rate:.92,pitch:1.02,volume:1};
 
 function ktn67LoadVoiceCfg(){
   try{
-    var j=JSON.parse(localStorage.getItem('ktn67_voice_cfg')||'{}');
-    if(j&&typeof j==='object'){
-      if(typeof j.voice==='string')ktn67VoiceCfg.voice=j.voice;
-      if(typeof j.style==='string')ktn67VoiceCfg.style=j.style;
-      if(isFinite(+j.rate))ktn67VoiceCfg.rate=Math.max(.65,Math.min(1.35,+j.rate));
-      if(isFinite(+j.pitch))ktn67VoiceCfg.pitch=Math.max(.65,Math.min(1.45,+j.pitch));
-      if(isFinite(+j.volume))ktn67VoiceCfg.volume=Math.max(.2,Math.min(1,+j.volume));
+    var raw=localStorage.getItem('ktn67_voice_cfg');
+
+    if(raw){
+      var j=JSON.parse(raw||'{}');
+      if(j&&typeof j==='object'){
+        if(typeof j.voice==='string')ktn67VoiceCfg.voice=j.voice;
+        if(typeof j.style==='string')ktn67VoiceCfg.style=j.style;
+        if(isFinite(+j.rate))ktn67VoiceCfg.rate=Math.max(.65,Math.min(1.35,+j.rate));
+        if(isFinite(+j.pitch))ktn67VoiceCfg.pitch=Math.max(.65,Math.min(1.45,+j.pitch));
+        if(isFinite(+j.volume))ktn67VoiceCfg.volume=Math.max(.2,Math.min(1,+j.volume));
+      }
+      return;
     }
+
+    /* One-time compatibility migration from the 0.70.17 audio settings. */
+    var legacyStyle=localStorage.getItem('ktn27_voice_style_v2')||'';
+    if(['professional','synthetic','trucker','cb','ironic'].indexOf(legacyStyle)>=0){
+      ktn67VoiceCfg.style=legacyStyle;
+    }
+
+    var a=JSON.parse(localStorage.getItem('ktn27_audio_settings')||'null');
+    if(a&&typeof a==='object'){
+      var master=isFinite(+a.master)?Math.max(0,Math.min(1,+a.master)):1;
+      var nav=isFinite(+a.nav)?Math.max(0,Math.min(1,+a.nav)):1;
+      ktn67VoiceCfg.volume=Math.max(.2,Math.min(1,master*nav));
+      if(a.muted===true)window.voiceOn=false;
+    }
+
+    localStorage.setItem('ktn67_voice_cfg',JSON.stringify(ktn67VoiceCfg));
   }catch(e){}
 }
 ktn67LoadVoiceCfg();
@@ -4687,12 +4708,20 @@ function saveNavSession(){
   if(Date.now()-sessionSaveTs<5000)return;
   if(!Array.isArray(routeCoords)||routeCoords.length<2||Number(totalMeters)<=300)return;
   sessionSaveTs=Date.now();
+
+  /* Route geometry is already persisted by saveOfflineRoute() when it changes.
+     The periodic session snapshot keeps only live progress/state. */
   try{
     localStorage.setItem('nav_session_v15',JSON.stringify({
-      ts:Date.now(),cfg:cfg,lastPos:lastPos,snappedPos:snappedPos,
-      lastRouteIndex:lastRouteIndex,nextStopIndex:nextStopIndex,
-      routeCoords:routeCoords,steps:steps,totalMeters:totalMeters,
-      actualTrack:actualTrack.slice(-500)
+      ts:Date.now(),
+      cfg:cfg,
+      lastPos:lastPos,
+      snappedPos:snappedPos,
+      lastRouteIndex:lastRouteIndex,
+      nextStopIndex:nextStopIndex,
+      totalMeters:totalMeters,
+      actualTrack:actualTrack.slice(-200),
+      geometryStore:'nav_offline_route_v13'
     }));
   }catch(e){}
 }
@@ -4700,15 +4729,46 @@ function restoreNavSession(){
   try{
     if(gattoExplorerMode||window.KTN_GATTO_EXPLORER)return false;
     if(Q.get('fresh')==='1')return false;
+
     var s=JSON.parse(localStorage.getItem('nav_session_v15')||'null');
-    if(!s||Date.now()-s.ts>6*3600000||!s.routeCoords||s.routeCoords.length<2)return false;
-    var oldTo=s.cfg&&{lat:+s.cfg.toLat,lng:+s.cfg.toLng},newTo={lat:+cfg.toLat,lng:+cfg.toLng};
-    if(!oldTo||!isFinite(oldTo.lat)||!isFinite(oldTo.lng)||!isFinite(newTo.lat)||!isFinite(newTo.lng)||hav(oldTo,newTo)>250)return false;
-    cfg=Object.assign(cfg,s.cfg||{});routeCoords=s.routeCoords;steps=s.steps||[];
-    lastRouteIndex=Math.max(0,Number(s.lastRouteIndex)||0);nextStopIndex=Math.max(0,Number(s.nextStopIndex)||0);actualTrack=s.actualTrack||[];
-    cumDist=[0];for(var i=1;i<routeCoords.length;i++)cumDist[i]=cumDist[i-1]+hav(routeCoords[i-1],routeCoords[i]);
-    totalMeters=cumDist[cumDist.length-1]||0;return true;
-  }catch(e){return false}
+    if(!s||Date.now()-s.ts>6*3600000)return false;
+
+    var oldTo=s.cfg&&{lat:+s.cfg.toLat,lng:+s.cfg.toLng};
+    var newTo={lat:+cfg.toLat,lng:+cfg.toLng};
+    if(!oldTo||!isFinite(oldTo.lat)||!isFinite(oldTo.lng)||
+       !isFinite(newTo.lat)||!isFinite(newTo.lng)||hav(oldTo,newTo)>250)return false;
+
+    /* Backward compatible: old v15 sessions may still contain full geometry.
+       New snapshots reuse the heavy route saved only when route geometry changes. */
+    var rc=Array.isArray(s.routeCoords)&&s.routeCoords.length>=2?s.routeCoords:null;
+    var st=Array.isArray(s.steps)?s.steps:null;
+    var off=null;
+
+    if(!rc){
+      off=JSON.parse(localStorage.getItem('nav_offline_route_v13')||'null');
+      if(!off||!Array.isArray(off.coords)||off.coords.length<2)return false;
+
+      var offTo=off.cfg&&{lat:+off.cfg.toLat,lng:+off.cfg.toLng};
+      if(!offTo||!isFinite(offTo.lat)||!isFinite(offTo.lng)||hav(offTo,newTo)>250)return false;
+
+      rc=off.coords;
+      st=Array.isArray(off.steps)?off.steps:[];
+    }
+
+    cfg=Object.assign(cfg,(off&&off.cfg)||{},s.cfg||{});
+    routeCoords=rc;
+    steps=st||[];
+    lastRouteIndex=Math.max(0,Number(s.lastRouteIndex)||0);
+    nextStopIndex=Math.max(0,Number(s.nextStopIndex)||0);
+    actualTrack=Array.isArray(s.actualTrack)?s.actualTrack:[];
+
+    cumDist=[0];
+    for(var i=1;i<routeCoords.length;i++)cumDist[i]=cumDist[i-1]+hav(routeCoords[i-1],routeCoords[i]);
+    totalMeters=cumDist[cumDist.length-1]||0;
+    return totalMeters>300;
+  }catch(e){
+    return false;
+  }
 }
 
 
@@ -5122,38 +5182,49 @@ setTimeout(function(){proDrivingFocus(true)},700);
    ktn00722RoadsideEngine is the sole camera data/projection owner. */
 
 
-var ktnGpsStartPending=false,ktnGpsStartTimer=null,ktnGpsStartSince=0;
 function ktnRequestGpsStart(){
   window.__KTN_GPS_START_REQUESTED__=true;
+
+  /* Already owned by NavigationRuntime: never restart the same watcher. */
+  try{
+    if(window.__ktnGpsOwnerActive && typeof watchId!=='undefined' && watchId!==null && watchId!==undefined){
+      window.__KTN_GPS_START_REQUESTED__=false;
+      var ld0=document.getElementById('loading');if(ld0)ld0.style.display='none';
+      return watchId;
+    }
+  }catch(_e){}
+
   var g=window.KTN_NAV_RUNTIME&&window.KTN_NAV_RUNTIME.gps;
   if(g&&g.ready&&typeof g.start==='function'){
-    ktnGpsStartPending=false;
-    if(ktnGpsStartTimer!==null){clearTimeout(ktnGpsStartTimer);ktnGpsStartTimer=null;}
     window.__KTN_GPS_START_REQUESTED__=false;
-    return g.start();
+    try{return g.start()}catch(e){
+      var lm0=document.getElementById('loadingMsg');
+      if(lm0)lm0.textContent='Errore avvio GPS: '+(e&&e.message?e.message:e);
+      var sb0=document.getElementById('startBtn');
+      if(sb0){sb0.style.display='block';sb0.textContent='RIPROVA GPS';}
+      return null;
+    }
   }
-  if(ktnGpsStartPending)return null;
-  ktnGpsStartPending=true;ktnGpsStartSince=Date.now();
-  (function waitRuntime(){
-    var gg=window.KTN_NAV_RUNTIME&&window.KTN_NAV_RUNTIME.gps;
-    if(gg&&gg.ready&&typeof gg.start==='function'){
-      ktnGpsStartPending=false;ktnGpsStartTimer=null;window.__KTN_GPS_START_REQUESTED__=false;
-      try{gg.start()}catch(e){
-        var lm=document.getElementById('loadingMsg');if(lm)lm.textContent='Errore avvio GPS: '+(e&&e.message?e.message:e);
-        var sb=document.getElementById('startBtn');if(sb){sb.style.display='block';sb.textContent='RIPROVA GPS';}
-      }
-      return;
-    }
-    if(Date.now()-ktnGpsStartSince>15000){
-      ktnGpsStartPending=false;ktnGpsStartTimer=null;
-      var lm=document.getElementById('loadingMsg');if(lm)lm.textContent='GPS non ancora inizializzato. Tocca per riprovare.';
-      var sb=document.getElementById('startBtn');if(sb){sb.style.display='block';sb.textContent='AVVIA GPS';}
-      return;
-    }
-    ktnGpsStartTimer=setTimeout(waitRuntime,60);
-  })();
+
+  var lm=document.getElementById('loadingMsg');
+  if(lm)lm.textContent='Percorso pronto. Inizializzazione runtime GPS…';
+
+  /* One watchdog only: it reports a broken runtime, it does NOT retry. */
+  if(!window.__KTN_GPS_READY_WATCHDOG__){
+    window.__KTN_GPS_READY_WATCHDOG__=setTimeout(function(){
+      window.__KTN_GPS_READY_WATCHDOG__=null;
+      if(!window.__KTN_GPS_START_REQUESTED__)return;
+      var g2=window.KTN_NAV_RUNTIME&&window.KTN_NAV_RUNTIME.gps;
+      if(g2&&g2.ready&&typeof g2.start==='function')return;
+      var lm2=document.getElementById('loadingMsg');
+      if(lm2)lm2.textContent='Runtime GPS non inizializzato. Ricarica il navigatore.';
+      var sb2=document.getElementById('startBtn');
+      if(sb2){sb2.style.display='block';sb2.textContent='RIPROVA GPS';}
+    },8000);
+  }
   return null;
 }
+
 
 /* === v73 INTENTIONAL DEVIATION CONFIDENCE ===
    GPS/map-matching corrections are silent. A reroute is announced only
@@ -5328,7 +5399,7 @@ var snap=snapToRoute(pos),displayPos=snap.pos;snappedPos=displayPos;lastPos=pos;
    Number(totalMeters)>300&&
    lastRouteIndex>=Math.max(0,routeCoords.length-25);
 
- if(_routeValidForArrival && rem<45){
+ if(_routeValidForArrival && rem<45 && speed<12){
    if(!window.KTN_TOPHUD_SINGLE_OWNER){
      var _ai=document.getElementById('turnIcon'),_ad=document.getElementById('turnDistance'),_at=document.getElementById('turnInstruction');
      if(_ai)_ai.textContent='●';if(_ad)_ad.textContent='ARRIVO';if(_at)_at.textContent='Destinazione raggiunta';
@@ -5368,7 +5439,7 @@ function ktnGpsErrorPresenter(e){
  if(b)b.className='gpsbadge bad';setStatus('gpsState',e.code===1?'GPS: negato':e.code===3?'GPS: timeout':'GPS: errore','bad');
  if(t)t.textContent=e.code===1?'GPS negato':(e.code===3?'GPS: timeout':'GPS non disponibile');
  toast(e.code===1?'Permesso posizione negato':(e.code===3?'Timeout GPS: riprovo…':'GPS non disponibile'));
- if(e.code===3){setTimeout(function(){try{ktnRequestGpsStart()}catch(x){}},1500)}
+ if(e.code===3){var sb=document.getElementById('startBtn');if(sb){sb.style.display='block';sb.textContent='RIPROVA GPS';}}
 }
 /* CLEAN-ARCH 0.70.39: public recenter is exported only by NavigationRuntime. */
 MAP.on('dragstart',function(){follow=false});
@@ -5450,7 +5521,7 @@ if(gattoExplorerMode){
     ['turnRoad','CERCA UN POI PER CREARE UN PERCORSO']].forEach(function(x){var e=document.getElementById(x[0]);if(e)e.textContent=x[1]});
    var _pf=document.getElementById('ktn17ProgressFill');if(_pf)_pf.style.width='0%';
    setRoutingStatus(true,'navigatore libero');
-   setTimeout(function(){try{ktnRequestGpsStart()}catch(e){}},100);
+   try{ktnRequestGpsStart()}catch(e){}
 }else if(!validCfg()){
   document.getElementById('loadingMsg').textContent='Dati percorso mancanti. Torna alla pagina principale e calcola un percorso.';
   document.getElementById('startBtn').style.display='none';
@@ -6965,11 +7036,7 @@ body.pro-nav #etaSmart{display:none!important}
   setTimeout(function(){
     restoreSettings();
     bindActions();
-
-    /* Mutation observer: menu is moved/rebuilt by old runtime layers. */
-    try{
-      new MutationObserver(function(){bindActions()}).observe(document.body,{childList:true,subtree:true});
-    }catch(e){}
+    if(window.KTN_UI_LIFECYCLE)KTN_UI_LIFECYCLE.dom(bindActions);
   },500);
 })();
 </script>
@@ -7867,7 +7934,7 @@ body.pro-nav .voice-stack{display:none!important}
       Number(totalMeters)>300&&
       idx>=Math.max(0,routeCoords.length-25);
 
-    if(validArrival && remain<45){
+    if(validArrival && remain<45 && Math.max(0,Number(window.currentSpeedKmh)||0)<12){
       if(td)td.textContent='ARRIVO';
       if(tx)tx.textContent='Destinazione raggiunta';
       if(tr)tr.textContent=nextSt.name||'';
@@ -9259,9 +9326,12 @@ function drawOverview(){
     return r.width>0 && r.height>0;
   }
   function setImp(node,prop,val){
-    if(node) node.style.setProperty(prop,val,'important');
+    if(!node)return;
+    val=String(val);
+    if(node.style.getPropertyValue(prop)===val &&
+       node.style.getPropertyPriority(prop)==='important')return;
+    node.style.setProperty(prop,val,'important');
   }
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
   function layout(){
     if(!document.body.classList.contains('pro-nav')) return;
@@ -9282,8 +9352,6 @@ function drawOverview(){
     var panelRight=isLandscape?Math.round(turnR.right):0;
     var top=isLandscape?Math.max(8,Math.round(turnR.top)):Math.round(turnR.bottom+8);
 
-    /* 1) Cluster velocità + limite.
-       Lascia a destra una sede fissa per il cartello HGV. */
     var signSize=vw<=430?48:54;
     var edge=8;
     var gap=7;
@@ -9293,11 +9361,8 @@ function drawOverview(){
     setImp(speed,'right',reserve+'px');
     setImp(speed,'left','auto');
 
-    /* Forza il browser a ricalcolare dopo lo spostamento. */
     var speedR=speed.getBoundingClientRect();
 
-    /* 2) Cartello HGV sempre presente, a DESTRA del limite.
-       Se il limite non è misurabile, resta comunque accanto al cluster. */
     if(sign){
       var refR=(limit&&visible(limit))?limit.getBoundingClientRect():speedR;
       var sy=Math.round(refR.top+(refR.height-signSize)/2);
@@ -9311,19 +9376,16 @@ function drawOverview(){
       setImp(sign,'opacity','1');
     }
 
-    /* CLEAN-ARCH 0.70.22: legacy b10 lane layout retired. */
-
-    /* 4) Autovelox sotto il cluster velocità/cartelli, mai sopra di essi. */
     speedR=speed.getBoundingClientRect();
     var signR=sign?sign.getBoundingClientRect():speedR;
     var clusterBottom=Math.max(speedR.bottom,signR.bottom);
+
     if(cam){
       setImp(cam,'top',Math.round(clusterBottom+8)+'px');
       setImp(cam,'right','10px');
       setImp(cam,'left','auto');
     }
 
-    /* 5) Alert autovelox: sotto il chip, centrato, senza invadere la corsia. */
     if(camAlert && camAlert.classList.contains('on')){
       var camR=cam.getBoundingClientRect();
       setImp(camAlert,'top',Math.round(camR.bottom+7)+'px');
@@ -9333,7 +9395,6 @@ function drawOverview(){
       setImp(camAlert,'max-width',isLandscape?'min(48vw,520px)':'min(88vw,520px)');
     }
 
-    /* 6) Alert HGV dettagliato: sotto l'ultima riga HUD superiore. */
     if(hgvAlert && hgvAlert.classList.contains('on')){
       var y=clusterBottom+8;
       if(cam && visible(cam)) y=Math.max(y,cam.getBoundingClientRect().bottom+7);
@@ -9345,30 +9406,37 @@ function drawOverview(){
     }
   }
 
-  /* MutationObserver: reagisce all'apparizione/scomparsa di corsie, alert e divieti
-     senza aspettare un timer lungo. */
   var scheduled=false;
   function requestLayout(){
     if(scheduled)return;
     scheduled=true;
-    requestAnimationFrame(function(){scheduled=false;layout();});
+    requestAnimationFrame(function(){
+      scheduled=false;
+      layout();
+    });
   }
 
-  var obs=new MutationObserver(requestLayout);
-  function start(){
-    try{obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style'],childList:true});}catch(e){}
-    layout();
-    /* CLEAN-ARCH 0.70.22: no layout polling; MutationObserver + canonical events. */
-  }
+  function start(){ layout(); }
 
+  /* Event-driven only. No global class/style MutationObserver:
+     the old observer could retrigger itself after this owner wrote styles. */
   if(window.KTN_UI_LIFECYCLE)KTN_UI_LIFECYCLE.layout(requestLayout);
-  window.addEventListener('ktn31camera',requestLayout,{passive:true});
-  window.addEventListener('ktn:services-state',requestLayout,{passive:true});
-  window.addEventListener('ktn:lane-state',requestLayout,{passive:true});
-  window.addEventListener('ktn:speed-limit',requestLayout,{passive:true});
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(layout,80)});
+  [
+    'ktn31camera',
+    'ktn:services-state',
+    'ktn:lane-state',
+    'ktn:speed-limit',
+    'ktn:road-events',
+    'ktn39HgvNoPass'
+  ].forEach(function(ev){
+    window.addEventListener(ev,requestLayout,{passive:true});
+  });
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden)setTimeout(layout,80);
+  });
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 
   window.ktn71LayoutHud=layout;
@@ -10254,7 +10322,7 @@ C.query=async function(kind,lat,lng,q,maxAge){
 <script id="ktn00722RoadsideEngine">
 (function(){
 'use strict';
-if(window.KTN_ROADSIDE_ENGINE&&window.KTN_ROADSIDE_ENGINE.version==='0.70.24-cleanarch7')return;
+if(window.KTN_ROADSIDE_ENGINE&&window.KTN_ROADSIDE_ENGINE.version==='0.70.39-cleanarch12')return;
 var E=window.KTN_ROADSIDE_ENGINE={
  version:'0.70.39-cleanarch12',owner:'ktn00722RoadsideEngine',
  state:{routeKey:'none',routeEpoch:-1,progress:null,camera:null,cameras:[],services:[],serviceStatus:'idle',serviceError:'',lastCameraScanM:-1,lastServiceScanM:-1,lastCameraSig:'',lastServiceSig:''},
@@ -12076,18 +12144,17 @@ document.addEventListener('DOMContentLoaded',mount);setTimeout(mount,1200);setTi
 (function(){
 'use strict';
 function clean(){
- var a=document.getElementById('ktn17AlertBtn');
- if(a&&a.parentNode)a.parentNode.removeChild(a);
- [].slice.call(document.querySelectorAll('button')).forEach(function(b){
-   if((b.textContent||'').trim().toUpperCase()==='AVVISI' && b.parentNode)b.parentNode.removeChild(b);
- });
+  var a=document.getElementById('ktn17AlertBtn');
+  if(a&&a.parentNode)a.parentNode.removeChild(a);
+  [].slice.call(document.querySelectorAll('button')).forEach(function(b){
+    if((b.textContent||'').trim().toUpperCase()==='AVVISI' && b.parentNode)b.parentNode.removeChild(b);
+  });
 }
-document.addEventListener('DOMContentLoaded',clean);
-setTimeout(clean,300);setTimeout(clean,1200);
-try{
- var mo=new MutationObserver(clean);
- mo.observe(document.documentElement,{childList:true,subtree:true});
-}catch(e){}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean,{once:true});
+else clean();
+setTimeout(clean,300);
+setTimeout(clean,1200);
+if(window.KTN_UI_LIFECYCLE)KTN_UI_LIFECYCLE.dom(clean);
 })();
 </script>
 
@@ -14869,6 +14936,9 @@ function runtimeOnGPSError(e){
 }
 
 function runtimeStartGPS(){
+  if(window.__KTN_GPS_READY_WATCHDOG__){clearTimeout(window.__KTN_GPS_READY_WATCHDOG__);window.__KTN_GPS_READY_WATCHDOG__=null;}
+  window.__KTN_GPS_START_REQUESTED__=false;
+  var sb0=document.getElementById('startBtn');if(sb0)sb0.style.display='none';
   var ld=document.getElementById('loading');if(ld)ld.style.display='none';
   if(!navigator.geolocation){try{toast('GPS non supportato')}catch(e){}return null}
   var had=false;
@@ -14886,6 +14956,19 @@ function runtimeStartGPS(){
 R.gps={ready:true,start:runtimeStartGPS,onPosition:runtimeOnGPS,onError:runtimeOnGPSError};
 window.startGPS=runtimeStartGPS;
 window.onGPS=runtimeOnGPS;
+
+if(window.__KTN_GPS_START_REQUESTED__){
+  window.__KTN_GPS_START_REQUESTED__=false;
+  queueMicrotask(function(){
+    try{runtimeStartGPS()}
+    catch(e){
+      var lm=document.getElementById('loadingMsg');
+      if(lm)lm.textContent='Errore avvio GPS: '+(e&&e.message?e.message:e);
+      var sb=document.getElementById('startBtn');
+      if(sb){sb.style.display='block';sb.textContent='RIPROVA GPS';}
+    }
+  });
+}
 
 /* ownership is declared once by ktn00733ArchitectureManifest */
 window.KTN0720_CLEAN_ARCH=true;window.KTN_007041_HOTFIX=true;
