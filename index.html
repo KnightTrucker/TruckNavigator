@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<script>window.KTN_APP_VERSION='0.0.70.43';
+<script>window.KTN_APP_VERSION='0.0.70.44';
 window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidation';window.KTN_HGV_DB_FIX='2026-08-25';window.KTN_COUNTRY_DB='v2-auto';window.KTN_AUTO_DB_FIX='4.6';window.KTN_ACTIVE_HUD_FIX='4.8';window.KTN_CAMERA_FIX='5.0';window.KTN_ROUTE_RECOVERY_FIX='5.1';window.KTN_UI_TIMING_FIX='5.2';window.KTN_ARRIVAL_OWNER='5.3';window.KTN_STABLE_FIX='5.5';window.KTN_LANE_CAMERA_VERIFY='5.6';window.KTN_BACKGROUND_PERSIST='5.8-memory-only';window.KTN_ACTIVE_ROUTE_OWNER='6.0';window.KTN_UI_PANEL_OWNER='6.2-unified';</script>
 <script id="ktnStartupBootstrap">
 (function(){
   'use strict';
-  window.KTN_STARTUP_VERSION='0.0.70.43';
+  window.KTN_STARTUP_VERSION='0.0.70.44';
   window.__KTN_STARTUP_MODE__='';
   window.__KTN_STARTUP_CLOSED__=false;
   window.__KTN_STARTUP_MAIN_READY__=false;
@@ -22,6 +22,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
 
   function closeNow(){
     window.__KTN_STARTUP_CLOSED__=true;
+    try{document.body&&document.body.classList.remove('ktn-startup-active')}catch(_e){}
     var el=document.getElementById('startupOverlay');
     if(!el)return;
     el.style.pointerEvents='none';
@@ -45,7 +46,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
   window.ktnStartupChoose=function(mode){
     if(window.__KTN_STARTUP_MODE__)return;
     window.__KTN_STARTUP_MODE__=mode;
-    diag('v0.70.43 - scelta '+mode+' - avvio...',false);
+    diag('v0.70.44 - scelta '+mode+' - avvio...',false);
     closeNow();
     try{document.dispatchEvent(new CustomEvent('ktn:startup-selected',{detail:{mode:mode}}))}catch(_e){}
 
@@ -70,6 +71,19 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
   window.startupOpen=function(){window.ktnStartupChoose('open')};
   window.startupDriveConnect=function(){window.ktnStartupChoose('drive')};
 
+  /* 0.70.44: fallback touch/pointer capture. Anche se un vecchio layer intercetta
+     il target, il documento riconosce il punto premuto dentro uno dei 3 pulsanti. */
+  function startupHit(ev){
+    if(window.__KTN_STARTUP_CLOSED__||window.__KTN_STARTUP_MODE__)return;
+    var ov=document.getElementById('startupOverlay');if(!ov)return;
+    var x=ev.clientX,y=ev.clientY;if(!isFinite(x)||!isFinite(y))return;
+    var defs=[['drive','Connetti Google Drive'],['open','Apri file esistente'],['skip','Inizia con lista vuota']];
+    var bs=ov.querySelectorAll('button');
+    for(var i=0;i<bs.length;i++){var r=bs[i].getBoundingClientRect();if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom){ev.preventDefault&&ev.preventDefault();ev.stopPropagation&&ev.stopPropagation();window.ktnStartupChoose(defs[i]?defs[i][0]:'skip');return;}}
+  }
+  document.addEventListener('pointerup',startupHit,true);
+  document.addEventListener('touchend',function(ev){try{var t=ev.changedTouches&&ev.changedTouches[0];if(t)startupHit({clientX:t.clientX,clientY:t.clientY,preventDefault:function(){try{ev.preventDefault()}catch(_e){}},stopPropagation:function(){try{ev.stopPropagation()}catch(_e){}}})}catch(_e){}},true);
+
   window.addEventListener('error',function(ev){
     var m=(ev&&ev.message)||'errore JavaScript';
     diag('ERRORE JS: '+m,true);
@@ -83,7 +97,7 @@ window.KTN_CLEAN_ARCH_FINAL=true;window.KTN_CLEAN_ARCH='phase12-api-consolidatio
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightTruckerNavy - 0.0.70.43 HOTFIX</title>
+<title>KnightTruckerNavy - 0.0.70.44 STARTUP LAYER FIX</title>
 <link rel="icon" type="image/png" href="assets/ui/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -279,8 +293,12 @@ tbody tr{cursor:pointer}
   position: fixed; inset: 0;
   background: rgba(0,0,0,.82); backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
-  z-index: 200; padding: 20px;
+  z-index: 2147483647 !important; padding: 20px;
+  pointer-events: auto !important; isolation:isolate;
 }
+body.ktn-startup-active > *:not(#startupOverlay){pointer-events:none !important;}
+body.ktn-startup-active #startupOverlay,
+body.ktn-startup-active #startupOverlay *{pointer-events:auto !important;}
 .startup-box {
   background: var(--s1); border: 1px solid var(--bd);
   border-radius: 14px; padding: 32px 28px;
@@ -1642,13 +1660,13 @@ window.KTN_SCHUMACHER_AUDIO='assets/audio/schumacher.mp3';
 }
 </style>
 <script>window.KTN_PUNTA_AUDIO='assets/audio/punta.mp3';</script></head>
-<body>
+<body class="ktn-startup-active">
 <!-- ═══ STARTUP MODAL ══════════════════════════════════════════════ -->
 <div id="startupOverlay" class="startup-overlay">
   <div class="startup-box">
     <img src="assets/ui/logo.png" class="startup-logo" alt="Logo">
     <div class="startup-title">KnightTruckerNavy</div>
-    <div class="startup-sub">Scegli come avviare KnightTruckerNavy<br><strong style="color:#7dd3fc;letter-spacing:.5px">VERSIONE 0.70.43</strong><br><span id="ktnStartupDiag" style="display:inline-block;margin-top:5px;font-size:11px;color:#86efac">Bootstrap pronto</span></div>
+    <div class="startup-sub">Scegli come avviare KnightTruckerNavy<br><strong style="color:#7dd3fc;letter-spacing:.5px">VERSIONE 0.70.44</strong><br><span id="ktnStartupDiag" style="display:inline-block;margin-top:5px;font-size:11px;color:#86efac">Bootstrap pronto</span></div>
     <div class="startup-btns">
 <button type="button" class="btn btn-primary" onclick="ktnStartupChoose('drive')">☁ Connetti Google Drive</button>
       <button type="button" class="btn btn-primary" onclick="ktnStartupChoose('open')">
@@ -4904,8 +4922,10 @@ function autoDetectRegion() {
 render();
 FS._ui();
 window.__KTN_STARTUP_MAIN_READY__=true;
-try{window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.43 - JS principale pronto',false)}catch(_e){}
-/* 0.70.43: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
+try{window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.44 - JS principale pronto',false)}catch(_e){}
+setTimeout(function(){try{if(!window.__KTN_STARTUP_MODE__)window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.44 - EVENT LOOP OK',false)}catch(_e){}},900);
+window.addEventListener('load',function(){try{if(!window.__KTN_STARTUP_MODE__)window.ktnStartupDiag&&window.ktnStartupDiag('v0.70.44 - PAGINA CARICATA',false)}catch(_e){}},{once:true});
+/* 0.70.44: nessuna richiesta tile durante lo startup. La mappa parte solo dopo la scelta iniziale. */
 if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.add("collapsed");}
 </script>
 </div>
@@ -5213,7 +5233,7 @@ if(!mapVisible){var _ma=document.getElementById("mapArea");if(_ma)_ma.classList.
     <h3 id="versionTitle">KnightTruckerNavy</h3>
     <div class="ver">GATTO 1.3</div>
     <p class="version-tagline">IL VERO NAVIGATORE PER CAMION DI TORAKIKY</p><p style="font-size:11px;color:#9ca3af;margin:-8px 0 16px">Professional Navigator · singolo motore · Hybrid satellitare · singolo GPS · cockpit</p>
-    <audio id="versionVoiceAudio" preload="auto" src="assets/audio/version-voice.m4a"></audio>
+    <audio id="versionVoiceAudio" preload="none" src="assets/audio/version-voice.m4a"></audio>
 <button type="button" class="btn btn-primary" id="closeVersionPopup">Chiudi</button>
   </div>
 </div>
@@ -8120,7 +8140,7 @@ function ktn55CancelSearchChoice(){
      files still work normally, just without service-worker installation. */
   if('serviceWorker' in navigator &&
      (location.protocol==='https:' || location.hostname==='localhost')){
-    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7043',{scope:'./'}).catch(function(){})};
+    var regSw=function(){navigator.serviceWorker.register('./sw.js?v=7044',{scope:'./'}).catch(function(){})};
     var armSw=function(){setTimeout(regSw,700)};
     if(window.__KTN_STARTUP_MODE__) armSw();
     else document.addEventListener('ktn:startup-selected',armSw,{once:true});
