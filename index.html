@@ -1611,6 +1611,37 @@ window.KTN_SCHUMACHER_AUDIO='data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAAD
   .ktn014-main-action{min-height:44px!important}
 }
 </style>
+
+<style id="ktn014NavButtonLabelsCss">
+.ktn014-nav-main{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  min-height:64px!important;
+}
+.ktn014-nav-main .ktn014-nav-caption,
+.ktn014-nav-main span:last-child{
+  display:block!important;
+  font:800 9px/1.15 Arial,sans-serif!important;
+  letter-spacing:.45px!important;
+  opacity:.78!important;
+  white-space:nowrap!important;
+  text-transform:uppercase!important;
+}
+.ktn014-nav-main .ktn53-quick-ico{
+  margin:0!important;
+}
+@media(max-width:380px){
+  .ktn014-nav-main .ktn014-nav-caption,
+  .ktn014-nav-main span:last-child{
+    font-size:8px!important;
+    letter-spacing:.25px!important;
+  }
+}
+</style>
+
 </head>
 <body>
 <!-- ═══ STARTUP MODAL ══════════════════════════════════════════════ -->
@@ -1662,10 +1693,10 @@ window.KTN_SCHUMACHER_AUDIO='data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAAD
     <div class="ktn014-home-label">NAVIGAZIONE</div>
     <div class="ktn014-nav-actions hdr-right">
       <button type="button" class="btn ktn53-quick-btn ktn014-nav-main" onclick="ktn53OpenQuickNav()" title="Navigazione veloce">
-        <span class="ktn53-quick-ico">➤</span><span>NAV VELOCE</span>
+        <span class="ktn53-quick-ico">➤</span><span class="ktn014-nav-caption">NAVIGAZIONE VELOCE</span>
       </button>
       <button type="button" class="btn ktn53-quick-btn gatto11-open-nav ktn014-nav-main" onclick="gatto11OpenNavigator()" title="Apri il navigatore senza destinazione">
-        <span class="ktn53-quick-ico">🧭</span><span>NAVIGATORE</span>
+        <span class="ktn53-quick-ico">🧭</span><span class="ktn014-nav-caption">SOLO NAVIGATORE</span>
       </button>
     </div>
   </div>
