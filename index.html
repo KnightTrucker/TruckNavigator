@@ -1664,6 +1664,9 @@ window.KTN_SCHUMACHER_AUDIO='data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAAD
     <div class="startup-sub">Scegli come avviare KnightTruckerNavy</div>
     <div class="startup-btns">
 <button type="button" class="btn btn-primary" id="startupDriveBtn" onclick="startupDriveConnect()">☁ Connetti Google Drive</button>
+      <div id="startupDriveVerified" style="display:none;margin:-2px 2px 2px;padding:9px 10px;border:1px solid rgba(34,197,94,.42);border-radius:10px;background:rgba(20,83,45,.18);color:#bbf7d0;font:800 10px/1.4 Arial,sans-serif;text-align:left"></div>
+      <button type="button" class="btn btn-primary" id="startupDriveContinueBtn" style="display:none;background:#166534;border-color:#22c55e" onclick="startupDriveContinue()">✓ CONTINUA CON DRIVE</button>
+      <button type="button" class="btn btn-ghost" id="startupDriveChangeBtn" style="display:none" onclick="startupDriveChangeAccount()">↻ CAMBIA ACCOUNT GOOGLE</button>
       <button type="button" class="btn btn-primary" onclick="startupOpen()">
         &#128194; Apri file esistente
       </button>
@@ -2886,15 +2889,52 @@ const GDRIVE = {
   fileId: localStorage.getItem('torakike_drive_file_id') || null,
   busy: false,
   _authVerified: false,
+  _verifiedAccount: '',
+  _startupAuthTimer: null,
 
   init() {
     if (this.tokenClient || !window.google || !google.accounts || !google.accounts.oauth2) return;
     this.tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: this.clientId,
       scope: this.scope,
-      callback: (resp) => this._tokenCallback(resp)
+      callback: (resp) => this._tokenCallback(resp),
+      error_callback: (err) => this._oauthUiError(err)
     });
     this._ui();
+  },
+
+  _oauthUiError(err) {
+    try{clearTimeout(this._startupAuthTimer)}catch(e){}
+    this._startupAuthTimer=null;
+    this.connected=false;
+    this.accessToken=null;
+    this._authVerified=false;
+    this._verifiedAccount='';
+    var wasStartup=!!this._startupPending;
+    this._startupPending=false;
+    var typ=String(err&&err.type||'');
+    var msg=typ==='popup_failed_to_open'
+      ?'Google non ha potuto aprire la finestra di accesso. Consenti i popup e riprova.'
+      :typ==='popup_closed'
+        ?'Accesso Google annullato: nessun collegamento a Drive è stato effettuato.'
+        :'Accesso Google non completato. Drive non è collegato.';
+    if(wasStartup&&typeof startupDriveReset==='function')startupDriveReset(msg);
+    else if(typeof toast==='function')toast(msg);
+  },
+
+  async _readVerifiedAccount() {
+    if(!this.fileId||!this.accessToken)return '';
+    try{
+      const r=await this._jsonFetch(
+        'https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(this.fileId)+
+        '?fields=id,name,owners(displayName,emailAddress)'
+      );
+      const j=await r.json();
+      const o=j&&Array.isArray(j.owners)&&j.owners.length?j.owners[0]:null;
+      return String((o&&o.emailAddress)||(o&&o.displayName)||'Account Google verificato');
+    }catch(e){
+      return 'Account Google verificato';
+    }
   },
 
   connect(forceAccount) {
@@ -2904,18 +2944,30 @@ const GDRIVE = {
       else toast('Google non è ancora pronto. Riprova tra qualche secondo.');
       return;
     }
-    /* All'avvio vogliamo una connessione realmente scelta dall'utente.
-       folderId/fileId locali NON equivalgono a una sessione Drive valida. */
     var startupAuth=!!forceAccount;
     if(startupAuth){
       this.connected=false;
       this.accessToken=null;
       this._authVerified=false;
+      this._verifiedAccount='';
     }
-    /* requestAccessToken resta sincrono rispetto al click chiamante.
-       select_account rende visibile la scelta dell'account anche se Google
-       ha già una sessione browser aperta. */
-    this.tokenClient.requestAccessToken({prompt: startupAuth ? 'select_account' : (this.accessToken ? '' : 'consent')});
+    try{clearTimeout(this._startupAuthTimer)}catch(e){}
+    var self=this;
+    if(startupAuth){
+      this._startupAuthTimer=setTimeout(function(){
+        if(!self._authVerified&&self._startupPending){
+          self._startupPending=false;
+          self.connected=false;
+          self.accessToken=null;
+          if(typeof startupDriveReset==='function')startupDriveReset('Google non ha completato l’accesso. Drive non è collegato: riprova.');
+        }
+      },60000);
+    }
+    /* In avvio imponiamo sia scelta account sia consenso.
+       La schermata iniziale NON verrà chiusa dal callback. */
+    this.tokenClient.requestAccessToken({
+      prompt: startupAuth ? 'consent select_account' : (this.accessToken ? '' : 'consent')
+    });
     this._setUiState('sync');
   },
 
@@ -2924,6 +2976,10 @@ const GDRIVE = {
     this._authVerified=false;
     if (!resp || resp.error) {
       this.connected = false;
+      this._authVerified=false;
+      this._verifiedAccount='';
+      try{clearTimeout(this._startupAuthTimer)}catch(_){}
+      this._startupAuthTimer=null;
       this._startupPending=false;
       this._setUiState('error');
       if(fromStartup&&typeof startupDriveReset==='function')startupDriveReset('Accesso Google Drive annullato o non riuscito.');
@@ -2937,14 +2993,14 @@ const GDRIVE = {
       /* Se _ensureFile è arrivato qui, il token è stato realmente accettato
          dalle API Google Drive ed è stato letto/creato l'archivio KnightTrucker. */
       this._authVerified=true;
+      this._verifiedAccount=await this._readVerifiedAccount();
+      try{clearTimeout(this._startupAuthTimer)}catch(_){}
+      this._startupAuthTimer=null;
       this._ui();
       this._startupPending=false;
       if(fromStartup){
-        var b=document.getElementById('startupDriveBtn');
-        if(b)b.textContent='✓ Drive collegato e verificato';
-        if(typeof toast==='function')toast('Google Drive collegato e verificato.');
-        /* Chiudi solo DOPO autenticazione + accesso Drive riusciti. */
-        setTimeout(function(){startupClose();},180);
+        if(typeof startupDriveVerified==='function')startupDriveVerified(this._verifiedAccount);
+        if(typeof toast==='function')toast('Google Drive verificato. Conferma per continuare.');
       }
     } catch (e) {
       this.connected = false;
@@ -3205,6 +3261,7 @@ const GDRIVE = {
     this.accessToken = null;
     this.connected = false;
     this._authVerified=false;
+    this._verifiedAccount='';
     this._ui();
     toast('Google Drive disconnesso. I dati locali restano disponibili.');
   },
@@ -5155,30 +5212,103 @@ function shareWhatsApp(id) {
 }
 
 /* ── Startup ────────────────────────────────────────────────────────────── */
-function startupClose() {
-  var el = document.getElementById('startupOverlay');
-  window.KTN_STARTUP_DECIDED=true;
-  if (el) { el.style.opacity='0'; el.style.transition='opacity .25s'; setTimeout(function(){el.remove();if(typeof window.ktn011MaybeResumeAfterStartup==='function')setTimeout(window.ktn011MaybeResumeAfterStartup,80);},260); }
-  else if(typeof window.ktn011MaybeResumeAfterStartup==='function')setTimeout(window.ktn011MaybeResumeAfterStartup,80);
-}
 if(typeof window.KTN_STARTUP_DECIDED==='undefined')window.KTN_STARTUP_DECIDED=false;
+if(typeof window.KTN_STARTUP_MODE==='undefined')window.KTN_STARTUP_MODE='choice';
+
+function startupClose(mode) {
+  mode=String(mode||'local');
+  if(mode==='drive'){
+    if(!window.GDRIVE||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified){
+      startupDriveReset('Drive non è ancora verificato. Completa prima l’accesso Google.');
+      return false;
+    }
+  }
+  window.KTN_STARTUP_MODE=mode;
+  window.KTN_STARTUP_DECIDED=true;
+  var el=document.getElementById('startupOverlay');
+  function done(){
+    if(typeof window.ktn011MaybeResumeAfterStartup==='function'){
+      setTimeout(window.ktn011MaybeResumeAfterStartup,100);
+    }
+  }
+  if(el){
+    el.style.opacity='0';
+    el.style.transition='opacity .25s';
+    setTimeout(function(){try{el.remove()}catch(e){}done()},260);
+  }else done();
+  return true;
+}
+
 function startupDriveReset(msg) {
+  window.KTN_STARTUP_DECIDED=false;
+  window.KTN_STARTUP_MODE='choice';
   var b=document.getElementById('startupDriveBtn');
-  if(b){b.disabled=false;b.textContent='☁ Connetti Google Drive';}
+  var c=document.getElementById('startupDriveContinueBtn');
+  var ch=document.getElementById('startupDriveChangeBtn');
+  var st=document.getElementById('startupDriveVerified');
+  if(b){b.disabled=false;b.style.display='';b.textContent='☁ Connetti Google Drive';}
+  if(c)c.style.display='none';
+  if(ch)ch.style.display='none';
+  if(st){st.style.display='none';st.textContent='';}
   if(msg&&typeof toast==='function')toast(msg);
 }
+
+function startupDriveVerified(account) {
+  window.KTN_STARTUP_DECIDED=false;
+  window.KTN_STARTUP_MODE='drive-verified-waiting-confirmation';
+  var b=document.getElementById('startupDriveBtn');
+  var c=document.getElementById('startupDriveContinueBtn');
+  var ch=document.getElementById('startupDriveChangeBtn');
+  var st=document.getElementById('startupDriveVerified');
+  if(b){b.disabled=true;b.style.display='none';}
+  if(st){
+    st.style.display='block';
+    st.textContent='✓ Google Drive verificato' + (account ? ' · '+account : '') +
+      '. Premi CONTINUA CON DRIVE per usare questo account.';
+  }
+  if(c)c.style.display='';
+  if(ch)ch.style.display='';
+}
+
+function startupDriveContinue(){
+  if(!window.GDRIVE||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified){
+    startupDriveReset('La verifica Google Drive non è più valida. Collegati di nuovo.');
+    return;
+  }
+  startupClose('drive');
+}
+
+function startupDriveChangeAccount(){
+  try{
+    if(window.GDRIVE){
+      GDRIVE.connected=false;
+      GDRIVE.accessToken=null;
+      GDRIVE._authVerified=false;
+      GDRIVE._verifiedAccount='';
+      GDRIVE._startupPending=true;
+    }
+  }catch(e){}
+  var c=document.getElementById('startupDriveContinueBtn');
+  var ch=document.getElementById('startupDriveChangeBtn');
+  var st=document.getElementById('startupDriveVerified');
+  var b=document.getElementById('startupDriveBtn');
+  if(c)c.style.display='none';if(ch)ch.style.display='none';if(st)st.style.display='none';
+  if(b){b.style.display='';b.disabled=true;b.textContent='☁ Seleziona un altro account…';}
+  try{GDRIVE.connect(true)}catch(e){startupDriveReset('Impossibile riaprire la scelta account Google.');}
+}
+
 function startupDriveConnect() {
   var b=document.getElementById('startupDriveBtn');
   if(b&&b.disabled)return;
+  window.KTN_STARTUP_DECIDED=false;
+  window.KTN_STARTUP_MODE='drive-auth';
   try{
-    /* OAuth deve partire nello stesso gesto dell'utente: niente setTimeout.
-       Su Android/PWA un avvio differito può essere bloccato come popup. */
     GDRIVE.init();
     if(!GDRIVE.tokenClient){
       startupDriveReset('Google non è ancora pronto. Attendi un secondo e premi di nuovo.');
       return;
     }
-    if(b){b.disabled=true;b.textContent='☁ Seleziona account Google…';}
+    if(b){b.disabled=true;b.textContent='☁ Apertura accesso Google…';}
     GDRIVE._startupPending=true;
     GDRIVE.connect(true);
   }catch(e){
@@ -5186,12 +5316,13 @@ function startupDriveConnect() {
     startupDriveReset('Connessione Google Drive non avviata: '+(e&&e.message?e.message:e));
   }
 }
+
 async function startupOpen() {
   try{await FS.openFile();}catch(e){}
-  startupClose();
+  startupClose('file');
 }
 function startupSkip() {
-  startupClose();
+  startupClose('local');
 }
 
 /* ── Auto-rileva paese, città e regione dalle coordinate GPS ─────────────── */
@@ -10570,7 +10701,7 @@ function installWrappers(){if(window.__KTN011_WRAPPED__)return;window.__KTN011_W
 window.ktn011ResumeTrip=function(){var o=el('ktn011ResumeOverlay');if(o)o.classList.remove('on');try{if(window.KTN014_TRIP_STATE)window.KTN014_TRIP_STATE.syncResumeCache({active:true});if(window.KTN034_BACKGROUND_RESUME&&typeof window.KTN034_BACKGROUND_RESUME.restore==='function')window.KTN034_BACKGROUND_RESUME.restore();else if(typeof restoreLastTrip==='function')restoreLastTrip()}catch(e){if(typeof toast==='function')toast('Impossibile riprendere automaticamente il viaggio.')}};
 window.ktn011TerminateTrip=function(){var tr=read();if(tr){tr.status='terminated_manual';tr.completedAt=Date.now();addEvent(tr,'trip-terminated-manual');write(tr);archive(read()||tr)}try{if(window.KTN014_TRIP_STATE)window.KTN014_TRIP_STATE.deactivateResumeCache(tr&&tr.tripId);localStorage.removeItem('nav_session_v15')}catch(e){}var o=el('ktn011ResumeOverlay');if(o)o.classList.remove('on');if(typeof toast==='function')toast('Viaggio terminato. I dati restano disponibili per il report.')};
 window.ktn011NewTrip=function(){var tr=read();if(tr&&tr.status==='active'){tr.status='abandoned';tr.completedAt=Date.now();addEvent(tr,'trip-abandoned-new-trip');write(tr);archive(read()||tr)}try{if(window.KTN014_TRIP_STATE)window.KTN014_TRIP_STATE.clearTrip();localStorage.removeItem('nav_session_v15')}catch(e){}var o=el('ktn011ResumeOverlay');if(o)o.classList.remove('on');if(typeof toast==='function')toast('Pronto per un nuovo viaggio.')};
-function maybeResume(){if(document.getElementById('startupOverlay')||window.KTN_STARTUP_DECIDED!==true)return;if(document.getElementById('navOverlay'))return;var tr=read();if(!tr||tr.status!=='active')return;var o=el('ktn011ResumeOverlay');if(!o)return;var p=tr.planning||{},a=p.originOriginal||{},b=(tr.navigation&&tr.navigation.currentDestination)||p.destinationFinal||{};if(el('ktn011ResumeRoute'))el('ktn011ResumeRoute').textContent=(a.label||'Partenza')+' → '+(b.label||'Destinazione');if(el('ktn011ResumeWhen'))el('ktn011ResumeWhen').textContent='Ultimo aggiornamento: '+new Date((tr.navigation&&tr.navigation.lastSeenAt)||tr.startedAt||Date.now()).toLocaleString('it-IT');o.classList.add('on')}
+function maybeResume(){if(document.getElementById('startupOverlay')||window.KTN_STARTUP_DECIDED!==true)return;if(window.KTN_STARTUP_MODE==='drive'&&(!window.GDRIVE||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified))return;if(document.getElementById('navOverlay'))return;var tr=read();if(!tr||tr.status!=='active')return;var o=el('ktn011ResumeOverlay');if(!o)return;var p=tr.planning||{},a=p.originOriginal||{},b=(tr.navigation&&tr.navigation.currentDestination)||p.destinationFinal||{};if(el('ktn011ResumeRoute'))el('ktn011ResumeRoute').textContent=(a.label||'Partenza')+' → '+(b.label||'Destinazione');if(el('ktn011ResumeWhen'))el('ktn011ResumeWhen').textContent='Ultimo aggiornamento: '+new Date((tr.navigation&&tr.navigation.lastSeenAt)||tr.startedAt||Date.now()).toLocaleString('it-IT');o.classList.add('on')}
 window.ktn011MaybeResumeAfterStartup=maybeResume;
 function init(){var saved=null;try{saved=JSON.parse(localStorage.getItem('ktn011_planner')||'null')}catch(e){}var now=localParts(new Date(Date.now()+60000));if(el('ktn011DepartureDate'))el('ktn011DepartureDate').value=(saved&&saved.plannedDepartureISO)?localParts(new Date(saved.plannedDepartureISO)).date:now.date;if(el('ktn011DepartureTime'))el('ktn011DepartureTime').value=(saved&&saved.plannedDepartureISO)?localParts(new Date(saved.plannedDepartureISO)).time:now.time;var v=num(el('vPes')&&el('vPes').value,40);if(el('ktn011CargoT'))el('ktn011CargoT').value=Math.max(0,v-TARE).toFixed(1);if(saved&&saved.fuelBaseKmL&&el('ktn011FuelKmL'))el('ktn011FuelKmL').value=saved.fuelBaseKmL;if(saved&&saved.fuelBaseL100&&el('ktn011FuelL100'))el('ktn011FuelL100').value=saved.fuelBaseL100;window.ktn011PlannerChanged(false);installWrappers();setInterval(decorateRouteResult,900);setTimeout(maybeResume,700)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
