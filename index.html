@@ -10916,7 +10916,7 @@ function aSafe(x){return x&&typeof x==='object'?x:{}}
 function options(selected){return REASONS.map(function(x){return'<option value="'+esc(x)+'" '+(x===selected?'selected':'')+'>'+esc(x)+'</option>'}).join('')}
 function reasonParts(s){var r=String(s.reason||''),detail=String(s.reasonDetail||'');if(r)return{preset:REASONS.indexOf(r)>=0?r:'Altro',detail:REASONS.indexOf(r)>=0?detail:r+(detail?' - '+detail:'')};var sug=String(s.suggestedReason||'');if(REASONS.indexOf(sug)>=0)return{preset:sug,detail:''};return{preset:'Altro',detail:sug}}
 function renderReview(){var t=read(),sum=document.getElementById('ktn013ReportSummary'),box=document.getElementById('ktn013StopsReview'),sub=document.getElementById('ktn013ReportSub');if(!t||!sum||!box)return;var p=t.planning||{},r=p.roadHorizonPlan||{},f=r.fuel||{},live=t.live||{},lab=routeLabels(t),pa=plannedArrival(t),end=t.completedAt||Date.now(),diff=pa?Math.round((end-pa)/60000):null;if(sub)sub.textContent=(partialMode?'Report parziale':'Report finale')+' · '+lab.from+' → '+lab.to;sum.innerHTML='<div class="ktn013-report-summary"><div class="ktn013-rchip">Tratta<b>'+esc(lab.from)+' → '+esc(lab.to)+'</b></div><div class="ktn013-rchip">Stato<b>'+esc(statusText(t))+'</b></div><div class="ktn013-rchip">Partenza pianificata<b>'+esc(p.plannedDepartureLocal||fmtDate(Date.parse(p.plannedDepartureISO||'')))+'</b></div><div class="ktn013-rchip">Partenza registrata<b>'+fmtDate(t.startedAt)+'</b></div><div class="ktn013-rchip">Distanza pianificata<b>'+n(p.plannedDistanceKm,n(r.distanceM,0)/1000).toFixed(1).replace('.',',')+' km</b></div><div class="ktn013-rchip">Peso complessivo<b>'+n(p.totalWeightT,0).toFixed(1).replace('.',',')+' t · '+esc(p.weightClass||'')+'</b></div><div class="ktn013-rchip">Carburante pianificato<b>'+liters(n(p.plannedFuelLiters,f.estimatedLiters))+'</b></div><div class="ktn013-rchip">Stima carburante attuale/finale<b>'+liters(n(live.totalFuelForecastL,n(p.plannedFuelLiters,f.estimatedLiters)))+'</b></div><div class="ktn013-rchip">Scostamento arrivo<b>'+(diff===null?'--':((diff>=0?'+':'')+diff+' min'))+'</b></div></div>';
-  var stops=Array.isArray(t.stops)?t.stops:[];if(!stops.length){box.innerHTML='<div class="ktn013-no-stops">Nessuna sosta di almeno 2 minuti è stata registrata.</div>';return}box.innerHTML=stops.map(function(s,i){var rp=reasonParts(s),coord=(isFinite(+s.lat)&&isFinite(+s.lng))?(+s.lat).toFixed(5)+', '+(+s.lng).toFixed(5):'posizione non disponibile';return'<div class="ktn013-stop" data-stop="'+esc(s.id||String(i))+'"><div class="ktn013-stop-head"><strong>Sosta '+(i+1)+' · '+n(s.durationMin,0).toFixed(0)+' min</strong><span>'+fmtDate(s.startAt)+' - '+fmtDate(s.endAt)+'<br>'+esc(coord)+'</span></div><div class="ktn013-stop-grid"><div><label>Motivazione</label><select class="ktn013-reason">'+options(rp.preset)+'</select></div><div><label>Dettaglio / motivo aggiuntivo</label><input class="ktn013-detail" value="'+esc(rp.detail)+'" placeholder="Es. rifornimento e pausa 45 minuti"></div></div></div>'}).join('')}
+  var stops=Array.isArray(t.stops)?t.stops:[];if(!stops.length){box.innerHTML='<div class="ktn013-no-stops">Nessuna sosta di almeno 2 minuti è stata registrata.</div>';return}box.innerHTML=stops.map(function(s,i){var rp=reasonParts(s),coord=(isFinite(+s.lat)&&isFinite(+s.lng))?(+s.lat).toFixed(5)+', '+(+s.lng).toFixed(5):'posizione non disponibile';return'<div class="ktn013-stop" data-stop="'+esc(s.id||String(i))+'"><div class="ktn013-stop-head"><strong>Sosta '+(i+1)+' · '+dur(n(s.durationMin,0)*60)+'</strong><span>'+fmtDate(s.startAt)+' - '+fmtDate(s.endAt)+'<br>'+esc(coord)+'</span></div><div class="ktn013-stop-grid"><div><label>Motivazione</label><select class="ktn013-reason">'+options(rp.preset)+'</select></div><div><label>Dettaglio / motivo aggiuntivo</label><input class="ktn013-detail" value="'+esc(rp.detail)+'" placeholder="Es. rifornimento e pausa 45 minuti"></div></div></div>'}).join('')}
 function saveReview(){var t=read();if(!t)return null;t.stops=Array.isArray(t.stops)?t.stops:[];document.querySelectorAll('#ktn013StopsReview .ktn013-stop').forEach(function(row,i){var s=t.stops[i];if(!s)return;var preset=row.querySelector('.ktn013-reason'),detail=row.querySelector('.ktn013-detail'),p=preset?preset.value:'Altro',d=detail?detail.value.trim():'';s.reason=p;s.reasonDetail=d;s.reasonFinal=(p==='Altro'?(d||'Altro'):(p+(d?' - '+d:'')))});t.finalNotes=(document.getElementById('ktn013FinalNotes')||{}).value||t.finalNotes||'';write(t);return t}
 window.ktn013OpenReport=function(partial,tripId){selectedReportId=tripId||null;var t=read();if(!t){selectedReportId=null;if(typeof toast==='function')toast('Nessun viaggio disponibile per il report.');return}partialMode=partial===true||t.status==='active';var o=document.getElementById('ktn013ReportOverlay');if(o){o.classList.add('on');o.setAttribute('aria-hidden','false')}var note=document.getElementById('ktn013FinalNotes');if(note)note.value=t.finalNotes||'';var btn=document.getElementById('ktn013CreatePdf');if(btn)btn.textContent=partialMode?'CREA PDF PARZIALE':'REPORT COMPLETO';renderReview();Promise.resolve(ensureReportAddresses(t)).then(function(){renderReview()}).catch(function(){})};
 window.ktn013CloseReport=function(){try{saveReview()}catch(e){}var o=document.getElementById('ktn013ReportOverlay');if(o){o.classList.remove('on');o.setAttribute('aria-hidden','true')}selectedReportId=null;partialMode=false};
@@ -10924,13 +10924,13 @@ function cleanText(s){return String(s==null?'':s).replace(/[\u2013\u2014]/g,'-')
 function section(lines,title,opt){opt=opt||{};lines.push({text:title,bold:true,size:12,before:12,after:3,keepWithNext:true,section:true,pageBreakBefore:!!opt.pageBreakBefore})}
 function row(lines,k,v){lines.push({text:k+': '+String(v==null?'--':v),size:9,before:0,after:1})}
 function weatherSummary(r){var w=r&&r.weather||{},s=w.summary||{},p=[];if(w.status!=='ok')return'Meteo non disponibile o non ancora acquisito';p.push(s.rainSamples?'Pioggia prevista in alcuni punti campionati':'Nessuna pioggia significativa nei punti campionati');if(s.snowSamples)p.push('Neve possibile');if(n(s.maxHeadwindKmh,0)>0)p.push('Vento frontale massimo circa '+Math.round(s.maxHeadwindKmh)+' km/h');if(n(s.maxGustKmh,0)>0)p.push('Raffiche massime circa '+Math.round(s.maxGustKmh)+' km/h');return p.join(' - ')}
-function eventText(e){var type=String(e&&e.type||''),at=fmtDate(e&&e.at),d='';if(type==='trip-start')d='Viaggio avviato';else if(type==='planning-road-horizon')d='Analisi iniziale strada, meteo e carburante completata: '+n(e.fuelLiters,0).toFixed(1)+' litri stimati';else if(type==='route-change')d='Percorso modificato o ricalcolato - versione '+(e.routeVersion||'');else if(type==='driver-deviation-detected')d='Deviazione volontaria dal percorso rilevata'+(e.reason?' - '+e.reason:'')+(isFinite(+e.offRouteM)?' - circa '+Math.round(+e.offRouteM)+' m fuori dal percorso':'')+(isFinite(+e.lat)&&isFinite(+e.lng)?' - posizione '+(+e.lat).toFixed(5)+', '+(+e.lng).toFixed(5):'');else if(type==='driver-deviation-reroute-start')d='Ricalcolo avviato dopo deviazione volontaria';else if(type==='driver-deviation-reroute-success')d='Nuovo percorso adottato dopo la deviazione';else if(type==='driver-deviation-reroute-failed')d='Primo tentativo di ricalcolo dopo la deviazione non riuscito'+(e.error?' - '+e.error:'');else if(type==='road-closure-detected')d='Chiusura stradale rilevata sul percorso'+(isFinite(+e.aheadM)?' a circa '+(Math.round(+e.aheadM/100)/10)+' km':'')+(e.description?' - '+e.description:'');else if(type==='road-closure-reroute-start')d='Ricalcolo di sicurezza avviato per evitare una strada chiusa';else if(type==='road-closure-reroute-success')d='Nuovo percorso adottato per evitare la strada chiusa';else if(type==='road-closure-reroute-failed')d='Ricalcolo di sicurezza per strada chiusa non riuscito'+(e.error?' - '+e.error:'');else if(type==='hgv-illegal-road-detected')d='Ingresso rilevato su strada non consentita al camion'+(e.road?' - '+e.road:'')+(e.reason?' - '+e.reason:'');else if(type==='hgv-safety-reroute-start')d='Ricalcolo di sicurezza avviato per uscire da una strada non consentita al camion';else if(type==='hgv-safety-reroute-success')d='Nuovo percorso legale per il camion adottato';else if(type==='hgv-safety-reroute-failed')d='Ricalcolo per uscire dalla strada non consentita non riuscito'+(e.error?' - '+e.error:'');else if(type==='trip-stop-added')d='Tappa aggiunta durante il viaggio'+(e.label?' - '+e.label:'');else if(type==='trip-stop-deleted')d='Tappa eliminata durante il viaggio'+(e.label?' - '+e.label:'');else if(type==='trip-stops-reordered')d='Ordine delle tappe modificato durante il viaggio'+(Array.isArray(e.after)&&e.after.length?' - nuovo ordine: '+e.after.join(' -> '):'');else if(type==='trip-final-destination-changed')d='Destinazione finale modificata durante il viaggio'+(e.from?' da '+e.from:'')+(e.to?' a '+e.to:'')+'; la precedente destinazione è diventata una tappa';else if(type==='temporary-detour')d='Deviazione temporanea verso '+(e.label||'un punto selezionato')+' e successiva ripresa del viaggio';else if(type==='new-trip-from-navigator')d='Nuovo viaggio avviato dal navigatore'+(e.label?' verso '+e.label:'');else if(type==='stop-recorded')d='Sosta rilevata: '+n(e.durationMin,0).toFixed(0)+' minuti';else if(type==='stop-complete')d='Tappa completata '+(e.source==='manual'?'manualmente':'automaticamente')+(e.label?' - '+e.label:'');else if(type==='weather-live-refresh')d='Previsioni meteorologiche aggiornate lungo il percorso';else if(type==='road-horizon-warning')d=(e.title||'Avviso percorso')+(isFinite(+e.aheadM)?' a circa '+Math.round(+e.aheadM/100)/10+' km':'')+(e.detail?' - '+e.detail:'');else if(type==='fuel-forecast-change')d='Stima carburante modificata da '+n(e.fromLiters,0).toFixed(1)+' a '+n(e.toLiters,0).toFixed(1)+' litri';else if(type==='traffic-delay-change')d='Ritardo traffico stimato modificato da '+n(e.fromMinutes,0)+' a '+n(e.toMinutes,0)+' minuti';else if(type==='destination-complete')d='Destinazione raggiunta '+(e.source==='manual'?'con chiusura manuale':'automaticamente');else if(type==='trip-complete')d='Viaggio completato';else if(type==='app-background-gap')d='Applicazione sospesa o riaperta dopo '+Math.max(1,Math.round(n(e.durationSec,0)/60))+' minuti; durante questo intervallo alcuni dati in tempo reale potrebbero non essere stati acquisiti';else if(type==='trip-terminated-manual')d='Viaggio terminato manualmente';else if(type==='trip-replaced'||type==='trip-abandoned-new-trip')d='Viaggio sostituito / archiviato';else return null;return at+' - '+d}
+function eventText(e){var type=String(e&&e.type||''),at=fmtDate(e&&e.at),d='';if(type==='trip-start')d='Viaggio avviato';else if(type==='planning-road-horizon')d='Analisi iniziale strada, meteo e carburante completata: '+n(e.fuelLiters,0).toFixed(1)+' litri stimati';else if(type==='route-change')d='Percorso modificato o ricalcolato - versione '+(e.routeVersion||'');else if(type==='driver-deviation-detected')d='Deviazione volontaria dal percorso rilevata'+(e.reason?' - '+e.reason:'')+(isFinite(+e.offRouteM)?' - circa '+Math.round(+e.offRouteM)+' m fuori dal percorso':'')+(isFinite(+e.lat)&&isFinite(+e.lng)?' - posizione '+(+e.lat).toFixed(5)+', '+(+e.lng).toFixed(5):'');else if(type==='driver-deviation-reroute-start')d='Ricalcolo avviato dopo deviazione volontaria';else if(type==='driver-deviation-reroute-success')d='Nuovo percorso adottato dopo la deviazione';else if(type==='driver-deviation-reroute-failed')d='Primo tentativo di ricalcolo dopo la deviazione non riuscito'+(e.error?' - '+e.error:'');else if(type==='road-closure-detected')d='Chiusura stradale rilevata sul percorso'+(isFinite(+e.aheadM)?' a circa '+(Math.round(+e.aheadM/100)/10)+' km':'')+(e.description?' - '+e.description:'');else if(type==='road-closure-reroute-start')d='Ricalcolo di sicurezza avviato per evitare una strada chiusa';else if(type==='road-closure-reroute-success')d='Nuovo percorso adottato per evitare la strada chiusa';else if(type==='road-closure-reroute-failed')d='Ricalcolo di sicurezza per strada chiusa non riuscito'+(e.error?' - '+e.error:'');else if(type==='hgv-illegal-road-detected')d='Ingresso rilevato su strada non consentita al camion'+(e.road?' - '+e.road:'')+(e.reason?' - '+e.reason:'');else if(type==='hgv-safety-reroute-start')d='Ricalcolo di sicurezza avviato per uscire da una strada non consentita al camion';else if(type==='hgv-safety-reroute-success')d='Nuovo percorso legale per il camion adottato';else if(type==='hgv-safety-reroute-failed')d='Ricalcolo per uscire dalla strada non consentita non riuscito'+(e.error?' - '+e.error:'');else if(type==='trip-stop-added')d='Tappa aggiunta durante il viaggio'+(e.label?' - '+e.label:'');else if(type==='trip-stop-deleted')d='Tappa eliminata durante il viaggio'+(e.label?' - '+e.label:'');else if(type==='trip-stops-reordered')d='Ordine delle tappe modificato durante il viaggio'+(Array.isArray(e.after)&&e.after.length?' - nuovo ordine: '+e.after.join(' -> '):'');else if(type==='trip-final-destination-changed')d='Destinazione finale modificata durante il viaggio'+(e.from?' da '+e.from:'')+(e.to?' a '+e.to:'')+'; la precedente destinazione è diventata una tappa';else if(type==='temporary-detour')d='Deviazione temporanea verso '+(e.label||'un punto selezionato')+' e successiva ripresa del viaggio';else if(type==='new-trip-from-navigator')d='Nuovo viaggio avviato dal navigatore'+(e.label?' verso '+e.label:'');else if(type==='stop-recorded')d='Sosta rilevata: '+dur(n(e.durationMin,0)*60);else if(type==='stop-complete')d='Tappa completata '+(e.source==='manual'?'manualmente':'automaticamente')+(e.label?' - '+e.label:'');else if(type==='weather-live-refresh')d='Previsioni meteorologiche aggiornate lungo il percorso';else if(type==='road-horizon-warning')d=(e.title||'Avviso percorso')+(isFinite(+e.aheadM)?' a circa '+Math.round(+e.aheadM/100)/10+' km':'')+(e.detail?' - '+e.detail:'');else if(type==='fuel-forecast-change')d='Stima carburante modificata da '+n(e.fromLiters,0).toFixed(1)+' a '+n(e.toLiters,0).toFixed(1)+' litri';else if(type==='traffic-delay-change')d='Ritardo traffico stimato modificato da '+n(e.fromMinutes,0)+' a '+n(e.toMinutes,0)+' minuti';else if(type==='destination-complete')d='Destinazione raggiunta '+(e.source==='manual'?'con chiusura manuale':'automaticamente');else if(type==='trip-complete')d='Viaggio completato';else if(type==='app-background-gap')d='Applicazione sospesa o riaperta dopo '+Math.max(1,Math.round(n(e.durationSec,0)/60))+' minuti; durante questo intervallo alcuni dati in tempo reale potrebbero non essere stati acquisiti';else if(type==='trip-terminated-manual')d='Viaggio terminato manualmente';else if(type==='trip-replaced'||type==='trip-abandoned-new-trip')d='Viaggio sostituito / archiviato';else return null;return at+' - '+d}
 function buildLines(t,partial){var lines=[],p=t.planning||{},r=p.roadHorizonPlan||{},rt=r.route||{},fuel=r.fuel||{},live=t.live||{},lab=routeLabels(t),pa=plannedArrival(t),end=partial?Date.now():(t.completedAt||Date.now());lines.push({text:'REPORT VIAGGIO',bold:true,size:17,before:0,after:6});lines.push({text:lab.from+' -> '+lab.to,bold:true,size:12,before:0,after:2});row(lines,'Data di creazione',fmtDate(Date.now()));row(lines,'Tipo report',partial?'Parziale - viaggio in corso':'Finale');row(lines,'Stato viaggio',statusText(t));
   section(lines,'PIANIFICAZIONE INIZIALE');row(lines,'Partenza pianificata',p.plannedDepartureLocal||fmtDate(Date.parse(p.plannedDepartureISO||'')));row(lines,'Partenza registrata',fmtDate(t.startedAt));row(lines,'Ora prevista di arrivo alla pianificazione',pa?fmtDate(pa):'non disponibile');row(lines,'Destinazione finale originale',originalDestinationLabel(t));row(lines,'Tappe intermedie iniziali',Array.isArray(p.originalStops)&&p.originalStops.length?p.originalStops.map(function(x){return x.label||'Tappa'}).join(' -> '):'nessuna');row(lines,'Tara complesso',n(p.tareT,15).toFixed(1)+' t');row(lines,'Carico',n(p.cargoT,0).toFixed(1)+' t');row(lines,'Peso complessivo',n(p.totalWeightT,0).toFixed(1)+' t - '+(p.weightClass||''));row(lines,'Consumo base impostato',n(p.fuelBaseKmL,3.3).toFixed(2)+' km/l - '+n(p.fuelBaseL100,100/n(p.fuelBaseKmL,3.3)).toFixed(1)+' l/100 km');row(lines,'Distanza pianificata',n(p.plannedDistanceKm,n(r.distanceM,0)/1000).toFixed(1)+' km');row(lines,'Tempo di percorrenza previsto',dur(n(r.durationSec,0)));row(lines,'Carburante stimato alla pianificazione',liters(n(p.plannedFuelLiters,fuel.estimatedLiters)));row(lines,'Indice consumo previsto',isFinite(+fuel.index)?n(fuel.index,0).toFixed(1):'non disponibile');
   section(lines,'CARATTERISTICHE DEL PERCORSO PIANIFICATO');row(lines,'Strade principali e autostrade',km(rt.majorM));row(lines,'Strade secondarie',km(rt.secondaryM));row(lines,'Tratti urbani e di servizio',km(rt.urbanM));row(lines,'Salite oltre il 4%',km(rt.up4M));row(lines,'Discese oltre il 4%',km(rt.down4M));if(rt.elevation&&rt.elevation.available){row(lines,'Dislivello rilevato in salita','+'+n(rt.elevation.ascentM,0)+' m');row(lines,'Dislivello rilevato in discesa','-'+n(rt.elevation.descentM,0)+' m')}row(lines,'Fondo non asfaltato o anomalo',km(rt.roughM));row(lines,'Tratti a pedaggio rilevati',km(rt.tollM));row(lines,'Tratti con restrizioni di accesso',km(rt.accessM));row(lines,'Condizioni meteorologiche previste',weatherSummary(r));
   if(r.weather&&Array.isArray(r.weather.rows)&&r.weather.rows.length){section(lines,'PREVISIONI METEOROLOGICHE AI PUNTI DI PASSAGGIO');r.weather.rows.forEach(function(w,i){row(lines,'Punto '+(i+1),fmtDate(w.at)+' - '+(w.condition||'condizioni variabili')+' - '+(isFinite(+w.tempC)?n(w.tempC,0).toFixed(1)+' C - ':'')+'vento '+n(w.windKmh,0).toFixed(0)+' km/h'+(n(w.rainMm,0)>0?' - pioggia '+n(w.rainMm,0).toFixed(1)+' mm/h':'')+(n(w.snowCm,0)>0?' - neve '+n(w.snowCm,0).toFixed(1)+' cm/h':''))})}
   section(lines,partial?'SITUAZIONE ATTUALE':'ARRIVO E CONFRONTO FINALE',{pageBreakBefore:!partial});row(lines,partial?'Ora del report':'Ora di arrivo / conclusione',fmtDate(end));var nav=t.navigation||{},cd=nav.currentDestination||{};if(cd.label)row(lines,'Destinazione attuale del percorso',cd.label);if(Array.isArray(nav.currentStops)){var ni=Math.max(0,n(nav.nextStopIndex,0)),rem=nav.currentStops.slice(ni);row(lines,'Tappe ancora da percorrere',rem.length?rem.map(function(x){return x.label||'Tappa'}).join(' -> '):'nessuna')}row(lines,'Tempo complessivo trascorso',dur((end-n(t.startedAt,end))/1000));if(isFinite(+live.actualDistanceM))row(lines,'Distanza registrata dal navigatore',km(live.actualDistanceM));if(isFinite(+live.fuelUsedEstL))row(lines,'Carburante stimato gia utilizzato',liters(live.fuelUsedEstL));if(isFinite(+live.remainingFuelEstL)&&partial)row(lines,'Carburante stimato rimanente',liters(live.remainingFuelEstL));if(isFinite(+live.totalFuelForecastL))row(lines,partial?'Stima carburante totale aggiornata':'Stima carburante totale finale',liters(live.totalFuelForecastL));if(isFinite(+live.trafficExtraFuelL))row(lines,'Carburante attribuito al ritardo traffico',liters(live.trafficExtraFuelL));if(isFinite(+live.fuelIndexRemaining)&&partial){var ff=Math.max(.01,n(live.fuelIndexRemaining,100)/100),fb=n(p.fuelBaseKmL,3.3),fk=fb/ff,fd=(ff-1)*100;row(lines,'Consumo stimato del percorso rimanente',fk.toFixed(2)+' km/l - '+(fd>=0?'+':'')+fd.toFixed(1)+'% rispetto al consumo base')}if(pa){var dm=Math.round((end-pa)/60000);row(lines,"Scostamento rispetto all'arrivo pianificato",(dm>=0?'+':'')+dm+' minuti')}
-  section(lines,'SOSTE');var stops=Array.isArray(t.stops)?t.stops:[];if(!stops.length)row(lines,'Soste registrate','nessuna');stops.forEach(function(s,i){var reason=s.reasonFinal||s.reason||s.suggestedReason||'Motivazione non inserita',loc=(isFinite(+s.lat)&&isFinite(+s.lng))?(+s.lat).toFixed(5)+', '+(+s.lng).toFixed(5):'posizione non disponibile';lines.push({text:'Sosta '+(i+1),bold:true,size:10,before:5,after:1,keepWithNext:true});row(lines,'Periodo',fmtDate(s.startAt)+' - '+fmtDate(s.endAt));row(lines,'Durata',n(s.durationMin,0).toFixed(0)+' minuti');row(lines,'Posizione',loc);row(lines,'Motivazione',reason)});
+  section(lines,'SOSTE');var stops=Array.isArray(t.stops)?t.stops:[];if(!stops.length)row(lines,'Soste registrate','nessuna');stops.forEach(function(s,i){var reason=s.reasonFinal||s.reason||s.suggestedReason||'Motivazione non inserita',loc=(isFinite(+s.lat)&&isFinite(+s.lng))?(+s.lat).toFixed(5)+', '+(+s.lng).toFixed(5):'posizione non disponibile';lines.push({text:'Sosta '+(i+1),bold:true,size:10,before:5,after:1,keepWithNext:true});row(lines,'Periodo',fmtDate(s.startAt)+' - '+fmtDate(s.endAt));row(lines,'Durata',dur(n(s.durationMin,0)*60));row(lines,'Posizione',loc);row(lines,'Motivazione',reason)});
   section(lines,'MODIFICHE E AVVENIMENTI DURANTE IL VIAGGIO');var ev=(t.events||[]).map(eventText).filter(Boolean);if(!ev.length)row(lines,'Avvenimenti','nessuna variazione registrata');else ev.forEach(function(x){lines.push({text:x,size:8.5,before:0,after:1})});if(t.finalNotes){section(lines,'NOTE FINALI');lines.push({text:t.finalNotes,size:9,before:0,after:2})}section(lines,'NOTA SULLE STIME');lines.push({text:'Le stime di carburante e impatto del percorso sono indicative. Sono calcolate usando il consumo base impostato e le informazioni disponibili su peso, pendenza, tipo e fondo strada, traffico e condizioni meteorologiche.',size:8,before:0,after:1});return lines.map(function(x){x.text=cleanText(x.text);return x})}
 function cp1252Byte(ch){var c=ch.charCodeAt(0);if(c<=255)return c;var map={8364:128,8218:130,402:131,8222:132,8230:133,8224:134,8225:135,710:136,8240:137,352:138,8249:139,338:140,381:142,8216:145,8217:146,8220:147,8221:148,8226:149,8211:150,8212:151,732:152,8482:153,353:154,8250:155,339:156,382:158,376:159};return map[c]||63}
 function bin(s){var out='';for(var i=0;i<s.length;i++)out+=String.fromCharCode(cp1252Byte(s[i]));return out}
@@ -11113,13 +11113,19 @@ window.ktn014EnhanceNavigatorHtml=function(html){var b64='PCEtLSBLVE4gMC4xNCBOQV
 <script id="ktn014PlanningSafetyOwner">
 (function(){
 'use strict';
-if(window.__KTN014_PLANNING_SAFETY__)return;window.__KTN014_PLANNING_SAFETY__=true;
-window.KTN014_PLANNING_SAFETY_OWNER='0.14-single-owner';
-var S={sig:'',busy:false,promise:null,lastError:'',incidents:[],detourSig:'',lastAuditAt:0};
+if(window.__KTN014_PLANNING_SAFETY_V2__)return;
+window.__KTN014_PLANNING_SAFETY_V2__=true;
+window.__KTN014_PLANNING_SAFETY__=true;
+window.KTN014_PLANNING_SAFETY_OWNER='0.14-single-owner-v2';
+
+var S={
+  sig:'',busy:false,promise:null,startBusy:false,recovering:false,
+  lastError:'',incidents:[],lastAuditAt:0,lastSafeAt:0
+};
+
 function state(){try{return typeof window.KTN012_getPlannerRouteState==='function'?window.KTN012_getPlannerRouteState():null}catch(e){return null}}
 function key(){try{return String(localStorage.getItem('ktn57_tomtom_api_key')||'').trim()}catch(e){return''}}
 function enabled(){try{return localStorage.getItem('ktn57_tomtom_traffic_on')==='1'}catch(e){return false}}
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function pts(feature){return(feature&&feature.geometry&&feature.geometry.coordinates||[]).map(function(c){return{lat:+c[1],lng:+c[0]}}).filter(function(p){return isFinite(p.lat)&&isFinite(p.lng)})}
 function flatten(g){var o=[];function add(x){if(!Array.isArray(x))return;if(x.length>=2&&typeof x[0]==='number'&&typeof x[1]==='number'){o.push({lng:+x[0],lat:+x[1]});return}x.forEach(add)}if(g&&g.coordinates)add(g.coordinates);return o.filter(function(p){return isFinite(p.lat)&&isFinite(p.lng)})}
 function pointSeg(p,a,b){var lat0=p.lat*Math.PI/180,kx=111320*Math.max(.25,Math.cos(lat0)),ky=110540,px=(p.lng-a.lng)*kx,py=(p.lat-a.lat)*ky,bx=(b.lng-a.lng)*kx,by=(b.lat-a.lat)*ky,d=bx*bx+by*by,t=d?Math.max(0,Math.min(1,(px*bx+py*by)/d)):0,x=px-t*bx,y=py-t*by;return Math.sqrt(x*x+y*y)}
@@ -11130,21 +11136,312 @@ function closure(x){var t=eventText(x).toLowerCase();return eventCat(x)===8||/ch
 function eventOff(x,rp){var ep=flatten(x&&x.geometry);if(!ep.length)return Infinity;var best=Infinity;ep.forEach(function(p){var d=off(p,rp);if(d<best)best=d});return best}
 function bbox(features){var a=[];(features||[]).forEach(function(f){a=a.concat(pts(f))});if(!a.length)return'';var x1=180,y1=90,x2=-180,y2=-90;a.forEach(function(p){x1=Math.min(x1,p.lng);x2=Math.max(x2,p.lng);y1=Math.min(y1,p.lat);y2=Math.max(y2,p.lat)});var pad=.045;return[x1-pad,y1-pad,x2+pad,y2+pad].join(',')}
 function incidentFields(){return'{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,events{description,code,iconCategory},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity,probabilityOfOccurrence,numberOfReports,lastReportTime}}}'}
-function fetchInc(routes){var k=key(),bb=bbox(routes.map(function(r){return r.feature}));if(!k||!bb)return Promise.resolve([]);var u='https://api.tomtom.com/traffic/services/5/incidentDetails?key='+encodeURIComponent(k)+'&bbox='+encodeURIComponent(bb)+'&fields='+encodeURIComponent(incidentFields())+'&language=it-IT&timeValidityFilter=present';return fetch(u,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('TomTom incidenti HTTP '+r.status);return r.json()}).then(function(j){return(j&&j.incidents)||[]})}
-function safetyOf(r,inc){var rp=pts(r.feature),cl=(inc||[]).filter(function(x){return closure(x)&&eventOff(x,rp)<=360});return{status:cl.length?'blocked':'safe',closures:cl,checkedAt:Date.now(),source:'TomTom Incident Details'}}
-function routeSig(st){if(!st||!Array.isArray(st.routes)||!st.routes.length)return'';return st.routes.map(function(r){var p=pts(r.feature),a=p[0]||{},b=p[p.length-1]||{};return[r.pref,Math.round(+r.distance||0),p.length,(+a.lat||0).toFixed(4),(+a.lng||0).toFixed(4),(+b.lat||0).toFixed(4),(+b.lng||0).toFixed(4)].join(':')}).join('|')}
-function avoidOne(x){var ep=flatten(x&&x.geometry);if(!ep.length)return null;var x1=180,y1=90,x2=-180,y2=-90;ep.forEach(function(p){x1=Math.min(x1,p.lng);x2=Math.max(x2,p.lng);y1=Math.min(y1,p.lat);y2=Math.max(y2,p.lat)});var lat=(y1+y2)/2,py=420/110540,px=420/(111320*Math.max(.30,Math.cos(lat*Math.PI/180)));x1-=px;x2+=px;y1-=py;y2+=py;return[[[x1,y1],[x2,y1],[x2,y2],[x1,y2],[x1,y1]]]}
-function avoidGeom(cls){var polys=(cls||[]).map(avoidOne).filter(Boolean);if(!polys.length)return null;return polys.length===1?{type:'Polygon',coordinates:polys[0]}:{type:'MultiPolygon',coordinates:polys}}
-function accessAudit(feature){var ex=feature&&feature.properties&&feature.properties.extras&&feature.properties.extras.roadaccessrestrictions,vals=ex&&Array.isArray(ex.values)?ex.values:[],secs=[];vals.forEach(function(v){if(!Array.isArray(v)||v.length<3)return;var code=+v[2]||0;if(!code)return;secs.push({start:+v[0]||0,end:+v[1]||0,code:code,label:'Restrizione '+code,distance:0})});return{sections:secs,conditional:secs.filter(function(x){return[2,4,8,32,64].indexOf(x.code)>=0}),hard:secs.filter(function(x){return[1,16].indexOf(x.code)>=0})}}
+function fetchInc(routes){
+  var k=key(),bb=bbox(routes.map(function(r){return r.feature}));
+  if(!k||!bb)return Promise.resolve([]);
+  var u='https://api.tomtom.com/traffic/services/5/incidentDetails?key='+encodeURIComponent(k)+'&bbox='+encodeURIComponent(bb)+'&fields='+encodeURIComponent(incidentFields())+'&language=it-IT&timeValidityFilter=present';
+  return fetch(u,{cache:'no-store'}).then(function(r){
+    if(!r.ok)throw new Error('TomTom incidenti HTTP '+r.status);
+    return r.json();
+  }).then(function(j){return(j&&j.incidents)||[]});
+}
+function safetyOf(r,inc){
+  var rp=pts(r.feature),cl=(inc||[]).filter(function(x){return closure(x)&&eventOff(x,rp)<=360});
+  return{status:cl.length?'blocked':'safe',closures:cl,checkedAt:Date.now(),source:'TomTom Incident Details'};
+}
+function routeSig(st){
+  if(!st||!Array.isArray(st.routes)||!st.routes.length)return'';
+  return st.routes.map(function(r){
+    var p=pts(r.feature),a=p[0]||{},b=p[p.length-1]||{};
+    return[r.pref,Math.round(+r.distance||0),p.length,(+a.lat||0).toFixed(4),(+a.lng||0).toFixed(4),(+b.lat||0).toFixed(4),(+b.lng||0).toFixed(4)].join(':');
+  }).join('|')+'#'+String(st.selected);
+}
+function accessAudit(feature){
+  var ex=feature&&feature.properties&&feature.properties.extras&&feature.properties.extras.roadaccessrestrictions,
+      vals=ex&&Array.isArray(ex.values)?ex.values:[],secs=[];
+  vals.forEach(function(v){
+    if(!Array.isArray(v)||v.length<3)return;
+    var code=+v[2]||0;if(!code)return;
+    secs.push({start:+v[0]||0,end:+v[1]||0,code:code,label:'Restrizione '+code,distance:0});
+  });
+  return{
+    sections:secs,
+    conditional:secs.filter(function(x){return[2,4,8,32,64].indexOf(x.code)>=0}),
+    hard:secs.filter(function(x){return[1,16].indexOf(x.code)>=0})
+  };
+}
 function selected(st){return st&&st.routes&&st.routes[st.selected]||null}
-function clearIndex(st){var pref=['recommended','fastest','shortest'];for(var p=0;p<pref.length;p++){for(var i=0;i<st.routes.length;i++){var r=st.routes[i],sf=r._ktn014Safety;if(r.pref===pref[p]&&sf&&sf.status==='safe'&&!(r.access&&r.access.hard&&r.access.hard.length)&&!(r.access&&r.access.conditional&&r.access.conditional.length))return i}}return-1}
-function syncQuick(st){try{var q=window.ktn53QuickResolved,r=selected(st);if(q&&r){q.distance=r.distance;q.duration=r.duration;q.feature=r.feature;q.pref=r.pref;q.access=r.access;window.b10SelectedPreference=r.pref;if(typeof window.ktn53RenderQuickSummary==='function')window.ktn53RenderQuickSummary();if(typeof window.b10RenderQuickChoices==='function')window.b10RenderQuickChoices()}}catch(e){}}
-function render(){var st=state();if(!st||!st.routes||!st.routes.length)return;var r=selected(st),host=(document.getElementById('ktn53QuickSummary')&&document.getElementById('ktn53QuickSummary').classList.contains('on'))?document.getElementById('ktn53QuickSummary'):document.getElementById('routeResult');if(!host)return;var b=document.getElementById('ktn014PlanSafetyBanner');if(!b){b=document.createElement('div');b.id='ktn014PlanSafetyBanner';var acts=host.querySelector('.route-actions,.ktn53-qactions');if(acts)host.insertBefore(b,acts);else host.appendChild(b)}var sf=r&&r._ktn014Safety;if(S.busy){b.className='checking';b.textContent='Controllo chiusure stradali sul percorso…'}else if(!enabled()||!key()){b.className='unverified';b.textContent='Chiusure live non verificate: TomTom Traffic non è attivo.'}else if(!sf){b.className='checking';b.textContent='Controllo chiusure stradali in attesa…'}else if(sf.status==='blocked'){b.className='blocked';b.textContent='⛔ STRADA CHIUSA SUL PERCORSO · Navigazione bloccata finché non viene trovato un percorso sicuro.'}else{b.className='safe';b.textContent=sf.detoured?'✓ STRADA CHIUSA EVITATA · percorso alternativo di sicurezza calcolato.':'✓ Nessuna strada chiusa TomTom rilevata sul percorso selezionato.'}var cards=document.querySelectorAll('.b10-route-card');cards.forEach(function(c,i){var old=c.querySelector('.ktn014-plan-safety-tag');if(old)old.remove();var rr=st.routes[i],ss=rr&&rr._ktn014Safety;if(!rr)return;var t=document.createElement('span');t.className='ktn014-plan-safety-tag '+(!enabled()||!key()?'unverified':ss&&ss.status==='blocked'?'blocked':'safe');t.textContent=!enabled()||!key()?'CHIUSURE NON VERIFICATE':ss&&ss.status==='blocked'?'⛔ CHIUSURA STRADA':ss&&ss.detoured?'✓ CHIUSURA EVITATA':'✓ CHIUSURE OK';c.appendChild(t)})}
-function detour(st,inc){var r=selected(st);if(!r||!r._ktn014Safety||!r._ktn014Safety.closures.length||typeof window.KTN014_PLANNER_ROUTE_FETCH!=='function'||!st.ctx)return Promise.resolve(false);var geom=avoidGeom(r._ktn014Safety.closures),ds=routeSig(st)+'|'+r.pref;if(!geom||S.detourSig===ds)return Promise.resolve(false);S.detourSig=ds;return window.KTN014_PLANNER_ROUTE_FETCH(st.ctx.from,st.ctx.to,st.ctx.stops||[],r.pref,geom).then(function(nr){nr.access=nr.access||accessAudit(nr.feature);nr._ktn014Safety=safetyOf(nr,inc);if(nr._ktn014Safety.status!=='safe')return false;nr._ktn014Safety.detoured=true;nr._ktn014Safety.avoidedClosures=r._ktn014Safety.closures.length;st.routes[st.selected]=nr;window.KTN014_SAFETY_AVOID={geometry:geom,expiresAt:Date.now()+6*3600000,source:'planning-closure'};window.b10SelectedPreference=nr.pref;try{if(typeof window.b10ChooseInitialRoute==='function')window.b10ChooseInitialRoute(st.selected)}catch(e){}syncQuick(st);return true}).catch(function(e){S.lastError=String(e&&e.message||e);return false})}
-function audit(force){var st=state(),sg=routeSig(st);if(!sg)return Promise.resolve(false);if(!enabled()||!key()){st.routes.forEach(function(r){r._ktn014Safety={status:'unverified',closures:[],checkedAt:Date.now()}});S.sig=sg;render();return Promise.resolve(true)}if(S.busy&&S.promise)return S.promise;if(!force&&S.sig===sg&&Date.now()-S.lastAuditAt<90000){render();return Promise.resolve(true)}S.busy=true;render();S.promise=fetchInc(st.routes).then(function(inc){S.incidents=inc;st.routes.forEach(function(r){r._ktn014Safety=safetyOf(r,inc)});S.sig=routeSig(st);S.lastAuditAt=Date.now();var cur=selected(st);if(cur&&cur._ktn014Safety.status==='blocked'){var ci=clearIndex(st);if(ci>=0&&ci!==st.selected){try{window.b10ChooseInitialRoute(ci)}catch(e){}st=state();syncQuick(st);if(typeof toast==='function')toast('Strada chiusa rilevata: selezionato automaticamente un percorso senza la chiusura.');return true}return detour(st,inc)}return true}).catch(function(e){S.lastError=String(e&&e.message||e);st.routes.forEach(function(r){r._ktn014Safety={status:'unverified',closures:[],checkedAt:Date.now(),error:S.lastError}});return false}).finally(function(){S.busy=false;S.promise=null;render()});return S.promise}
+function routeAccessFree(r){
+  return !!r &&
+    !(r.access&&r.access.hard&&r.access.hard.length) &&
+    !(r.access&&r.access.conditional&&r.access.conditional.length);
+}
+function safeExistingIndex(st){
+  var pref=['recommended','fastest','shortest'];
+  for(var p=0;p<pref.length;p++){
+    for(var i=0;i<st.routes.length;i++){
+      var r=st.routes[i],sf=r&&r._ktn014Safety;
+      if(r&&r.pref===pref[p]&&sf&&sf.status==='safe'&&routeAccessFree(r))return i;
+    }
+  }
+  return-1;
+}
+function syncQuick(st){
+  try{
+    var q=window.ktn53QuickResolved,r=selected(st);
+    if(q&&r){
+      q.distance=r.distance;q.duration=r.duration;q.feature=r.feature;q.pref=r.pref;q.access=r.access;
+      window.b10SelectedPreference=r.pref;
+      if(typeof window.ktn53RenderQuickSummary==='function')window.ktn53RenderQuickSummary();
+      if(typeof window.b10RenderQuickChoices==='function')window.b10RenderQuickChoices();
+    }
+  }catch(e){}
+}
+function avoidOne(x,padM){
+  var ep=flatten(x&&x.geometry);if(!ep.length)return null;
+  var x1=180,y1=90,x2=-180,y2=-90;
+  ep.forEach(function(p){x1=Math.min(x1,p.lng);x2=Math.max(x2,p.lng);y1=Math.min(y1,p.lat);y2=Math.max(y2,p.lat)});
+  var lat=(y1+y2)/2,pad=Math.max(350,Number(padM)||550),
+      py=pad/110540,px=pad/(111320*Math.max(.30,Math.cos(lat*Math.PI/180)));
+  x1-=px;x2+=px;y1-=py;y2+=py;
+  return[[[x1,y1],[x2,y1],[x2,y2],[x1,y2],[x1,y1]]];
+}
+function avoidGeom(cls,padM){
+  var polys=(cls||[]).map(function(x){return avoidOne(x,padM)}).filter(Boolean);
+  if(!polys.length)return null;
+  return polys.length===1?{type:'Polygon',coordinates:polys[0]}:{type:'MultiPolygon',coordinates:polys};
+}
+function setAvoid(geom,source){
+  if(geom){
+    window.KTN014_SAFETY_AVOID={
+      geometry:geom,expiresAt:Date.now()+6*3600000,
+      source:source||'planning-closure'
+    };
+  }
+}
+function render(){
+  var st=state();if(!st||!st.routes||!st.routes.length)return;
+  var r=selected(st),
+      host=(document.getElementById('ktn53QuickSummary')&&document.getElementById('ktn53QuickSummary').classList.contains('on'))
+        ?document.getElementById('ktn53QuickSummary'):document.getElementById('routeResult');
+  if(!host)return;
+  var b=document.getElementById('ktn014PlanSafetyBanner');
+  if(!b){
+    b=document.createElement('div');b.id='ktn014PlanSafetyBanner';
+    var acts=host.querySelector('.route-actions,.ktn53-qactions');
+    if(acts)host.insertBefore(b,acts);else host.appendChild(b);
+  }
+  var sf=r&&r._ktn014Safety;
+  if(S.recovering){
+    b.className='checking';
+    b.textContent='⛔ Strada chiusa rilevata · CERCO AUTOMATICAMENTE UN PERCORSO ALTERNATIVO SICURO…';
+  }else if(S.busy){
+    b.className='checking';
+    b.textContent='Controllo chiusure stradali sul percorso…';
+  }else if(!enabled()||!key()){
+    b.className='unverified';
+    b.textContent='Chiusure live non verificate: TomTom Traffic non è attivo.';
+  }else if(!sf){
+    b.className='checking';
+    b.textContent='Controllo chiusure stradali in attesa…';
+  }else if(sf.status==='blocked'){
+    b.className='blocked';
+    b.textContent='⛔ STRADA CHIUSA · Non è stato possibile trovare automaticamente un percorso sicuro. NAVIGA resta bloccato.';
+  }else{
+    b.className='safe';
+    b.textContent=sf.detoured
+      ?'✓ STRADA CHIUSA EVITATA · percorso alternativo di sicurezza pronto.'
+      :'✓ Nessuna strada chiusa TomTom rilevata sul percorso selezionato.';
+  }
+
+  var cards=document.querySelectorAll('.b10-route-card');
+  cards.forEach(function(c,i){
+    var old=c.querySelector('.ktn014-plan-safety-tag');if(old)old.remove();
+    var rr=st.routes[i],ss=rr&&rr._ktn014Safety;if(!rr)return;
+    var t=document.createElement('span');
+    t.className='ktn014-plan-safety-tag '+(!enabled()||!key()?'unverified':ss&&ss.status==='blocked'?'blocked':'safe');
+    t.textContent=!enabled()||!key()?'CHIUSURE NON VERIFICATE':
+      ss&&ss.status==='blocked'?'⛔ CHIUSURA STRADA':
+      ss&&ss.detoured?'✓ CHIUSURA EVITATA':'✓ CHIUSURE OK';
+    c.appendChild(t);
+  });
+}
+function chooseExistingSafe(st,closures){
+  var ci=safeExistingIndex(st);
+  if(ci<0||ci===st.selected)return false;
+  var geom=avoidGeom(closures,550);
+  setAvoid(geom,'planning-closure-existing-alternative');
+  try{window.b10ChooseInitialRoute(ci)}catch(e){return false}
+  var st2=state();
+  syncQuick(st2);
+  S.sig=routeSig(st2);
+  S.lastSafeAt=Date.now();
+  if(typeof toast==='function')toast('Strada chiusa: selezionato automaticamente un percorso alternativo sicuro.');
+  return true;
+}
+function installDetour(st,nr,inc,geom,closures){
+  nr.access=nr.access||accessAudit(nr.feature);
+  nr._ktn014Safety=safetyOf(nr,inc);
+  if(nr._ktn014Safety.status!=='safe'||!routeAccessFree(nr))return false;
+  nr._ktn014Safety.detoured=true;
+  nr._ktn014Safety.avoidedClosures=(closures||[]).length;
+  st.routes[st.selected]=nr;
+  setAvoid(geom,'planning-closure-detour');
+  window.b10SelectedPreference=nr.pref;
+  try{if(typeof window.b10ChooseInitialRoute==='function')window.b10ChooseInitialRoute(st.selected)}catch(e){}
+  var st2=state();
+  syncQuick(st2);
+  S.sig=routeSig(st2);
+  S.lastSafeAt=Date.now();
+  return true;
+}
+function findDetour(st,inc,closures){
+  if(!closures||!closures.length||typeof window.KTN014_PLANNER_ROUTE_FETCH!=='function'||!st.ctx)
+    return Promise.resolve(false);
+
+  var cur=selected(st),base=cur&&cur.pref||'recommended';
+  var attempts=[
+    {pref:base,pad:550},
+    {pref:base,pad:1100},
+    {pref:'recommended',pad:1100},
+    {pref:'fastest',pad:1500},
+    {pref:'shortest',pad:1800}
+  ];
+  var seen={},clean=[];
+  attempts.forEach(function(a){
+    var k=a.pref+'|'+a.pad;
+    if(!seen[k]){seen[k]=1;clean.push(a)}
+  });
+
+  var i=0;
+  function next(){
+    if(i>=clean.length)return Promise.resolve(false);
+    var a=clean[i++],geom=avoidGeom(closures,a.pad);
+    if(!geom)return next();
+    return window.KTN014_PLANNER_ROUTE_FETCH(
+      st.ctx.from,st.ctx.to,st.ctx.stops||[],a.pref,geom
+    ).then(function(nr){
+      if(installDetour(st,nr,inc,geom,closures)){
+        if(typeof toast==='function')toast('Percorso alternativo trovato: la strada chiusa viene evitata.');
+        return true;
+      }
+      return next();
+    }).catch(function(e){
+      S.lastError=String(e&&e.message||e);
+      return next();
+    });
+  }
+  return next();
+}
+function remediateBlocked(st,inc){
+  var cur=selected(st),closures=cur&&cur._ktn014Safety&&cur._ktn014Safety.closures||[];
+  if(!closures.length)return Promise.resolve(false);
+  S.recovering=true;render();
+
+  if(chooseExistingSafe(st,closures)){
+    S.recovering=false;render();
+    return Promise.resolve(true);
+  }
+  return findDetour(st,inc,closures).then(function(ok){
+    S.recovering=false;render();
+    return ok;
+  },function(){
+    S.recovering=false;render();
+    return false;
+  });
+}
+function audit(force){
+  var st=state(),sg=routeSig(st);
+  if(!sg)return Promise.resolve(false);
+
+  if(!enabled()||!key()){
+    st.routes.forEach(function(r){
+      r._ktn014Safety={status:'unverified',closures:[],checkedAt:Date.now()};
+    });
+    S.sig=routeSig(st);S.lastAuditAt=Date.now();render();
+    return Promise.resolve(true);
+  }
+
+  if(S.busy&&S.promise)return S.promise;
+  var cur=selected(st),sf=cur&&cur._ktn014Safety;
+  if(!force&&S.sig===sg&&sf&&Date.now()-Number(sf.checkedAt||0)<90000){
+    render();return Promise.resolve(sf.status==='safe');
+  }
+
+  S.busy=true;S.recovering=false;render();
+  S.promise=fetchInc(st.routes).then(function(inc){
+    S.incidents=inc;
+    st.routes.forEach(function(r){r._ktn014Safety=safetyOf(r,inc)});
+    S.lastAuditAt=Date.now();
+
+    var current=selected(st);
+    if(current&&current._ktn014Safety.status==='blocked'){
+      return remediateBlocked(st,inc);
+    }
+    S.sig=routeSig(st);
+    S.lastSafeAt=Date.now();
+    return true;
+  }).catch(function(e){
+    S.lastError=String(e&&e.message||e);
+    st.routes.forEach(function(r){
+      r._ktn014Safety={status:'unverified',closures:[],checkedAt:Date.now(),error:S.lastError};
+    });
+    S.sig=routeSig(st);
+    return false;
+  }).finally(function(){
+    S.busy=false;S.promise=null;S.recovering=false;
+    var st2=state();if(st2)S.sig=routeSig(st2);
+    render();
+  });
+  return S.promise;
+}
+
 var oldStart=window.startNavigation;
-if(typeof oldStart==='function')window.startNavigation=function(){var args=arguments,self=this;if(window.__ktn34ResumeNav||window.__gattoExplorerMode)return oldStart.apply(self,args);var st=state(),r=selected(st);if(!r)return oldStart.apply(self,args);if(!enabled()||!key())return oldStart.apply(self,args);var sf=r._ktn014Safety;if(S.busy||!sf||sf.status==='unverified'){var beforeIndex=st.selected,beforeRoute=r;audit(true).then(function(){var st2=state(),r2=selected(st2),s2=r2&&r2._ktn014Safety;if(s2&&s2.status==='safe'){if((st2.selected!==beforeIndex||r2!==beforeRoute)&&typeof window.b10StartSelectedRoute==='function')window.b10StartSelectedRoute();else oldStart.apply(self,args)}else if(typeof toast==='function')toast('Navigazione non avviata: il percorso contiene una strada chiusa o non è stato possibile verificarlo.')});return}if(sf.status==='blocked'){if(typeof toast==='function')toast('Navigazione bloccata: strada chiusa sul percorso.');render();return}return oldStart.apply(self,args)};
-setInterval(function(){if(document.getElementById('navOverlay'))return;var st=state(),sg=routeSig(st);if(sg&&sg!==S.sig&&!S.busy)setTimeout(function(){audit(false)},250);render()},1500);
+if(typeof oldStart==='function'){
+  window.startNavigation=function(){
+    var args=arguments,self=this;
+    if(window.__ktn34ResumeNav||window.__gattoExplorerMode)return oldStart.apply(self,args);
+
+    var st=state(),r=selected(st);
+    if(!r||!enabled()||!key())return oldStart.apply(self,args);
+
+    var sf=r._ktn014Safety;
+    if(sf&&sf.status==='safe'&&Date.now()-Number(sf.checkedAt||0)<120000){
+      return oldStart.apply(self,args);
+    }
+
+    if(S.startBusy){
+      if(typeof toast==='function')toast('Controllo sicurezza già in corso…');
+      return;
+    }
+
+    S.startBusy=true;
+    audit(true).then(function(){
+      var st2=state(),r2=selected(st2),s2=r2&&r2._ktn014Safety;
+      if(s2&&s2.status==='safe'){
+        /* IMPORTANT: launch directly through the already-proven previous owner.
+           Do NOT call b10StartSelectedRoute here: that created a recursive
+           safety/access loop in Quick Navigation. */
+        oldStart.apply(self,args);
+      }else if(typeof toast==='function'){
+        toast('Navigazione non avviata: non è stato trovato un percorso sicuro che eviti la chiusura.');
+      }
+    }).catch(function(e){
+      if(typeof toast==='function')toast('Controllo sicurezza non riuscito: '+String(e&&e.message||e));
+    }).finally(function(){S.startBusy=false});
+  };
+}
+
+/* Background planning audit: route change only. Never re-audit a stable safe route
+   every 1.5 seconds, which caused the "controllo / tutto ok / controllo" loop. */
+setInterval(function(){
+  if(document.getElementById('navOverlay'))return;
+  var st=state();if(!st||S.busy)return;
+  var sg=routeSig(st),r=selected(st),sf=r&&r._ktn014Safety;
+  if(sg&&(!sf||sg!==S.sig))setTimeout(function(){audit(false)},250);
+  else render();
+},1800);
+
 window.KTN014_PlanningSafety={audit:audit,state:S};
 })();
 </script>
