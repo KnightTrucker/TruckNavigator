@@ -3290,6 +3290,8 @@ const GDRIVE = {
   }
 };
 
+window.GDRIVE=GDRIVE;
+
 // Load GIS asynchronously; initialize when available.
 (function waitForGoogleIdentity(attempt) {
   if (window.google && google.accounts && google.accounts.oauth2) {
@@ -5218,7 +5220,7 @@ if(typeof window.KTN_STARTUP_MODE==='undefined')window.KTN_STARTUP_MODE='choice'
 function startupClose(mode) {
   mode=String(mode||'local');
   if(mode==='drive'){
-    if(!window.GDRIVE||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified){
+    if(typeof GDRIVE==='undefined'||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified){
       startupDriveReset('Drive non è ancora verificato. Completa prima l’accesso Google.');
       return false;
     }
@@ -5271,7 +5273,7 @@ function startupDriveVerified(account) {
 }
 
 function startupDriveContinue(){
-  if(!window.GDRIVE||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified){
+  if(typeof GDRIVE==='undefined'||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified){
     startupDriveReset('La verifica Google Drive non è più valida. Collegati di nuovo.');
     return;
   }
@@ -5280,7 +5282,7 @@ function startupDriveContinue(){
 
 function startupDriveChangeAccount(){
   try{
-    if(window.GDRIVE){
+    if(typeof GDRIVE!=='undefined'){
       GDRIVE.connected=false;
       GDRIVE.accessToken=null;
       GDRIVE._authVerified=false;
@@ -10701,7 +10703,7 @@ function installWrappers(){if(window.__KTN011_WRAPPED__)return;window.__KTN011_W
 window.ktn011ResumeTrip=function(){var o=el('ktn011ResumeOverlay');if(o)o.classList.remove('on');try{if(window.KTN014_TRIP_STATE)window.KTN014_TRIP_STATE.syncResumeCache({active:true});if(window.KTN034_BACKGROUND_RESUME&&typeof window.KTN034_BACKGROUND_RESUME.restore==='function')window.KTN034_BACKGROUND_RESUME.restore();else if(typeof restoreLastTrip==='function')restoreLastTrip()}catch(e){if(typeof toast==='function')toast('Impossibile riprendere automaticamente il viaggio.')}};
 window.ktn011TerminateTrip=function(){var tr=read();if(tr){tr.status='terminated_manual';tr.completedAt=Date.now();addEvent(tr,'trip-terminated-manual');write(tr);archive(read()||tr)}try{if(window.KTN014_TRIP_STATE)window.KTN014_TRIP_STATE.deactivateResumeCache(tr&&tr.tripId);localStorage.removeItem('nav_session_v15')}catch(e){}var o=el('ktn011ResumeOverlay');if(o)o.classList.remove('on');if(typeof toast==='function')toast('Viaggio terminato. I dati restano disponibili per il report.')};
 window.ktn011NewTrip=function(){var tr=read();if(tr&&tr.status==='active'){tr.status='abandoned';tr.completedAt=Date.now();addEvent(tr,'trip-abandoned-new-trip');write(tr);archive(read()||tr)}try{if(window.KTN014_TRIP_STATE)window.KTN014_TRIP_STATE.clearTrip();localStorage.removeItem('nav_session_v15')}catch(e){}var o=el('ktn011ResumeOverlay');if(o)o.classList.remove('on');if(typeof toast==='function')toast('Pronto per un nuovo viaggio.')};
-function maybeResume(){if(document.getElementById('startupOverlay')||window.KTN_STARTUP_DECIDED!==true)return;if(window.KTN_STARTUP_MODE==='drive'&&(!window.GDRIVE||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified))return;if(document.getElementById('navOverlay'))return;var tr=read();if(!tr||tr.status!=='active')return;var o=el('ktn011ResumeOverlay');if(!o)return;var p=tr.planning||{},a=p.originOriginal||{},b=(tr.navigation&&tr.navigation.currentDestination)||p.destinationFinal||{};if(el('ktn011ResumeRoute'))el('ktn011ResumeRoute').textContent=(a.label||'Partenza')+' → '+(b.label||'Destinazione');if(el('ktn011ResumeWhen'))el('ktn011ResumeWhen').textContent='Ultimo aggiornamento: '+new Date((tr.navigation&&tr.navigation.lastSeenAt)||tr.startedAt||Date.now()).toLocaleString('it-IT');o.classList.add('on')}
+function maybeResume(){if(document.getElementById('startupOverlay')||window.KTN_STARTUP_DECIDED!==true)return;if(window.KTN_STARTUP_MODE==='drive'&&(typeof GDRIVE==='undefined'||!GDRIVE.connected||!GDRIVE.accessToken||!GDRIVE._authVerified))return;if(document.getElementById('navOverlay'))return;var tr=read();if(!tr||tr.status!=='active')return;var o=el('ktn011ResumeOverlay');if(!o)return;var p=tr.planning||{},a=p.originOriginal||{},b=(tr.navigation&&tr.navigation.currentDestination)||p.destinationFinal||{};if(el('ktn011ResumeRoute'))el('ktn011ResumeRoute').textContent=(a.label||'Partenza')+' → '+(b.label||'Destinazione');if(el('ktn011ResumeWhen'))el('ktn011ResumeWhen').textContent='Ultimo aggiornamento: '+new Date((tr.navigation&&tr.navigation.lastSeenAt)||tr.startedAt||Date.now()).toLocaleString('it-IT');o.classList.add('on')}
 window.ktn011MaybeResumeAfterStartup=maybeResume;
 function init(){var saved=null;try{saved=JSON.parse(localStorage.getItem('ktn011_planner')||'null')}catch(e){}var now=localParts(new Date(Date.now()+60000));if(el('ktn011DepartureDate'))el('ktn011DepartureDate').value=(saved&&saved.plannedDepartureISO)?localParts(new Date(saved.plannedDepartureISO)).date:now.date;if(el('ktn011DepartureTime'))el('ktn011DepartureTime').value=(saved&&saved.plannedDepartureISO)?localParts(new Date(saved.plannedDepartureISO)).time:now.time;var v=num(el('vPes')&&el('vPes').value,40);if(el('ktn011CargoT'))el('ktn011CargoT').value=Math.max(0,v-TARE).toFixed(1);if(saved&&saved.fuelBaseKmL&&el('ktn011FuelKmL'))el('ktn011FuelKmL').value=saved.fuelBaseKmL;if(saved&&saved.fuelBaseL100&&el('ktn011FuelL100'))el('ktn011FuelL100').value=saved.fuelBaseL100;window.ktn011PlannerChanged(false);installWrappers();setInterval(decorateRouteResult,900);setTimeout(maybeResume,700)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
