@@ -1663,7 +1663,7 @@ window.KTN_SCHUMACHER_AUDIO='data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAAD
     <div class="startup-title">KnightTruckerNavy</div>
     <div class="startup-sub">Scegli come avviare KnightTruckerNavy</div>
     <div class="startup-btns">
-<button type="button" class="btn btn-primary" onclick="startupDriveConnect()">☁ Connetti Google Drive</button>
+<button type="button" class="btn btn-primary" id="startupDriveBtn" onclick="startupDriveConnect()">☁ Connetti Google Drive</button>
       <button type="button" class="btn btn-primary" onclick="startupOpen()">
         &#128194; Apri file esistente
       </button>
@@ -2899,19 +2899,23 @@ const GDRIVE = {
   connect() {
     this.init();
     if (!this.tokenClient) {
-      toast('Google non è ancora pronto. Riprova tra qualche secondo.');
-      setTimeout(() => this.init(), 1200);
+      if(this._startupPending){this._startupPending=false;if(typeof startupDriveReset==='function')startupDriveReset('Google non è ancora pronto. Attendi un secondo e premi di nuovo.');}
+      else toast('Google non è ancora pronto. Riprova tra qualche secondo.');
       return;
     }
+    /* requestAccessToken resta sincrono rispetto al click chiamante. */
     this.tokenClient.requestAccessToken({prompt: this.accessToken ? '' : 'consent'});
     this._setUiState('sync');
   },
 
   async _tokenCallback(resp) {
+    var fromStartup=!!this._startupPending;
     if (!resp || resp.error) {
       this.connected = false;
+      this._startupPending=false;
       this._setUiState('error');
-      toast('Accesso Google Drive non riuscito.');
+      if(fromStartup&&typeof startupDriveReset==='function')startupDriveReset('Accesso Google Drive annullato o non riuscito.');
+      else toast('Accesso Google Drive non riuscito.');
       return;
     }
     this.accessToken = resp.access_token;
@@ -2919,10 +2923,19 @@ const GDRIVE = {
     try {
       await this._ensureFile();
       this._ui();
+      this._startupPending=false;
+      if(fromStartup){
+        var b=document.getElementById('startupDriveBtn');
+        if(b)b.textContent='✓ Drive collegato';
+        /* Chiudi solo DOPO autenticazione + caricamento archivio riusciti. */
+        setTimeout(function(){startupClose();},120);
+      }
     } catch (e) {
       this.connected = false;
+      this._startupPending=false;
       this._setUiState('error');
-      toast('Errore Google Drive: ' + (e.message || e));
+      if(fromStartup&&typeof startupDriveReset==='function')startupDriveReset('Errore Google Drive: '+(e.message||e));
+      else toast('Errore Google Drive: ' + (e.message || e));
     }
   },
 
@@ -3218,7 +3231,7 @@ async function persist() {
   try { await FS._write(); } catch(e) {}
   try { await GDRIVE._write(true); } catch(e) {}
 }
-\n/* Viaggio Attivo: checkpoint Drive senza martellare l'API durante ogni fix GPS. */
+/* Viaggio Attivo: checkpoint Drive senza martellare l'API durante ogni fix GPS. */
 var ktn014TripDriveTimer=0,ktn014TripDriveLastAt=0;
 window.ktn014ScheduleTripDriveSync=function(source){
   try{
@@ -5123,9 +5136,29 @@ function startupClose() {
   var el = document.getElementById('startupOverlay');
   if (el) { el.style.opacity='0'; el.style.transition='opacity .25s'; setTimeout(function(){el.remove();},260); }
 }
+function startupDriveReset(msg) {
+  var b=document.getElementById('startupDriveBtn');
+  if(b){b.disabled=false;b.textContent='☁ Connetti Google Drive';}
+  if(msg&&typeof toast==='function')toast(msg);
+}
 function startupDriveConnect() {
-  startupClose();
-  setTimeout(function(){ GDRIVE.connect(); }, 300);
+  var b=document.getElementById('startupDriveBtn');
+  if(b&&b.disabled)return;
+  try{
+    /* OAuth deve partire nello stesso gesto dell'utente: niente setTimeout.
+       Su Android/PWA un avvio differito può essere bloccato come popup. */
+    GDRIVE.init();
+    if(!GDRIVE.tokenClient){
+      startupDriveReset('Google non è ancora pronto. Attendi un secondo e premi di nuovo.');
+      return;
+    }
+    if(b){b.disabled=true;b.textContent='☁ Connessione a Google…';}
+    GDRIVE._startupPending=true;
+    GDRIVE.connect();
+  }catch(e){
+    GDRIVE._startupPending=false;
+    startupDriveReset('Connessione Google Drive non avviata: '+(e&&e.message?e.message:e));
+  }
 }
 function startupOpen() {
   startupClose();
