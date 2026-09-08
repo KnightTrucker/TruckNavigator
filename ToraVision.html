@@ -4,405 +4,91 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
-<title>ToraVision v0.1.3</title>
-
+<title>ToraVision v0.1.4</title>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-
 <style>
-:root{
-  --bg:#06101d;--panel:#0b1828;--panel2:#10243a;--text:#edf7ff;--muted:#8fa9bf;
-  --cyan:#29d7ff;--green:#36e28a;--red:#ff4d5f;--amber:#ffc857;--line:#183651
-}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-body{min-height:100dvh}
-header{
-  position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
-  padding:10px 14px;background:rgba(6,16,29,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)
-}
-.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.4px}
-.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#0d2d45;border:1px solid #17608a;color:var(--cyan);font-size:20px}
-.version{font-size:11px;color:var(--muted);font-weight:700}
-.status-dot{width:10px;height:10px;border-radius:50%;background:#627487;box-shadow:0 0 0 4px rgba(98,116,135,.12)}
-.status-dot.live{background:var(--green);box-shadow:0 0 0 4px rgba(54,226,138,.13),0 0 18px rgba(54,226,138,.45)}
-main{max-width:1000px;margin:auto;padding:10px}
-.viewport{
-  position:relative;background:#000;border:1px solid var(--line);border-radius:16px;overflow:hidden;
-  min-height:220px;display:grid;place-items:center
-}
-#video{display:block;width:100%;height:auto;background:#000}
-#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.idle{
-  position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--muted);
-  background:radial-gradient(circle at center,#0e2134 0,#06101d 70%);z-index:5
-}
-.idle strong{display:block;color:white;font-size:22px;margin-bottom:6px}
-.idle.hidden{display:none}
-.alert{
-  position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:8;
-  min-width:55%;max-width:92%;padding:12px 16px;border-radius:15px;text-align:center;
-  font-size:clamp(20px,5vw,38px);font-weight:1000;letter-spacing:.5px;
-  background:rgba(6,16,29,.94);border:2px solid var(--amber);box-shadow:0 8px 30px rgba(0,0,0,.35);
-  opacity:0;pointer-events:none;transition:.18s
-}
-.alert.show{opacity:1}
-.alert.info{border-color:var(--cyan)}
-.alert.danger{border-color:var(--red)}
-.hud{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;flex-wrap:wrap;z-index:7;pointer-events:none}
-.badge{background:rgba(5,15,26,.88);border:1px solid #27506d;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
-button,select{min-height:52px;border-radius:14px;border:1px solid var(--line);font:inherit;font-weight:900}
-button{cursor:pointer}
-#startBtn{background:linear-gradient(180deg,#34e894,#16a85e);color:#04120b;border-color:#37e893}
-#stopBtn{background:linear-gradient(180deg,#ff6977,#d83b4a);color:white;border-color:#ff6573}
-button:disabled{opacity:.38;cursor:not-allowed}
-.secondary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
-.control-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px}
-.control-card label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:800}
-select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height:42px}
-.models{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
-.model{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px}
-.model b{display:block;font-size:12px}.model span{font-size:11px;color:var(--muted)}
-.model.ok{border-color:#176f4a}.model.bad{border-color:#7f3340}
-.grid{display:grid;grid-template-columns:1fr;gap:10px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:12px}
-.card h3{margin:0 0 8px;font-size:14px}
-#events{display:flex;gap:6px;flex-wrap:wrap;min-height:34px}
-.event{border:1px solid #28516d;background:#0b2033;border-radius:10px;padding:6px 8px;font-size:12px}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.metric{background:#091725;border-radius:10px;padding:8px;text-align:center;border:1px solid #142d43}
-.metric b{display:block;font-size:16px}.metric small{color:var(--muted);font-size:10px}
-.note{font-size:11px;color:var(--muted);line-height:1.45}
-@media(max-width:520px){.models{grid-template-columns:1fr 1fr}.models .model:last-child{grid-column:1/-1}}
-@media(min-width:760px){main{padding:16px}.grid{grid-template-columns:1.25fr .75fr}.controls{max-width:520px}}
+:root{--bg:#06101d;--panel:#0b1828;--panel2:#10243a;--text:#edf7ff;--muted:#8fa9bf;--cyan:#29d7ff;--green:#36e28a;--red:#ff4d5f;--amber:#ffc857;--line:#183651}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{min-height:100dvh}
+header{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(6,16,29,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.4px}.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#0d2d45;border:1px solid #17608a;color:var(--cyan);font-size:20px}.version{font-size:11px;color:var(--muted);font-weight:700}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#627487;box-shadow:0 0 0 4px rgba(98,116,135,.12)}.status-dot.live{background:var(--green);box-shadow:0 0 0 4px rgba(54,226,138,.13),0 0 18px rgba(54,226,138,.45)}
+main{max-width:1000px;margin:auto;padding:10px}.viewport{position:relative;background:#000;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:220px;display:grid;place-items:center;touch-action:none}#video{display:block;width:100%;height:auto;background:#000}#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}#overlay.calibrating{pointer-events:auto;cursor:crosshair}
+.idle{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--muted);background:radial-gradient(circle at center,#0e2134 0,#06101d 70%);z-index:5}.idle strong{display:block;color:#fff;font-size:22px;margin-bottom:6px}.idle.hidden{display:none}
+.alert{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:12;min-width:55%;max-width:92%;padding:12px 16px;border-radius:15px;text-align:center;font-size:clamp(20px,5vw,38px);font-weight:1000;letter-spacing:.5px;background:rgba(6,16,29,.94);border:2px solid var(--amber);box-shadow:0 8px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.18s}.alert.show{opacity:1}.alert.info{border-color:var(--cyan)}.alert.danger{border-color:var(--red)}
+.hud{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;flex-wrap:wrap;z-index:8;pointer-events:none}.badge{background:rgba(5,15,26,.88);border:1px solid #27506d;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}.controls3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 10px}button,select{min-height:50px;border-radius:14px;border:1px solid var(--line);font:inherit;font-weight:900}button{cursor:pointer}#startBtn{background:linear-gradient(180deg,#34e894,#16a85e);color:#04120b;border-color:#37e893}#stopBtn{background:linear-gradient(180deg,#ff6977,#d83b4a);color:#fff;border-color:#ff6573}#calibrateBtn,#lockRoiBtn,#showRoiBtn{background:#10243a;color:#eaf7ff}#lockRoiBtn{border-color:#36e28a}button:disabled{opacity:.38;cursor:not-allowed}button.active{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.secondary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}.control-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px}.control-card label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:800}select{width:100%;background:var(--panel2);color:#fff;padding:0 10px;min-height:42px}
+.models{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.model{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px}.model b{display:block;font-size:12px}.model span{font-size:11px;color:var(--muted)}.model.ok{border-color:#176f4a}.model.bad{border-color:#7f3340}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:12px}.card h3{margin:0 0 8px;font-size:14px}#events{display:flex;gap:6px;flex-wrap:wrap;min-height:34px}.event{border:1px solid #28516d;background:#0b2033;border-radius:10px;padding:6px 8px;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.metric{background:#091725;border-radius:10px;padding:8px;text-align:center;border:1px solid #142d43}.metric b{display:block;font-size:16px}.metric small{color:var(--muted);font-size:10px}.note{font-size:11px;color:var(--muted);line-height:1.45}.calibHint{display:none;background:#10243a;border:1px solid #2d6689;border-radius:12px;padding:10px;margin:8px 0;font-size:12px;line-height:1.45}.calibHint.show{display:block}
+@media(max-width:600px){.models{grid-template-columns:1fr 1fr}.models .model:last-child{grid-column:1/-1}.controls3{grid-template-columns:1fr 1fr}.controls3 button:last-child{grid-column:1/-1}.metrics{grid-template-columns:1fr 1fr}}@media(min-width:760px){main{padding:16px}.grid{grid-template-columns:1.25fr .75fr}.controls{max-width:520px}}
 </style>
 </head>
 <body>
-<header>
-  <div class="brand"><div class="logo">TV</div><div>ToraVision<div class="version">v0.1.3 · SIGNS + TRAFFIC LIGHT</div></div></div>
-  <div style="display:flex;align-items:center;gap:8px"><span id="globalStatus" class="version">caricamento modelli</span><span id="liveDot" class="status-dot"></span></div>
-</header>
-
+<header><div class="brand"><div class="logo">TV</div><div>ToraVision<div class="version">v0.1.4 · STABILIZED ROI</div></div></div><div style="display:flex;align-items:center;gap:8px"><span id="globalStatus" class="version">caricamento modelli</span><span id="liveDot" class="status-dot"></span></div></header>
 <main>
-  <section class="viewport">
-    <video id="video" playsinline muted></video>
-    <canvas id="overlay"></canvas>
-    <div id="idle" class="idle"><div><strong>ToraVision</strong>Cartelli stradali + semafori.<br>Premi AVVIA ANALISI.</div></div>
-    <div id="bigAlert" class="alert"></div>
-    <div class="hud">
-      <span class="badge" id="hudSigns">Cartelli: 0</span>
-      <span class="badge" id="hudLights">Semafori: 0</span>
-      <span class="badge" id="hudRate">Cartelli: —/s</span>
-    </div>
-  </section>
-
-  <div class="controls">
-    <button id="startBtn" disabled>▶ AVVIA ANALISI</button>
-    <button id="stopBtn" disabled>■ FERMA ANALISI</button>
-  </div>
-
-  <div class="secondary">
-    <div class="control-card">
-      <label>FOTOCAMERA</label>
-      <select id="cameraSelect"><option value="">Posteriore automatica</option></select>
-    </div>
-    <div class="control-card">
-      <label>SENSIBILITÀ CARTELLI</label>
-      <select id="signSensitivity">
-        <option value="0.26">Alta</option>
-        <option value="0.34" selected>Normale</option>
-        <option value="0.44">Prudente</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="models">
-    <div class="model" id="mDetector"><b>Detector cartelli</b><span>caricamento…</span></div>
-    <div class="model" id="mClassifier"><b>Classificatore 43</b><span>caricamento…</span></div>
-    <div class="model" id="mLights"><b>Detector semafori</b><span>caricamento…</span></div>
-  </div>
-
-  <div class="grid">
-    <div class="card">
-      <h3>Rilevamenti recenti</h3>
-      <div id="events"><span class="note">Nessun rilevamento.</span></div>
-    </div>
-    <div class="card">
-      <h3>Prestazioni cartelli</h3>
-      <div class="metrics">
-        <div class="metric"><b id="metricMs">—</b><small>ms/ciclo</small></div>
-        <div class="metric"><b id="metricRate">—</b><small>analisi/s</small></div>
-        <div class="metric"><b id="metricSigns">0</b><small>cartelli</small></div>
-      </div>
-    </div>
-  </div>
-
-  <p class="note">
-    v0.1.3: cartelli con detector YOLO + classificatore ONNX a 43 classi. Semafori rilevati come oggetto reale circa una volta al secondo.
-    Nessuna analisi del colore del semaforo. Auto, camion, bus, moto e pedoni non vengono mostrati. Nessuna registrazione.
-  </p>
+<section class="viewport" id="viewport"><video id="video" playsinline muted></video><canvas id="overlay"></canvas><div id="idle" class="idle"><div><strong>ToraVision</strong>Cartelli + semafori.<br>ROI manuale e stabilizzazione anti-vibrazione.</div></div><div id="bigAlert" class="alert"></div><div class="hud"><span class="badge" id="hudSigns">Cartelli: 0</span><span class="badge" id="hudLights">Semafori: 0</span><span class="badge" id="hudRate">Analisi: —/s</span><span class="badge" id="hudStab">Stab: 0,0</span></div></section>
+<div class="controls"><button id="startBtn" disabled>▶ AVVIA ANALISI</button><button id="stopBtn" disabled>■ FERMA ANALISI</button></div>
+<div class="controls3"><button id="calibrateBtn" disabled>▣ CALIBRA AREA</button><button id="lockRoiBtn" disabled>✓ BLOCCA AREA</button><button id="showRoiBtn" class="active">◫ AREA VISIBILE</button></div>
+<div id="calibHint" class="calibHint">Trascina gli angoli, i bordi o l'interno del rettangolo. La zona esterna viene esclusa dall'analisi. La calibrazione viene salvata separatamente per portrait e landscape.</div>
+<div class="secondary"><div class="control-card"><label>FOTOCAMERA</label><select id="cameraSelect"><option value="">Posteriore automatica</option></select></div><div class="control-card"><label>SENSIBILITÀ CARTELLI</label><select id="signSensitivity"><option value="0.24">Alta</option><option value="0.32" selected>Normale</option><option value="0.42">Prudente</option></select></div></div>
+<div class="models"><div class="model" id="mDetector"><b>Detector cartelli</b><span>caricamento…</span></div><div class="model" id="mClassifier"><b>Classificatore 43</b><span>caricamento…</span></div><div class="model" id="mLights"><b>Detector semafori</b><span>caricamento…</span></div></div>
+<div class="grid"><div class="card"><h3>Rilevamenti confermati</h3><div id="events"><span class="note">Nessun rilevamento.</span></div></div><div class="card"><h3>Prestazioni</h3><div class="metrics"><div class="metric"><b id="metricMs">—</b><small>ms detector</small></div><div class="metric"><b id="metricRate">—</b><small>analisi/s</small></div><div class="metric"><b id="metricSigns">0</b><small>cartelli</small></div><div class="metric"><b id="metricRoi">—</b><small>ROI %</small></div></div></div></div>
+<p class="note">v0.1.4: ROI manuale persistente, stabilizzazione leggera della sola ROI, massimo 3 cartelli, tracking e conferma temporale. Semafori cercati come oggetto circa una volta al secondo e senza lettura del colore. Il detector cartelli disponibile è realmente 640×640; la frequenza è limitata a circa 5 analisi/s per evitare sovraccarico.</p>
 </main>
-
-<canvas id="detCanvas" width="640" height="640" hidden></canvas>
-<canvas id="clsCanvas" width="224" height="224" hidden></canvas>
-
+<canvas id="detCanvas" width="640" height="640" hidden></canvas><canvas id="clsCanvas" width="224" height="224" hidden></canvas><canvas id="stabCanvas" width="96" height="54" hidden></canvas><canvas id="lightCanvas" width="480" height="270" hidden></canvas>
 <script>
 'use strict';
-
+const APP_VERSION='0.1.4';
 const DETECTOR_URL='https://raw.githubusercontent.com/Artyom-Dmitriev/TsrApp/main/TsrApp/TsrApp/Assets/detector.onnx';
 const CLASSIFIER_URL='https://raw.githubusercontent.com/Artyom-Dmitriev/TsrApp/main/TsrApp/TsrApp/Assets/model.onnx';
-
-const LABELS=[
-'Limite 20 km/h','Limite 30 km/h','Limite 50 km/h','Limite 60 km/h','Limite 70 km/h','Limite 80 km/h',
-'Fine limite 80 km/h','Limite 100 km/h','Limite 120 km/h','Divieto di sorpasso','Divieto sorpasso >3,5 t',
-'Dare precedenza al prossimo incrocio','Strada con precedenza','Dare precedenza','STOP','Divieto di transito',
-'Divieto veicoli >3,5 t','Senso vietato','Pericolo generico','Curva pericolosa a sinistra','Curva pericolosa a destra',
-'Doppia curva','Strada dissestata','Strada sdrucciolevole','Restringimento a destra','Lavori in corso',
-'Segnalazione semaforica','Pedoni','Bambini','Attraversamento ciclisti','Ghiaccio/neve','Animali selvatici',
-'Fine di tutti i divieti','Svolta a destra obbligatoria','Svolta a sinistra obbligatoria','Dritto obbligatorio',
-'Dritto o destra','Dritto o sinistra','Tenere la destra','Tenere la sinistra','Rotatoria','Fine divieto sorpasso',
-'Fine divieto sorpasso >3,5 t'
-];
-
-const video=document.getElementById('video');
-const overlay=document.getElementById('overlay'),octx=overlay.getContext('2d');
-const detCanvas=document.getElementById('detCanvas'),detCtx=detCanvas.getContext('2d',{willReadFrequently:true});
-const clsCanvas=document.getElementById('clsCanvas'),clsCtx=clsCanvas.getContext('2d',{willReadFrequently:true});
-const startBtn=document.getElementById('startBtn'),stopBtn=document.getElementById('stopBtn');
-const cameraSelect=document.getElementById('cameraSelect'),signSensitivity=document.getElementById('signSensitivity');
-const idle=document.getElementById('idle'),bigAlert=document.getElementById('bigAlert'),liveDot=document.getElementById('liveDot');
-const globalStatus=document.getElementById('globalStatus');
-
-let signDetector=null,signClassifier=null,lightModel=null;
-let stream=null,running=false,runToken=0;
-let signs=[],lights=[],recent=[],lastAlert=new Map();
-let lastSignMs=0,lastLightRun=0,lightBusy=false;
-
-ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
-ort.env.wasm.numThreads=1;
-ort.env.wasm.simd=true;
-
-function modelState(id,text,state=''){
-  const e=document.getElementById(id);e.classList.remove('ok','bad');if(state)e.classList.add(state);e.querySelector('span').textContent=text;
-}
-
-async function loadModels(){
-  let ready=0;
-  try{
-    globalStatus.textContent='detector cartelli…';
-    signDetector=await ort.InferenceSession.create(DETECTOR_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
-    modelState('mDetector','pronto · YOLOv8n','ok');ready++;
-  }catch(e){console.error('detector',e);modelState('mDetector','errore','bad')}
-
-  try{
-    globalStatus.textContent='classificatore cartelli…';
-    signClassifier=await ort.InferenceSession.create(CLASSIFIER_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
-    modelState('mClassifier','pronto · 43 classi ONNX','ok');ready++;
-  }catch(e){console.error('classifier',e);modelState('mClassifier','errore','bad')}
-
-  try{
-    globalStatus.textContent='detector semafori…';
-    lightModel=await cocoSsd.load({base:'lite_mobilenet_v2'});
-    modelState('mLights','pronto · traffic light','ok');
-  }catch(e){console.error('lights',e);modelState('mLights','errore','bad')}
-
-  startBtn.disabled=ready<1;
-  globalStatus.textContent=ready===2?'modelli cartelli pronti':(ready?'modalità parziale':'modelli non disponibili');
-}
-loadModels();
-
-async function openCamera(deviceId=''){
-  if(stream)stream.getTracks().forEach(t=>t.stop());
-  const vc=deviceId
-    ?{deviceId:{exact:deviceId},width:{ideal:960},height:{ideal:540},frameRate:{ideal:30,max:30}}
-    :{facingMode:{ideal:'environment'},width:{ideal:960},height:{ideal:540},frameRate:{ideal:30,max:30}};
-  stream=await navigator.mediaDevices.getUserMedia({video:vc,audio:false});
-  video.srcObject=stream;await video.play();
-  await new Promise(r=>video.videoWidth?r():(video.onloadedmetadata=r));
-  overlay.width=video.videoWidth;overlay.height=video.videoHeight;
-  await populateCameras();
-}
-
-async function populateCameras(){
-  try{
-    const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
-    const current=stream?.getVideoTracks?.()[0]?.getSettings?.().deviceId||'';
-    cameraSelect.innerHTML='<option value="">Posteriore automatica</option>';
-    cams.forEach((c,i)=>{const o=document.createElement('option');o.value=c.deviceId;o.textContent=c.label||`Camera ${i+1}`;cameraSelect.appendChild(o)});
-    cameraSelect.value=current||'';
-  }catch(e){}
-}
-
-cameraSelect.addEventListener('change',async()=>{
-  if(!running)return;
-  const token=++runToken;
-  try{await openCamera(cameraSelect.value);if(running&&token===runToken)signLoop(token)}
-  catch(e){showAlert('Camera non disponibile','danger',2500)}
-});
-
-startBtn.addEventListener('click',async()=>{
-  if(running)return;
-  try{
-    startBtn.disabled=true;globalStatus.textContent='avvio camera…';await openCamera(cameraSelect.value);
-    running=true;const token=++runToken;stopBtn.disabled=false;idle.classList.add('hidden');liveDot.classList.add('live');
-    globalStatus.textContent='analisi attiva';signLoop(token);lightLoop(token);
-  }catch(e){
-    console.error(e);globalStatus.textContent='camera non disponibile';showAlert('Impossibile avviare la camera','danger',3500);startBtn.disabled=false;
-  }
-});
+const LABELS=['Limite 20 km/h','Limite 30 km/h','Limite 50 km/h','Limite 60 km/h','Limite 70 km/h','Limite 80 km/h','Fine limite 80 km/h','Limite 100 km/h','Limite 120 km/h','Divieto di sorpasso','Divieto sorpasso >3,5 t','Dare precedenza al prossimo incrocio','Strada con precedenza','Dare precedenza','STOP','Divieto di transito','Divieto veicoli >3,5 t','Senso vietato','Pericolo generico','Curva pericolosa a sinistra','Curva pericolosa a destra','Doppia curva','Strada dissestata','Strada sdrucciolevole','Restringimento a destra','Lavori in corso','Segnalazione semaforica','Pedoni','Bambini','Attraversamento ciclisti','Ghiaccio/neve','Animali selvatici','Fine di tutti i divieti','Svolta a destra obbligatoria','Svolta a sinistra obbligatoria','Dritto obbligatorio','Dritto o destra','Dritto o sinistra','Tenere la destra','Tenere la sinistra','Rotatoria','Fine divieto sorpasso','Fine divieto sorpasso >3,5 t'];
+const video=document.getElementById('video'),viewport=document.getElementById('viewport'),overlay=document.getElementById('overlay'),octx=overlay.getContext('2d');
+const detCanvas=document.getElementById('detCanvas'),detCtx=detCanvas.getContext('2d',{willReadFrequently:true}),clsCanvas=document.getElementById('clsCanvas'),clsCtx=clsCanvas.getContext('2d',{willReadFrequently:true}),stabCanvas=document.getElementById('stabCanvas'),stabCtx=stabCanvas.getContext('2d',{willReadFrequently:true}),lightCanvas=document.getElementById('lightCanvas'),lightCtx=lightCanvas.getContext('2d');
+const startBtn=document.getElementById('startBtn'),stopBtn=document.getElementById('stopBtn'),calibrateBtn=document.getElementById('calibrateBtn'),lockRoiBtn=document.getElementById('lockRoiBtn'),showRoiBtn=document.getElementById('showRoiBtn'),cameraSelect=document.getElementById('cameraSelect'),signSensitivity=document.getElementById('signSensitivity'),idle=document.getElementById('idle'),bigAlert=document.getElementById('bigAlert'),liveDot=document.getElementById('liveDot'),globalStatus=document.getElementById('globalStatus'),calibHint=document.getElementById('calibHint');
+let signDetector=null,signClassifier=null,lightModel=null,stream=null,running=false,calibrating=false,resumeAfterCalibration=false,runToken=0;
+let roi={x:.10,y:.10,w:.80,h:.72},showRoi=true,dragMode=null,dragStart=null,roiStart=null;
+let signTracks=[],lights=[],recent=[],lastAlert=new Map(),nextTrackId=1,lastDetectorMs=0,lastLightAt=0,prevGray=null,stabX=0,stabY=0,stabRawX=0,stabRawY=0;
+const TARGET_PERIOD_MS=200,LIGHT_PERIOD_MS=1100,MAX_SIGNS=3,CLASSIFY_COOLDOWN_MS=650,TRACK_KEEP_MS=1500,CONFIRM_HITS=2;
+ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';ort.env.wasm.numThreads=1;ort.env.wasm.simd=true;
+function orientationKey(){return innerWidth>=innerHeight?'landscape':'portrait'}function roiStorageKey(){return'toravision.roi.'+orientationKey()}function saveRoi(){localStorage.setItem(roiStorageKey(),JSON.stringify(roi))}
+function normalizeRoi(r){const minW=.18,minH=.18;let x=clamp(r.x,0,1-minW),y=clamp(r.y,0,1-minH),w=clamp(r.w,minW,1-x),h=clamp(r.h,minH,1-y);if(x+w>1)w=1-x;if(y+h>1)h=1-y;return{x,y,w,h}}
+function loadRoi(){try{const v=JSON.parse(localStorage.getItem(roiStorageKey())||'null');if(v&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.w)&&Number.isFinite(v.h)){roi=normalizeRoi(v);return true}}catch(e){}roi={x:.10,y:.10,w:.80,h:.72};return false}
+function modelState(id,text,state=''){const e=document.getElementById(id);e.classList.remove('ok','bad');if(state)e.classList.add(state);e.querySelector('span').textContent=text}
+async function loadModels(){let signReady=0;try{globalStatus.textContent='detector cartelli…';signDetector=await ort.InferenceSession.create(DETECTOR_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});modelState('mDetector','pronto · YOLOv8n 640','ok');signReady++}catch(e){console.error('detector',e);modelState('mDetector','errore','bad')}try{globalStatus.textContent='classificatore cartelli…';signClassifier=await ort.InferenceSession.create(CLASSIFIER_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});modelState('mClassifier','pronto · 43 classi ONNX','ok');signReady++}catch(e){console.error('classifier',e);modelState('mClassifier','errore','bad')}try{globalStatus.textContent='detector semafori…';lightModel=await cocoSsd.load({base:'lite_mobilenet_v2'});modelState('mLights','pronto · traffic light','ok')}catch(e){console.error('lights',e);modelState('mLights','errore','bad')}startBtn.disabled=signReady===0;calibrateBtn.disabled=signReady===0;globalStatus.textContent=signReady===2?'modelli pronti':(signReady?'modalità parziale':'modelli non disponibili')}loadModels();
+async function openCamera(deviceId=''){if(stream)stream.getTracks().forEach(t=>t.stop());const vc=deviceId?{deviceId:{exact:deviceId},width:{ideal:960},height:{ideal:540},frameRate:{ideal:30,max:30}}:{facingMode:{ideal:'environment'},width:{ideal:960},height:{ideal:540},frameRate:{ideal:30,max:30}};stream=await navigator.mediaDevices.getUserMedia({video:vc,audio:false});video.srcObject=stream;await video.play();await new Promise(r=>video.videoWidth?r():(video.onloadedmetadata=r));overlay.width=video.videoWidth;overlay.height=video.videoHeight;idle.classList.add('hidden');await populateCameras();loadRoi();resetStabilizer();draw()}
+async function populateCameras(){try{const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'),current=stream?.getVideoTracks?.()[0]?.getSettings?.().deviceId||'';cameraSelect.innerHTML='<option value="">Posteriore automatica</option>';cams.forEach((c,i)=>{const o=document.createElement('option');o.value=c.deviceId;o.textContent=c.label||`Camera ${i+1}`;cameraSelect.appendChild(o)});cameraSelect.value=current||''}catch(e){}}
+async function ensureCamera(){if(stream&&video.readyState>=2)return;globalStatus.textContent='avvio camera…';await openCamera(cameraSelect.value)}
+startBtn.addEventListener('click',async()=>{if(running)return;try{startBtn.disabled=true;await ensureCamera();const hasSaved=!!localStorage.getItem(roiStorageKey());if(!hasSaved){resumeAfterCalibration=true;enterCalibration();showAlert('IMPOSTA L’AREA DI ANALISI','info',2500);return}startRuntime()}catch(e){console.error(e);globalStatus.textContent='camera non disponibile';showAlert('Impossibile avviare la camera','danger',3500);startBtn.disabled=false}});
 stopBtn.addEventListener('click',stopAnalysis);
-
-function stopAnalysis(){
-  running=false;runToken++;
-  if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=null;video.srcObject=null;signs=[];lights=[];lightBusy=false;
-  stopBtn.disabled=true;startBtn.disabled=false;idle.classList.remove('hidden');liveDot.classList.remove('live');
-  globalStatus.textContent='fermo';octx.clearRect(0,0,overlay.width,overlay.height);updateHud();
-}
-
-async function signLoop(token){
-  while(running&&token===runToken){
-    const t0=performance.now();
-    try{
-      signs=(signDetector&&signClassifier)?await detectSigns(token):[];
-    }catch(e){console.warn('sign pipeline',e)}
-    if(!running||token!==runToken)break;
-    lastSignMs=performance.now()-t0;
-    draw();updateHud();
-    await sleep(55);
-  }
-}
-
-async function lightLoop(token){
-  while(running&&token===runToken){
-    const now=performance.now();
-    if(lightModel && !lightBusy && now-lastLightRun>=900){
-      lastLightRun=now;lightBusy=true;
-      try{
-        const pred=await lightModel.detect(video,12,0.58);
-        if(running&&token===runToken){
-          lights=pred.filter(p=>p.class==='traffic light'&&p.score>=0.58).slice(0,4);
-          if(lights.length) notify('SEMAFORO',Math.max(...lights.map(x=>x.score)),false);
-          draw();updateHud();
-        }
-      }catch(e){console.warn('traffic light',e)}
-      finally{lightBusy=false}
-    }
-    await sleep(120);
-  }
-}
-
-async function detectSigns(token){
-  if(video.readyState<2)return[];
-  const W=video.videoWidth,H=video.videoHeight;
-  const scale=Math.min(640/W,640/H),nw=Math.round(W*scale),nh=Math.round(H*scale);
-  const padX=Math.floor((640-nw)/2),padY=Math.floor((640-nh)/2);
-
-  detCtx.fillStyle='rgb(114,114,114)';detCtx.fillRect(0,0,640,640);
-  detCtx.drawImage(video,0,0,W,H,padX,padY,nw,nh);
-
-  const px=detCtx.getImageData(0,0,640,640).data,plane=640*640,input=new Float32Array(plane*3);
-  for(let i=0,p=0;i<px.length;i+=4,p++){input[p]=px[i]/255;input[plane+p]=px[i+1]/255;input[2*plane+p]=px[i+2]/255}
-
-  const f={};f[signDetector.inputNames[0]]=new ort.Tensor('float32',input,[1,3,640,640]);
-  const rr=await signDetector.run(f);
-  if(!running||token!==runToken)return[];
-  const boxes=decodeDetector(rr[signDetector.outputNames[0]],W,H,scale,padX,padY,parseFloat(signSensitivity.value)).slice(0,4);
-
-  const out=[];
-  for(const b of boxes){
-    if(!running||token!==runToken)break;
-    const c=await classifyOnnx(b,W,H);
-    if(c.conf<0.42)continue;
-    const s={...b,label:LABELS[c.id]||`Cartello ${c.id}`,conf:c.conf};
-    out.push(s);
-    if(c.conf>=0.58 && b.detScore>=0.32){
-      const imp=/Limite|STOP|precedenza|Divieto|Senso vietato|Lavori|Rotatoria/.test(s.label);
-      notify(s.label,Math.min(c.conf,b.detScore),imp);
-    }
-  }
-  return out;
-}
-
-async function classifyOnnx(b,W,H){
-  const pad=.15,cx=b.x+b.w/2,cy=b.y+b.h/2,side=Math.max(b.w,b.h)*(1+2*pad);
-  const x1=clamp(cx-side/2,0,W),y1=clamp(cy-side/2,0,H),x2=clamp(cx+side/2,0,W),y2=clamp(cy+side/2,0,H);
-  clsCtx.clearRect(0,0,224,224);clsCtx.drawImage(video,x1,y1,Math.max(1,x2-x1),Math.max(1,y2-y1),0,0,224,224);
-
-  const px=clsCtx.getImageData(0,0,224,224).data,plane=224*224,input=new Float32Array(plane*3);
-  const mean=[.485,.456,.406],std=[.229,.224,.225];
-  for(let i=0,p=0;i<px.length;i+=4,p++){
-    input[p]=(px[i]/255-mean[0])/std[0];
-    input[plane+p]=(px[i+1]/255-mean[1])/std[1];
-    input[2*plane+p]=(px[i+2]/255-mean[2])/std[2];
-  }
-  const f={};f[signClassifier.inputNames[0]]=new ort.Tensor('float32',input,[1,3,224,224]);
-  const rr=await signClassifier.run(f),logits=rr[signClassifier.outputNames[0]].data,probs=softmax(logits);
-  let id=0;for(let i=1;i<probs.length;i++)if(probs[i]>probs[id])id=i;
-  return{id,conf:probs[id]};
-}
-
-function softmax(a){
-  let m=-Infinity;for(const v of a)if(v>m)m=v;
-  const o=new Float32Array(a.length);let s=0;for(let i=0;i<a.length;i++){o[i]=Math.exp(a[i]-m);s+=o[i]}
-  for(let i=0;i<o.length;i++)o[i]/=s;return o;
-}
-
-function decodeDetector(tensor,W,H,scale,padX,padY,thr){
-  const d=tensor.data,A=tensor.dims[2]||8400,b=[];
-  for(let a=0;a<A;a++){
-    const sc=d[4*A+a];if(sc<thr)continue;
-    const cx=d[a],cy=d[A+a],w=d[2*A+a],h=d[3*A+a];
-    let x1=(cx-w/2-padX)/scale,y1=(cy-h/2-padY)/scale,x2=(cx+w/2-padX)/scale,y2=(cy+h/2-padY)/scale;
-    x1=clamp(x1,0,W);y1=clamp(y1,0,H);x2=clamp(x2,0,W);y2=clamp(y2,0,H);
-    if(x2-x1<4||y2-y1<4)continue;b.push({x:x1,y:y1,w:x2-x1,h:y2-y1,detScore:sc});
-  }
-  b.sort((a,b)=>b.detScore-a.detScore);return nms(b,.45);
-}
-function nms(boxes,t){const k=[];for(const b of boxes){if(k.every(x=>iou(x,b)<t))k.push(b);if(k.length>=8)break}return k}
-function iou(a,b){
-  const x1=Math.max(a.x,b.x),y1=Math.max(a.y,b.y),x2=Math.min(a.x+a.w,b.x+b.w),y2=Math.min(a.y+a.h,b.y+b.h);
-  const iw=Math.max(0,x2-x1),ih=Math.max(0,y2-y1),inter=iw*ih;return inter/(a.w*a.h+b.w*b.h-inter+1e-9)
-}
-
-function draw(){
-  const W=overlay.width,H=overlay.height;octx.clearRect(0,0,W,H);
-  for(const s of signs)drawBox([s.x,s.y,s.w,s.h],`${s.label} ${Math.round(Math.min(s.conf,s.detScore)*100)}%`,'#ffc857');
-  for(const l of lights)drawBox(l.bbox,`SEMAFORO ${Math.round(l.score*100)}%`,'#29d7ff');
-}
-function drawBox(b,text,color){
-  const [x,y,w,h]=b;octx.lineWidth=Math.max(2,overlay.width/500);octx.strokeStyle=color;octx.strokeRect(x,y,w,h);
-  octx.font=`900 ${Math.max(14,overlay.width/58)}px system-ui`;const tw=octx.measureText(text).width,th=Math.max(22,overlay.width/40),ty=Math.max(th,y);
-  octx.fillStyle='rgba(3,11,20,.88)';octx.fillRect(x,ty-th,Math.min(tw+12,overlay.width-x),th);
-  octx.fillStyle=color;octx.fillText(text,x+5,ty-5);
-}
-
-function notify(label,score,important){
-  const now=Date.now(),last=lastAlert.get(label)||0;if(now-last<4000)return;lastAlert.set(label,now);
-  recent.unshift({label,score});recent=recent.slice(0,10);renderEvents();
-  if(important)showAlert(label,'info',2000);
-}
-function renderEvents(){
-  const e=document.getElementById('events');
-  e.innerHTML=recent.length?recent.map(x=>`<span class="event">${escapeHtml(x.label)} · ${Math.round(x.score*100)}%</span>`).join(''):'<span class="note">Nessun rilevamento.</span>';
-}
-function updateHud(){
-  const rate=lastSignMs?1000/lastSignMs:0;
-  document.getElementById('hudSigns').textContent=`Cartelli: ${signs.length}`;
-  document.getElementById('hudLights').textContent=`Semafori: ${lights.length}`;
-  document.getElementById('hudRate').textContent=`Cartelli: ${rate?rate.toFixed(1):'—'}/s`;
-  document.getElementById('metricMs').textContent=lastSignMs?Math.round(lastSignMs):'—';
-  document.getElementById('metricRate').textContent=rate?rate.toFixed(1):'—';
-  document.getElementById('metricSigns').textContent=signs.length;
-}
-function showAlert(t,type='info',ms=2000){bigAlert.textContent=t;bigAlert.className=`alert show ${type}`;clearTimeout(showAlert._t);showAlert._t=setTimeout(()=>bigAlert.className='alert',ms)}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stopAnalysis()});
-window.addEventListener('pagehide',()=>{if(running)stopAnalysis()});
+calibrateBtn.addEventListener('click',async()=>{try{await ensureCamera();resumeAfterCalibration=running;if(running){running=false;runToken++}enterCalibration()}catch(e){showAlert('Impossibile avviare la camera','danger',3000)}});
+lockRoiBtn.addEventListener('click',()=>{if(!calibrating)return;roi=normalizeRoi(roi);saveRoi();calibrating=false;overlay.classList.remove('calibrating');lockRoiBtn.disabled=true;calibHint.classList.remove('show');resetStabilizer();draw();showAlert('AREA BLOCCATA','info',1600);if(resumeAfterCalibration){resumeAfterCalibration=false;startRuntime()}else{startBtn.disabled=false;globalStatus.textContent='area pronta'}});
+showRoiBtn.addEventListener('click',()=>{showRoi=!showRoi;showRoiBtn.classList.toggle('active',showRoi);showRoiBtn.textContent=showRoi?'◫ AREA VISIBILE':'◫ AREA NASCOSTA';draw()});
+cameraSelect.addEventListener('change',async()=>{try{const wasRunning=running;if(running){running=false;runToken++}await openCamera(cameraSelect.value);if(wasRunning)startRuntime()}catch(e){showAlert('Camera non disponibile','danger',2500)}});
+function enterCalibration(){calibrating=true;running=false;runToken++;overlay.classList.add('calibrating');lockRoiBtn.disabled=false;calibHint.classList.add('show');startBtn.disabled=true;stopBtn.disabled=false;globalStatus.textContent='calibrazione area';signTracks=[];lights=[];resetStabilizer();draw()}
+function startRuntime(){if(!stream)return;calibrating=false;running=true;const token=++runToken;overlay.classList.remove('calibrating');lockRoiBtn.disabled=true;calibHint.classList.remove('show');startBtn.disabled=true;stopBtn.disabled=false;calibrateBtn.disabled=false;liveDot.classList.add('live');globalStatus.textContent='analisi attiva';signTracks=[];lights=[];resetStabilizer();runtimeLoop(token)}
+function stopAnalysis(){running=false;calibrating=false;resumeAfterCalibration=false;runToken++;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;signTracks=[];lights=[];resetStabilizer();stopBtn.disabled=true;startBtn.disabled=!signDetector;calibrateBtn.disabled=!signDetector;lockRoiBtn.disabled=true;overlay.classList.remove('calibrating');calibHint.classList.remove('show');idle.classList.remove('hidden');liveDot.classList.remove('live');globalStatus.textContent='fermo';octx.clearRect(0,0,overlay.width,overlay.height);updateHud()}
+async function runtimeLoop(token){while(running&&token===runToken){const cycleStart=performance.now();try{updateStabilization();await runSignDetector(token);if(!running||token!==runToken)break;if(lightModel&&performance.now()-lastLightAt>=LIGHT_PERIOD_MS){lastLightAt=performance.now();await runTrafficLightDetector(token)}}catch(e){console.warn('runtime',e)}if(!running||token!==runToken)break;pruneTracks();draw();updateHud();const spent=performance.now()-cycleStart;await sleep(Math.max(0,TARGET_PERIOD_MS-spent))}}
+function roiPixels(withStabilization=true){const W=video.videoWidth,H=video.videoHeight,base={x:roi.x*W,y:roi.y*H,w:roi.w*W,h:roi.h*H};if(!withStabilization)return base;const maxX=base.w*.025,maxY=base.h*.025,dx=clamp(stabX*base.w/96,-maxX,maxX),dy=clamp(stabY*base.h/54,-maxY,maxY);return{x:clamp(base.x+dx,0,W-base.w),y:clamp(base.y+dy,0,H-base.h),w:base.w,h:base.h}}
+function resetStabilizer(){prevGray=null;stabX=stabY=stabRawX=stabRawY=0}
+function updateStabilization(){if(video.readyState<2)return;const r=roiPixels(false);stabCtx.drawImage(video,r.x,r.y,r.w,r.h,0,0,96,54);const data=stabCtx.getImageData(0,0,96,54).data,gray=new Uint8Array(96*54);for(let i=0,p=0;i<data.length;i+=4,p++)gray[p]=(data[i]*77+data[i+1]*150+data[i+2]*29)>>8;if(prevGray){let bestScore=Infinity,bestX=0,bestY=0;for(let dy=-4;dy<=4;dy+=2){for(let dx=-6;dx<=6;dx+=2){let sad=0,n=0;for(let y=8;y<46;y+=4){const cy=y+dy;if(cy<0||cy>=54)continue;for(let x=10;x<86;x+=4){const cx=x+dx;if(cx<0||cx>=96)continue;sad+=Math.abs(prevGray[y*96+x]-gray[cy*96+cx]);n++}}const score=n?sad/n:Infinity;if(score<bestScore){bestScore=score;bestX=dx;bestY=dy}}}if(bestScore<34){stabRawX=bestX;stabRawY=bestY;stabX=stabX*.62+bestX*.38;stabY=stabY*.62+bestY*.38}else{stabRawX=stabRawY=0;stabX*=.7;stabY*=.7}}prevGray=gray}
+async function runSignDetector(token){if(!signDetector||video.readyState<2)return;const t0=performance.now(),r=roiPixels(true),scale=Math.min(640/r.w,640/r.h),nw=Math.round(r.w*scale),nh=Math.round(r.h*scale),padX=Math.floor((640-nw)/2),padY=Math.floor((640-nh)/2);detCtx.fillStyle='rgb(114,114,114)';detCtx.fillRect(0,0,640,640);detCtx.drawImage(video,r.x,r.y,r.w,r.h,padX,padY,nw,nh);const px=detCtx.getImageData(0,0,640,640).data,plane=640*640,input=new Float32Array(plane*3);for(let i=0,p=0;i<px.length;i+=4,p++){input[p]=px[i]/255;input[plane+p]=px[i+1]/255;input[2*plane+p]=px[i+2]/255}const feeds={};feeds[signDetector.inputNames[0]]=new ort.Tensor('float32',input,[1,3,640,640]);const rr=await signDetector.run(feeds);if(!running||token!==runToken)return;const boxes=decodeDetector(rr[signDetector.outputNames[0]],r,scale,padX,padY,parseFloat(signSensitivity.value)).slice(0,MAX_SIGNS);lastDetectorMs=performance.now()-t0;await updateTracksWithDetections(boxes,token)}
+function decodeDetector(tensor,r,scale,padX,padY,thr){const d=tensor.data,A=tensor.dims[2]||8400,b=[];for(let a=0;a<A;a++){const sc=d[4*A+a];if(sc<thr)continue;const cx=d[a],cy=d[A+a],w=d[2*A+a],h=d[3*A+a];let x1=(cx-w/2-padX)/scale+r.x,y1=(cy-h/2-padY)/scale+r.y,x2=(cx+w/2-padX)/scale+r.x,y2=(cy+h/2-padY)/scale+r.y;x1=clamp(x1,0,video.videoWidth);y1=clamp(y1,0,video.videoHeight);x2=clamp(x2,0,video.videoWidth);y2=clamp(y2,0,video.videoHeight);if(x2-x1<4||y2-y1<4)continue;b.push({x:x1,y:y1,w:x2-x1,h:y2-y1,detScore:sc})}b.sort((a,b)=>b.detScore-a.detScore);return nms(b,.45)}
+async function updateTracksWithDetections(boxes,token){const now=performance.now(),used=new Set();for(const b of boxes){let best=null,bestScore=0;for(const tr of signTracks){if(used.has(tr.id))continue;const score=Math.max(iou(tr,b),centerSimilarity(tr,b)*.55);if(score>bestScore&&score>.18){bestScore=score;best=tr}}if(!best){best={id:nextTrackId++,x:b.x,y:b.y,w:b.w,h:b.h,detScore:b.detScore,lastSeen:now,lastClassified:0,hits:1,votes:new Map(),confirmed:null,confirmScore:0};signTracks.push(best)}else{used.add(best.id);best.hits++;best.lastSeen=now;best.detScore=b.detScore;const a=.42;best.x=best.x*(1-a)+b.x*a;best.y=best.y*(1-a)+b.y*a;best.w=best.w*(1-a)+b.w*a;best.h=best.h*(1-a)+b.h*a}}const candidates=signTracks.filter(t=>now-t.lastSeen<500&&now-t.lastClassified>=CLASSIFY_COOLDOWN_MS).sort((a,b)=>b.detScore-a.detScore).slice(0,2);for(const tr of candidates){if(!running||token!==runToken)break;tr.lastClassified=performance.now();const cls=await classifyOnnx(tr);if(cls.conf<.40)continue;const label=LABELS[cls.id]||`Cartello ${cls.id}`,v=tr.votes.get(label)||{hits:0,sum:0};v.hits++;v.sum+=cls.conf;tr.votes.set(label,v);let winner=null;for(const [lab,val] of tr.votes){if(!winner||val.hits>winner.hits||(val.hits===winner.hits&&val.sum>winner.sum))winner={label:lab,...val}}if(winner&&winner.hits>=CONFIRM_HITS){const was=tr.confirmed;tr.confirmed=winner.label;tr.confirmScore=winner.sum/winner.hits;if(was!==tr.confirmed){const important=/Limite|STOP|precedenza|Divieto|Senso vietato|Lavori|Rotatoria/.test(tr.confirmed);notify(tr.confirmed,Math.min(tr.confirmScore,tr.detScore),important)}}}}
+async function classifyOnnx(b){const W=video.videoWidth,H=video.videoHeight,pad=.15,cx=b.x+b.w/2,cy=b.y+b.h/2,side=Math.max(b.w,b.h)*(1+2*pad),x1=clamp(cx-side/2,0,W),y1=clamp(cy-side/2,0,H),x2=clamp(cx+side/2,0,W),y2=clamp(cy+side/2,0,H);clsCtx.clearRect(0,0,224,224);clsCtx.drawImage(video,x1,y1,Math.max(1,x2-x1),Math.max(1,y2-y1),0,0,224,224);const px=clsCtx.getImageData(0,0,224,224).data,plane=224*224,input=new Float32Array(plane*3),mean=[.485,.456,.406],std=[.229,.224,.225];for(let i=0,p=0;i<px.length;i+=4,p++){input[p]=(px[i]/255-mean[0])/std[0];input[plane+p]=(px[i+1]/255-mean[1])/std[1];input[2*plane+p]=(px[i+2]/255-mean[2])/std[2]}const f={};f[signClassifier.inputNames[0]]=new ort.Tensor('float32',input,[1,3,224,224]);const rr=await signClassifier.run(f),logits=rr[signClassifier.outputNames[0]].data,probs=softmax(logits);let id=0;for(let i=1;i<probs.length;i++)if(probs[i]>probs[id])id=i;return{id,conf:probs[id]}}
+async function runTrafficLightDetector(token){if(!lightModel||video.readyState<2)return;const r=roiPixels(true),targetW=480,targetH=Math.max(180,Math.round(targetW*r.h/r.w));lightCanvas.width=targetW;lightCanvas.height=targetH;lightCtx.drawImage(video,r.x,r.y,r.w,r.h,0,0,targetW,targetH);const pred=await lightModel.detect(lightCanvas,12,.58);if(!running||token!==runToken)return;lights=pred.filter(p=>p.class==='traffic light'&&p.score>=.58).slice(0,3).map(p=>({bbox:[r.x+p.bbox[0]*r.w/targetW,r.y+p.bbox[1]*r.h/targetH,p.bbox[2]*r.w/targetW,p.bbox[3]*r.h/targetH],score:p.score}));if(lights.length)notify('SEMAFORO',Math.max(...lights.map(x=>x.score)),false)}
+function pruneTracks(){const now=performance.now();signTracks=signTracks.filter(t=>now-t.lastSeen<TRACK_KEEP_MS).slice(-8)}function nms(boxes,t){const k=[];for(const b of boxes){if(k.every(x=>iou(x,b)<t))k.push(b);if(k.length>=8)break}return k}
+function iou(a,b){const x1=Math.max(a.x,b.x),y1=Math.max(a.y,b.y),x2=Math.min(a.x+a.w,b.x+b.w),y2=Math.min(a.y+a.h,b.y+b.h),iw=Math.max(0,x2-x1),ih=Math.max(0,y2-y1),inter=iw*ih;return inter/(a.w*a.h+b.w*b.h-inter+1e-9)}function centerSimilarity(a,b){const ax=a.x+a.w/2,ay=a.y+a.h/2,bx=b.x+b.w/2,by=b.y+b.h/2,d=Math.hypot(ax-bx,ay-by),scale=Math.max(20,(a.w+a.h+b.w+b.h)/4);return Math.max(0,1-d/(scale*2.2))}
+function draw(){if(!overlay.width||!overlay.height)return;const W=overlay.width,H=overlay.height;octx.clearRect(0,0,W,H);if(calibrating){drawCalibration(W,H);return}if(showRoi&&stream){const r=roiPixels(false);octx.save();octx.strokeStyle='rgba(41,215,255,.72)';octx.setLineDash([10,8]);octx.lineWidth=Math.max(2,W/650);octx.strokeRect(r.x,r.y,r.w,r.h);octx.restore()}for(const tr of signTracks.filter(t=>performance.now()-t.lastSeen<700).slice(0,MAX_SIGNS)){const label=tr.confirmed?`${tr.confirmed} ${Math.round(Math.min(tr.confirmScore,tr.detScore)*100)}%`:'CARTELLO…';drawBox([tr.x,tr.y,tr.w,tr.h],label,tr.confirmed?'#ffc857':'#8fa9bf')}for(const l of lights)drawBox(l.bbox,`SEMAFORO ${Math.round(l.score*100)}%`,'#29d7ff')}
+function drawBox(b,text,color){const[x,y,w,h]=b;octx.lineWidth=Math.max(2,overlay.width/500);octx.strokeStyle=color;octx.strokeRect(x,y,w,h);octx.font=`900 ${Math.max(14,overlay.width/58)}px system-ui`;const tw=octx.measureText(text).width,th=Math.max(22,overlay.width/40),ty=Math.max(th,y);octx.fillStyle='rgba(3,11,20,.88)';octx.fillRect(x,ty-th,Math.min(tw+12,overlay.width-x),th);octx.fillStyle=color;octx.fillText(text,x+5,ty-5)}
+function drawCalibration(W,H){const r={x:roi.x*W,y:roi.y*H,w:roi.w*W,h:roi.h*H};octx.save();octx.fillStyle='rgba(0,0,0,.55)';octx.fillRect(0,0,W,r.y);octx.fillRect(0,r.y+r.h,W,H-r.y-r.h);octx.fillRect(0,r.y,r.x,r.h);octx.fillRect(r.x+r.w,r.y,W-r.x-r.w,r.h);octx.strokeStyle='#29d7ff';octx.lineWidth=Math.max(3,W/420);octx.setLineDash([]);octx.strokeRect(r.x,r.y,r.w,r.h);const hs=Math.max(14,W/65);for(const[x,y]of[[r.x,r.y],[r.x+r.w,r.y],[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]]){octx.fillStyle='#29d7ff';octx.fillRect(x-hs/2,y-hs/2,hs,hs);octx.strokeStyle='#fff';octx.lineWidth=2;octx.strokeRect(x-hs/2,y-hs/2,hs,hs)}octx.fillStyle='rgba(5,15,26,.88)';octx.fillRect(r.x+8,r.y+8,Math.min(r.w-16,240),34);octx.fillStyle='#fff';octx.font=`800 ${Math.max(13,W/70)}px system-ui`;octx.fillText('AREA ANALIZZATA',r.x+16,r.y+30);octx.restore()}
+function canvasPoint(ev){const rr=overlay.getBoundingClientRect();return{x:(ev.clientX-rr.left)*overlay.width/rr.width,y:(ev.clientY-rr.top)*overlay.height/rr.height}}function hitMode(p){const W=overlay.width,H=overlay.height,r={x:roi.x*W,y:roi.y*H,w:roi.w*W,h:roi.h*H},tol=Math.max(24,W*.028),L=Math.abs(p.x-r.x)<tol,R=Math.abs(p.x-(r.x+r.w))<tol,T=Math.abs(p.y-r.y)<tol,B=Math.abs(p.y-(r.y+r.h))<tol;if(L&&T)return'lt';if(R&&T)return'rt';if(L&&B)return'lb';if(R&&B)return'rb';if(L&&p.y>r.y&&p.y<r.y+r.h)return'l';if(R&&p.y>r.y&&p.y<r.y+r.h)return'r';if(T&&p.x>r.x&&p.x<r.x+r.w)return't';if(B&&p.x>r.x&&p.x<r.x+r.w)return'b';if(p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h)return'move';return null}
+overlay.addEventListener('pointerdown',ev=>{if(!calibrating)return;const p=canvasPoint(ev);dragMode=hitMode(p);if(!dragMode)return;overlay.setPointerCapture(ev.pointerId);dragStart=p;roiStart={...roi};ev.preventDefault()});overlay.addEventListener('pointermove',ev=>{if(!calibrating||!dragMode)return;const p=canvasPoint(ev),W=overlay.width,H=overlay.height,dx=(p.x-dragStart.x)/W,dy=(p.y-dragStart.y)/H;let r={...roiStart},min=.18;if(dragMode==='move'){r.x=clamp(roiStart.x+dx,0,1-roiStart.w);r.y=clamp(roiStart.y+dy,0,1-roiStart.h)}else{if(dragMode.includes('l')){const nx=clamp(roiStart.x+dx,0,roiStart.x+roiStart.w-min);r.w=roiStart.w+(roiStart.x-nx);r.x=nx}if(dragMode.includes('r'))r.w=clamp(roiStart.w+dx,min,1-roiStart.x);if(dragMode.includes('t')){const ny=clamp(roiStart.y+dy,0,roiStart.y+roiStart.h-min);r.h=roiStart.h+(roiStart.y-ny);r.y=ny}if(dragMode.includes('b'))r.h=clamp(roiStart.h+dy,min,1-roiStart.y)}roi=normalizeRoi(r);draw();ev.preventDefault()});function endDrag(ev){if(!dragMode)return;dragMode=null;try{overlay.releasePointerCapture(ev.pointerId)}catch(e){}}overlay.addEventListener('pointerup',endDrag);overlay.addEventListener('pointercancel',endDrag);
+function notify(label,score,important){const now=Date.now(),last=lastAlert.get(label)||0;if(now-last<4500)return;lastAlert.set(label,now);recent.unshift({label,score});recent=recent.slice(0,10);renderEvents();if(important)showAlert(label,'info',2000)}function renderEvents(){const e=document.getElementById('events');e.innerHTML=recent.length?recent.map(x=>`<span class="event">${escapeHtml(x.label)} · ${Math.round(x.score*100)}%</span>`).join(''):'<span class="note">Nessun rilevamento.</span>'}
+function updateHud(){const rate=lastDetectorMs?Math.min(5,1000/Math.max(lastDetectorMs,TARGET_PERIOD_MS)):0,confirmed=signTracks.filter(t=>t.confirmed&&performance.now()-t.lastSeen<900).length;document.getElementById('hudSigns').textContent=`Cartelli: ${confirmed}`;document.getElementById('hudLights').textContent=`Semafori: ${lights.length}`;document.getElementById('hudRate').textContent=`Analisi: ${rate?rate.toFixed(1):'—'}/s`;document.getElementById('hudStab').textContent=`Stab: ${stabRawX},${stabRawY}`;document.getElementById('metricMs').textContent=lastDetectorMs?Math.round(lastDetectorMs):'—';document.getElementById('metricRate').textContent=rate?rate.toFixed(1):'—';document.getElementById('metricSigns').textContent=confirmed;document.getElementById('metricRoi').textContent=Math.round(roi.w*roi.h*100)+'%'}
+function handleOrientationChange(){if(!stream)return;const wasRunning=running;if(running){running=false;runToken++}const found=loadRoi();resetStabilizer();draw();if(wasRunning){if(found)startRuntime();else{resumeAfterCalibration=true;enterCalibration();showAlert('CALIBRA QUESTA ORIENTAZIONE','info',2500)}}}let orientTimer=null;window.addEventListener('orientationchange',()=>{clearTimeout(orientTimer);orientTimer=setTimeout(handleOrientationChange,400)});
+function softmax(a){let m=-Infinity;for(const v of a)if(v>m)m=v;const o=new Float32Array(a.length);let s=0;for(let i=0;i<a.length;i++){o[i]=Math.exp(a[i]-m);s+=o[i]}for(let i=0;i<o.length;i++)o[i]/=s;return o}function showAlert(t,type='info',ms=2000){bigAlert.textContent=t;bigAlert.className=`alert show ${type}`;clearTimeout(showAlert._t);showAlert._t=setTimeout(()=>bigAlert.className='alert',ms)}function clamp(v,a,b){return Math.max(a,Math.min(b,v))}function sleep(ms){return new Promise(r=>setTimeout(r,ms))}function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)stopAnalysis()});window.addEventListener('pagehide',()=>{if(stream)stopAnalysis()});
 </script>
-</body>
-</html>
+</body></html>
