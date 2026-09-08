@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
-<title>ToraVision v0.1.2</title>
+<title>ToraVision v0.1.3</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 
 <style>
 :root{
@@ -47,11 +48,9 @@ main{max-width:1000px;margin:auto;padding:10px}
   opacity:0;pointer-events:none;transition:.18s
 }
 .alert.show{opacity:1}
-.alert.danger{border-color:var(--red);color:#fff}
 .alert.info{border-color:var(--cyan)}
-.hud{
-  position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;flex-wrap:wrap;z-index:7;pointer-events:none
-}
+.alert.danger{border-color:var(--red)}
+.hud{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;flex-wrap:wrap;z-index:7;pointer-events:none}
 .badge{background:rgba(5,15,26,.88);border:1px solid #27506d;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:10px 0}
 button,select{min-height:52px;border-radius:14px;border:1px solid var(--line);font:inherit;font-weight:900}
@@ -65,8 +64,7 @@ button:disabled{opacity:.38;cursor:not-allowed}
 select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height:42px}
 .models{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 .model{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px}
-.model b{display:block;font-size:12px}
-.model span{font-size:11px;color:var(--muted)}
+.model b{display:block;font-size:12px}.model span{font-size:11px;color:var(--muted)}
 .model.ok{border-color:#176f4a}.model.bad{border-color:#7f3340}
 .grid{display:grid;grid-template-columns:1fr;gap:10px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:12px}
@@ -77,12 +75,13 @@ select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height
 .metric{background:#091725;border-radius:10px;padding:8px;text-align:center;border:1px solid #142d43}
 .metric b{display:block;font-size:16px}.metric small{color:var(--muted);font-size:10px}
 .note{font-size:11px;color:var(--muted);line-height:1.45}
+@media(max-width:520px){.models{grid-template-columns:1fr 1fr}.models .model:last-child{grid-column:1/-1}}
 @media(min-width:760px){main{padding:16px}.grid{grid-template-columns:1.25fr .75fr}.controls{max-width:520px}}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><div class="logo">TV</div><div>ToraVision<div class="version">v0.1.2 · TRAFFIC SIGN + LIGHTS</div></div></div>
+  <div class="brand"><div class="logo">TV</div><div>ToraVision<div class="version">v0.1.3 · SIGNS + TRAFFIC LIGHT</div></div></div>
   <div style="display:flex;align-items:center;gap:8px"><span id="globalStatus" class="version">caricamento modelli</span><span id="liveDot" class="status-dot"></span></div>
 </header>
 
@@ -90,12 +89,12 @@ select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height
   <section class="viewport">
     <video id="video" playsinline muted></video>
     <canvas id="overlay"></canvas>
-    <div id="idle" class="idle"><div><strong>ToraVision</strong>Modalità alleggerita: solo cartelli stradali.<br>Premi AVVIA ANALISI.</div></div>
+    <div id="idle" class="idle"><div><strong>ToraVision</strong>Cartelli stradali + semafori.<br>Premi AVVIA ANALISI.</div></div>
     <div id="bigAlert" class="alert"></div>
     <div class="hud">
       <span class="badge" id="hudSigns">Cartelli: 0</span>
-      <span class="badge" id="hudLight">Semaforo: —</span>
-      <span class="badge" id="hudFps">Analisi: —</span>
+      <span class="badge" id="hudLights">Semafori: 0</span>
+      <span class="badge" id="hudRate">Cartelli: —/s</span>
     </div>
   </section>
 
@@ -110,11 +109,11 @@ select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height
       <select id="cameraSelect"><option value="">Posteriore automatica</option></select>
     </div>
     <div class="control-card">
-      <label>SENSIBILITÀ DETECTOR</label>
+      <label>SENSIBILITÀ CARTELLI</label>
       <select id="signSensitivity">
-        <option value="0.28">Alta</option>
-        <option value="0.36" selected>Normale</option>
-        <option value="0.46">Prudente</option>
+        <option value="0.26">Alta</option>
+        <option value="0.34" selected>Normale</option>
+        <option value="0.44">Prudente</option>
       </select>
     </div>
   </div>
@@ -122,7 +121,7 @@ select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height
   <div class="models">
     <div class="model" id="mDetector"><b>Detector cartelli</b><span>caricamento…</span></div>
     <div class="model" id="mClassifier"><b>Classificatore 43</b><span>caricamento…</span></div>
-    <div class="model ok" id="mLights"><b>Semafori</b><span>rilevatore leggero RGB</span></div>
+    <div class="model" id="mLights"><b>Detector semafori</b><span>caricamento…</span></div>
   </div>
 
   <div class="grid">
@@ -131,7 +130,7 @@ select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height
       <div id="events"><span class="note">Nessun rilevamento.</span></div>
     </div>
     <div class="card">
-      <h3>Prestazioni</h3>
+      <h3>Prestazioni cartelli</h3>
       <div class="metrics">
         <div class="metric"><b id="metricMs">—</b><small>ms/ciclo</small></div>
         <div class="metric"><b id="metricRate">—</b><small>analisi/s</small></div>
@@ -141,24 +140,21 @@ select{width:100%;background:var(--panel2);color:white;padding:0 10px;min-height
   </div>
 
   <p class="note">
-    v0.1.2: resta rimosso il riconoscimento generale COCO (auto, camion, bus, moto, pedoni).
-    Sono stati ripristinati i semafori con un rilevatore leggero rosso/giallo/verde che non usa un secondo modello AI pesante.
-    Nessuna registrazione.
+    v0.1.3: cartelli con detector YOLO + classificatore ONNX a 43 classi. Semafori rilevati come oggetto reale circa una volta al secondo.
+    Nessuna analisi del colore del semaforo. Auto, camion, bus, moto e pedoni non vengono mostrati. Nessuna registrazione.
   </p>
 </main>
 
 <canvas id="detCanvas" width="640" height="640" hidden></canvas>
-<canvas id="clsCanvas" width="32" height="32" hidden></canvas>
-<canvas id="lightCanvas" width="240" height="135" hidden></canvas>
+<canvas id="clsCanvas" width="224" height="224" hidden></canvas>
 
 <script>
 'use strict';
 
-const APP_VERSION='0.1.2';
-const SIGN_DETECTOR_URL='https://raw.githubusercontent.com/Artyom-Dmitriev/TsrApp/main/TsrApp/TsrApp/Assets/detector.onnx';
-const SIGN_CLASSIFIER_URL='https://raw.githubusercontent.com/0xchinmay/Germany-Traffic-Signal-Recognition/main/web/model/model.json';
+const DETECTOR_URL='https://raw.githubusercontent.com/Artyom-Dmitriev/TsrApp/main/TsrApp/TsrApp/Assets/detector.onnx';
+const CLASSIFIER_URL='https://raw.githubusercontent.com/Artyom-Dmitriev/TsrApp/main/TsrApp/TsrApp/Assets/model.onnx';
 
-const SIGN_LABELS=[
+const LABELS=[
 'Limite 20 km/h','Limite 30 km/h','Limite 50 km/h','Limite 60 km/h','Limite 70 km/h','Limite 80 km/h',
 'Fine limite 80 km/h','Limite 100 km/h','Limite 120 km/h','Divieto di sorpasso','Divieto sorpasso >3,5 t',
 'Dare precedenza al prossimo incrocio','Strada con precedenza','Dare precedenza','STOP','Divieto di transito',
@@ -171,50 +167,49 @@ const SIGN_LABELS=[
 ];
 
 const video=document.getElementById('video');
-const overlay=document.getElementById('overlay');
-const octx=overlay.getContext('2d');
-const detCanvas=document.getElementById('detCanvas');
-const detCtx=detCanvas.getContext('2d',{willReadFrequently:true});
-const clsCanvas=document.getElementById('clsCanvas');
-const clsCtx=clsCanvas.getContext('2d',{willReadFrequently:true});
-const lightCanvas=document.getElementById('lightCanvas');
-const lightCtx=lightCanvas.getContext('2d',{willReadFrequently:true});
-const startBtn=document.getElementById('startBtn');
-const stopBtn=document.getElementById('stopBtn');
-const cameraSelect=document.getElementById('cameraSelect');
-const signSensitivity=document.getElementById('signSensitivity');
-const idle=document.getElementById('idle');
-const bigAlert=document.getElementById('bigAlert');
-const liveDot=document.getElementById('liveDot');
+const overlay=document.getElementById('overlay'),octx=overlay.getContext('2d');
+const detCanvas=document.getElementById('detCanvas'),detCtx=detCanvas.getContext('2d',{willReadFrequently:true});
+const clsCanvas=document.getElementById('clsCanvas'),clsCtx=clsCanvas.getContext('2d',{willReadFrequently:true});
+const startBtn=document.getElementById('startBtn'),stopBtn=document.getElementById('stopBtn');
+const cameraSelect=document.getElementById('cameraSelect'),signSensitivity=document.getElementById('signSensitivity');
+const idle=document.getElementById('idle'),bigAlert=document.getElementById('bigAlert'),liveDot=document.getElementById('liveDot');
 const globalStatus=document.getElementById('globalStatus');
 
-let detector=null,classifier=null,stream=null,running=false,runToken=0;
-let latestSigns=[],latestLights=[],recentEvents=[],lastAlerts=new Map(),lastCycleMs=0,lastLightState='—';
+let signDetector=null,signClassifier=null,lightModel=null;
+let stream=null,running=false,runToken=0;
+let signs=[],lights=[],recent=[],lastAlert=new Map();
+let lastSignMs=0,lastLightRun=0,lightBusy=false;
 
 ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
 ort.env.wasm.numThreads=1;
 ort.env.wasm.simd=true;
 
-function setModelState(id,text,state=''){
-  const el=document.getElementById(id); el.classList.remove('ok','bad');
-  if(state)el.classList.add(state); el.querySelector('span').textContent=text;
+function modelState(id,text,state=''){
+  const e=document.getElementById(id);e.classList.remove('ok','bad');if(state)e.classList.add(state);e.querySelector('span').textContent=text;
 }
 
 async function loadModels(){
-  let ok=0;
+  let ready=0;
   try{
     globalStatus.textContent='detector cartelli…';
-    detector=await ort.InferenceSession.create(SIGN_DETECTOR_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
-    setModelState('mDetector','pronto · YOLOv8n','ok');ok++;
-  }catch(e){console.error(e);setModelState('mDetector','errore','bad')}
+    signDetector=await ort.InferenceSession.create(DETECTOR_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
+    modelState('mDetector','pronto · YOLOv8n','ok');ready++;
+  }catch(e){console.error('detector',e);modelState('mDetector','errore','bad')}
+
   try{
-    globalStatus.textContent='classificatore leggero…';
-    classifier=await tf.loadLayersModel(SIGN_CLASSIFIER_URL);
-    tf.tidy(()=>classifier.predict(tf.zeros([1,32,32,3])));
-    setModelState('mClassifier','pronto · GTSRB 32×32','ok');ok++;
-  }catch(e){console.error(e);setModelState('mClassifier','errore','bad')}
-  globalStatus.textContent=ok===2?'modelli pronti':(ok?'modalità parziale':'modelli non disponibili');
-  startBtn.disabled=ok===0;
+    globalStatus.textContent='classificatore cartelli…';
+    signClassifier=await ort.InferenceSession.create(CLASSIFIER_URL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
+    modelState('mClassifier','pronto · 43 classi ONNX','ok');ready++;
+  }catch(e){console.error('classifier',e);modelState('mClassifier','errore','bad')}
+
+  try{
+    globalStatus.textContent='detector semafori…';
+    lightModel=await cocoSsd.load({base:'lite_mobilenet_v2'});
+    modelState('mLights','pronto · traffic light','ok');
+  }catch(e){console.error('lights',e);modelState('mLights','errore','bad')}
+
+  startBtn.disabled=ready<1;
+  globalStatus.textContent=ready===2?'modelli cartelli pronti':(ready?'modalità parziale':'modelli non disponibili');
 }
 loadModels();
 
@@ -224,7 +219,7 @@ async function openCamera(deviceId=''){
     ?{deviceId:{exact:deviceId},width:{ideal:960},height:{ideal:540},frameRate:{ideal:30,max:30}}
     :{facingMode:{ideal:'environment'},width:{ideal:960},height:{ideal:540},frameRate:{ideal:30,max:30}};
   stream=await navigator.mediaDevices.getUserMedia({video:vc,audio:false});
-  video.srcObject=stream; await video.play();
+  video.srcObject=stream;await video.play();
   await new Promise(r=>video.videoWidth?r():(video.onloadedmetadata=r));
   overlay.width=video.videoWidth;overlay.height=video.videoHeight;
   await populateCameras();
@@ -243,261 +238,166 @@ async function populateCameras(){
 cameraSelect.addEventListener('change',async()=>{
   if(!running)return;
   const token=++runToken;
-  try{
-    globalStatus.textContent='cambio camera…';
-    await openCamera(cameraSelect.value);
-    if(!running||token!==runToken)return;
-    globalStatus.textContent='analisi attiva';
-    analysisLoop(token);
-  }catch(e){showAlert('Camera non disponibile','danger',2600)}
+  try{await openCamera(cameraSelect.value);if(running&&token===runToken)signLoop(token)}
+  catch(e){showAlert('Camera non disponibile','danger',2500)}
 });
 
 startBtn.addEventListener('click',async()=>{
   if(running)return;
   try{
-    startBtn.disabled=true;globalStatus.textContent='avvio camera…';
-    await openCamera(cameraSelect.value);
-    running=true;const token=++runToken;
-    stopBtn.disabled=false;idle.classList.add('hidden');liveDot.classList.add('live');
-    globalStatus.textContent='analisi attiva';analysisLoop(token);
+    startBtn.disabled=true;globalStatus.textContent='avvio camera…';await openCamera(cameraSelect.value);
+    running=true;const token=++runToken;stopBtn.disabled=false;idle.classList.add('hidden');liveDot.classList.add('live');
+    globalStatus.textContent='analisi attiva';signLoop(token);lightLoop(token);
   }catch(e){
-    console.error(e);globalStatus.textContent='camera non disponibile';
-    showAlert(location.protocol==='https:'?'Permesso camera negato':'Serve HTTPS per la camera','danger',4000);
-    startBtn.disabled=false;
+    console.error(e);globalStatus.textContent='camera non disponibile';showAlert('Impossibile avviare la camera','danger',3500);startBtn.disabled=false;
   }
 });
-
 stopBtn.addEventListener('click',stopAnalysis);
+
 function stopAnalysis(){
   running=false;runToken++;
   if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=null;video.srcObject=null;latestSigns=[];latestLights=[];lastLightState='—';
+  stream=null;video.srcObject=null;signs=[];lights=[];lightBusy=false;
   stopBtn.disabled=true;startBtn.disabled=false;idle.classList.remove('hidden');liveDot.classList.remove('live');
   globalStatus.textContent='fermo';octx.clearRect(0,0,overlay.width,overlay.height);updateHud();
 }
 
-async function analysisLoop(token){
-  let cycle=0;
+async function signLoop(token){
   while(running&&token===runToken){
-    cycle++;
     const t0=performance.now();
     try{
-      if(detector&&classifier)latestSigns=await detectAndClassifySigns(token);
-      else latestSigns=[];
-      // Semafori: analisi leggera a ciclo alternato per non appesantire.
-      if(cycle%2===1) latestLights=detectTrafficLightsLight();
-    }catch(e){console.warn(e)}
+      signs=(signDetector&&signClassifier)?await detectSigns(token):[];
+    }catch(e){console.warn('sign pipeline',e)}
     if(!running||token!==runToken)break;
-    lastCycleMs=performance.now()-t0;
-    drawOverlay();updateHud();
-    await sleep(60);
+    lastSignMs=performance.now()-t0;
+    draw();updateHud();
+    await sleep(55);
   }
 }
 
-async function detectAndClassifySigns(token){
+async function lightLoop(token){
+  while(running&&token===runToken){
+    const now=performance.now();
+    if(lightModel && !lightBusy && now-lastLightRun>=900){
+      lastLightRun=now;lightBusy=true;
+      try{
+        const pred=await lightModel.detect(video,12,0.58);
+        if(running&&token===runToken){
+          lights=pred.filter(p=>p.class==='traffic light'&&p.score>=0.58).slice(0,4);
+          if(lights.length) notify('SEMAFORO',Math.max(...lights.map(x=>x.score)),false);
+          draw();updateHud();
+        }
+      }catch(e){console.warn('traffic light',e)}
+      finally{lightBusy=false}
+    }
+    await sleep(120);
+  }
+}
+
+async function detectSigns(token){
   if(video.readyState<2)return[];
   const W=video.videoWidth,H=video.videoHeight;
-  const scale=Math.min(640/W,640/H);
-  const nw=Math.round(W*scale),nh=Math.round(H*scale);
+  const scale=Math.min(640/W,640/H),nw=Math.round(W*scale),nh=Math.round(H*scale);
   const padX=Math.floor((640-nw)/2),padY=Math.floor((640-nh)/2);
 
   detCtx.fillStyle='rgb(114,114,114)';detCtx.fillRect(0,0,640,640);
   detCtx.drawImage(video,0,0,W,H,padX,padY,nw,nh);
 
-  const img=detCtx.getImageData(0,0,640,640).data,plane=640*640;
-  const input=new Float32Array(3*plane);
-  for(let i=0,p=0;i<img.length;i+=4,p++){
-    input[p]=img[i]/255;input[plane+p]=img[i+1]/255;input[2*plane+p]=img[i+2]/255;
-  }
+  const px=detCtx.getImageData(0,0,640,640).data,plane=640*640,input=new Float32Array(plane*3);
+  for(let i=0,p=0;i<px.length;i+=4,p++){input[p]=px[i]/255;input[plane+p]=px[i+1]/255;input[2*plane+p]=px[i+2]/255}
 
-  const feeds={};feeds[detector.inputNames[0]]=new ort.Tensor('float32',input,[1,3,640,640]);
-  const res=await detector.run(feeds);
+  const f={};f[signDetector.inputNames[0]]=new ort.Tensor('float32',input,[1,3,640,640]);
+  const rr=await signDetector.run(f);
   if(!running||token!==runToken)return[];
+  const boxes=decodeDetector(rr[signDetector.outputNames[0]],W,H,scale,padX,padY,parseFloat(signSensitivity.value)).slice(0,4);
 
-  const boxes=decodeDetector(res[detector.outputNames[0]],W,H,scale,padX,padY,parseFloat(signSensitivity.value)).slice(0,3);
   const out=[];
   for(const b of boxes){
     if(!running||token!==runToken)break;
-    const cls=classifySignLight(b,W,H);
-    if(cls.conf<0.50)continue;
-    const sign={...b,label:SIGN_LABELS[cls.id]||`Cartello ${cls.id}`,conf:cls.conf};
-    out.push(sign);
-    if(cls.conf>=0.62&&b.detScore>=0.34){
-      const important=/Limite|STOP|precedenza|Divieto|Senso vietato|Lavori|Rotatoria/.test(sign.label);
-      notifyDetection(sign.label,Math.min(cls.conf,b.detScore),important);
+    const c=await classifyOnnx(b,W,H);
+    if(c.conf<0.42)continue;
+    const s={...b,label:LABELS[c.id]||`Cartello ${c.id}`,conf:c.conf};
+    out.push(s);
+    if(c.conf>=0.58 && b.detScore>=0.32){
+      const imp=/Limite|STOP|precedenza|Divieto|Senso vietato|Lavori|Rotatoria/.test(s.label);
+      notify(s.label,Math.min(c.conf,b.detScore),imp);
     }
   }
   return out;
 }
 
-function classifySignLight(box,W,H){
-  const pad=.12,cx=box.x+box.w/2,cy=box.y+box.h/2;
-  const side=Math.max(box.w*(1+2*pad),box.h*(1+2*pad));
-  const x1=clamp(cx-side/2,0,W),y1=clamp(cy-side/2,0,H);
-  const x2=clamp(cx+side/2,0,W),y2=clamp(cy+side/2,0,H);
-  const sw=Math.max(1,x2-x1),sh=Math.max(1,y2-y1);
-  clsCtx.clearRect(0,0,32,32);clsCtx.drawImage(video,x1,y1,sw,sh,0,0,32,32);
+async function classifyOnnx(b,W,H){
+  const pad=.15,cx=b.x+b.w/2,cy=b.y+b.h/2,side=Math.max(b.w,b.h)*(1+2*pad);
+  const x1=clamp(cx-side/2,0,W),y1=clamp(cy-side/2,0,H),x2=clamp(cx+side/2,0,W),y2=clamp(cy+side/2,0,H);
+  clsCtx.clearRect(0,0,224,224);clsCtx.drawImage(video,x1,y1,Math.max(1,x2-x1),Math.max(1,y2-y1),0,0,224,224);
 
-  return tf.tidy(()=>{
-    const x=tf.browser.fromPixels(clsCanvas).toFloat().div(255).expandDims(0);
-    const y=classifier.predict(x);
-    const probs=y.dataSync();
-    let id=0;for(let i=1;i<probs.length;i++)if(probs[i]>probs[id])id=i;
-    return{id,conf:probs[id]};
-  });
+  const px=clsCtx.getImageData(0,0,224,224).data,plane=224*224,input=new Float32Array(plane*3);
+  const mean=[.485,.456,.406],std=[.229,.224,.225];
+  for(let i=0,p=0;i<px.length;i+=4,p++){
+    input[p]=(px[i]/255-mean[0])/std[0];
+    input[plane+p]=(px[i+1]/255-mean[1])/std[1];
+    input[2*plane+p]=(px[i+2]/255-mean[2])/std[2];
+  }
+  const f={};f[signClassifier.inputNames[0]]=new ort.Tensor('float32',input,[1,3,224,224]);
+  const rr=await signClassifier.run(f),logits=rr[signClassifier.outputNames[0]].data,probs=softmax(logits);
+  let id=0;for(let i=1;i<probs.length;i++)if(probs[i]>probs[id])id=i;
+  return{id,conf:probs[id]};
 }
 
-function detectTrafficLightsLight(){
-  if(video.readyState<2)return[];
-  const LW=240,LH=135;
-  lightCtx.drawImage(video,0,0,video.videoWidth,video.videoHeight,0,0,LW,LH);
-  const img=lightCtx.getImageData(0,0,LW,LH).data;
-
-  // Cerchiamo solo nella parte alta/centrale del frame: i semafori veri
-  // raramente sono nella fascia inferiore vicino al veicolo.
-  const candidates=[];
-  const step=2;
-  for(let y=2;y<Math.floor(LH*.78);y+=step){
-    for(let x=2;x<LW-2;x+=step){
-      const i=(y*LW+x)*4,r=img[i],g=img[i+1],b=img[i+2];
-      const max=Math.max(r,g,b),min=Math.min(r,g,b);
-      if(max<105 || max-min<38)continue;
-
-      let state=null,score=0;
-      if(r>145 && r>g*1.35 && r>b*1.28){state='ROSSO';score=r-g*.35-b*.2}
-      else if(r>145 && g>105 && b<105 && Math.abs(r-g)<80){state='GIALLO';score=(r+g)/2-b}
-      else if(g>125 && g>r*1.25 && g>b*1.15){state='VERDE';score=g-r*.25-b*.2}
-      if(!state)continue;
-
-      // Verifica che attorno ci sia una piccola zona scura: tipico corpo semaforico.
-      let dark=0,total=0;
-      for(let yy=-4;yy<=4;yy+=2){
-        for(let xx=-4;xx<=4;xx+=2){
-          const nx=x+xx,ny=y+yy;
-          if(nx<0||ny<0||nx>=LW||ny>=LH)continue;
-          const j=(ny*LW+nx)*4;
-          const br=(img[j]+img[j+1]+img[j+2])/3;
-          if(br<95)dark++;
-          total++;
-        }
-      }
-      if(total && dark/total<0.16)continue;
-      candidates.push({x,y,state,score});
-    }
-  }
-
-  // Raggruppa pixel vicini dello stesso colore.
-  candidates.sort((a,b)=>b.score-a.score);
-  const groups=[];
-  for(const c of candidates){
-    let g=groups.find(q=>q.state===c.state && Math.hypot(q.cx-c.x,q.cy-c.y)<12);
-    if(!g){
-      g={state:c.state,cx:c.x,cy:c.y,count:0,score:0,minX:c.x,maxX:c.x,minY:c.y,maxY:c.y};
-      groups.push(g);
-    }
-    g.count++;g.score+=c.score;g.cx=(g.cx*(g.count-1)+c.x)/g.count;g.cy=(g.cy*(g.count-1)+c.y)/g.count;
-    g.minX=Math.min(g.minX,c.x);g.maxX=Math.max(g.maxX,c.x);g.minY=Math.min(g.minY,c.y);g.maxY=Math.max(g.maxY,c.y);
-  }
-
-  const sx=video.videoWidth/LW,sy=video.videoHeight/LH;
-  const out=groups
-    .filter(g=>g.count>=2)
-    .sort((a,b)=>(b.count*10+b.score/100)-(a.count*10+a.score/100))
-    .slice(0,3)
-    .map(g=>{
-      const pad=7;
-      return{
-        state:g.state,
-        x:clamp((g.minX-pad)*sx,0,video.videoWidth),
-        y:clamp((g.minY-pad)*sy,0,video.videoHeight),
-        w:clamp((g.maxX-g.minX+pad*2)*sx,16,video.videoWidth),
-        h:clamp((g.maxY-g.minY+pad*2)*sy,24,video.videoHeight),
-        conf:Math.min(.95,.45+g.count*.045)
-      };
-    });
-
-  // Priorità rosso > giallo > verde.
-  if(out.length){
-    const red=out.find(o=>o.state==='ROSSO');
-    const yellow=out.find(o=>o.state==='GIALLO');
-    const green=out.find(o=>o.state==='VERDE');
-    const top=red||yellow||green||out[0];
-    lastLightState=top.state;
-    if(top.state==='ROSSO'&&top.conf>=.58)notifyDetection('SEMAFORO ROSSO',top.conf,true);
-    else if(top.state==='GIALLO'&&top.conf>=.60)notifyDetection('SEMAFORO GIALLO',top.conf,false);
-  }else lastLightState='—';
-
-  return out;
+function softmax(a){
+  let m=-Infinity;for(const v of a)if(v>m)m=v;
+  const o=new Float32Array(a.length);let s=0;for(let i=0;i<a.length;i++){o[i]=Math.exp(a[i]-m);s+=o[i]}
+  for(let i=0;i<o.length;i++)o[i]/=s;return o;
 }
 
-function decodeDetector(tensor,W,H,scale,padX,padY,threshold){
-  const d=tensor.data,anchors=tensor.dims[2]||8400,boxes=[];
-  for(let a=0;a<anchors;a++){
-    const score=d[4*anchors+a];if(score<threshold)continue;
-    const cx=d[a],cy=d[anchors+a],w=d[2*anchors+a],h=d[3*anchors+a];
-    let x1=(cx-w/2-padX)/scale,y1=(cy-h/2-padY)/scale;
-    let x2=(cx+w/2-padX)/scale,y2=(cy+h/2-padY)/scale;
+function decodeDetector(tensor,W,H,scale,padX,padY,thr){
+  const d=tensor.data,A=tensor.dims[2]||8400,b=[];
+  for(let a=0;a<A;a++){
+    const sc=d[4*A+a];if(sc<thr)continue;
+    const cx=d[a],cy=d[A+a],w=d[2*A+a],h=d[3*A+a];
+    let x1=(cx-w/2-padX)/scale,y1=(cy-h/2-padY)/scale,x2=(cx+w/2-padX)/scale,y2=(cy+h/2-padY)/scale;
     x1=clamp(x1,0,W);y1=clamp(y1,0,H);x2=clamp(x2,0,W);y2=clamp(y2,0,H);
-    if(x2-x1<4||y2-y1<4)continue;
-    boxes.push({x:x1,y:y1,w:x2-x1,h:y2-y1,detScore:score});
+    if(x2-x1<4||y2-y1<4)continue;b.push({x:x1,y:y1,w:x2-x1,h:y2-y1,detScore:sc});
   }
-  boxes.sort((a,b)=>b.detScore-a.detScore);return nms(boxes,.45);
+  b.sort((a,b)=>b.detScore-a.detScore);return nms(b,.45);
 }
-
-function nms(boxes,thr){
-  const keep=[];
-  for(const b of boxes){if(keep.every(k=>iou(k,b)<thr))keep.push(b);if(keep.length>=6)break}
-  return keep;
-}
+function nms(boxes,t){const k=[];for(const b of boxes){if(k.every(x=>iou(x,b)<t))k.push(b);if(k.length>=8)break}return k}
 function iou(a,b){
   const x1=Math.max(a.x,b.x),y1=Math.max(a.y,b.y),x2=Math.min(a.x+a.w,b.x+b.w),y2=Math.min(a.y+a.h,b.y+b.h);
-  const iw=Math.max(0,x2-x1),ih=Math.max(0,y2-y1),inter=iw*ih;
-  return inter/(a.w*a.h+b.w*b.h-inter+1e-9);
+  const iw=Math.max(0,x2-x1),ih=Math.max(0,y2-y1),inter=iw*ih;return inter/(a.w*a.h+b.w*b.h-inter+1e-9)
 }
 
-function drawOverlay(){
+function draw(){
   const W=overlay.width,H=overlay.height;octx.clearRect(0,0,W,H);
-  for(const s of latestSigns){
-    octx.lineWidth=Math.max(2,W/500);octx.strokeStyle='#ffc857';octx.strokeRect(s.x,s.y,s.w,s.h);
-    const text=`${s.label} ${Math.round(Math.min(s.conf,s.detScore)*100)}%`;
-    octx.font=`900 ${Math.max(14,W/55)}px system-ui`;
-    const tw=octx.measureText(text).width,th=Math.max(22,W/38),ty=Math.max(th,s.y);
-    octx.fillStyle='rgba(3,11,20,.88)';octx.fillRect(s.x,ty-th,Math.min(tw+12,W-s.x),th);
-    octx.fillStyle='#ffc857';octx.fillText(text,s.x+5,ty-5);
-  }
-  for(const l of latestLights){
-    const color=l.state==='ROSSO'?'#ff4d5f':(l.state==='GIALLO'?'#ffc857':'#36e28a');
-    octx.lineWidth=Math.max(2,W/500);octx.strokeStyle=color;octx.strokeRect(l.x,l.y,l.w,l.h);
-    const text=`SEMAFORO ${l.state} ${Math.round(l.conf*100)}%`;
-    octx.font=`900 ${Math.max(14,W/58)}px system-ui`;
-    const tw=octx.measureText(text).width,th=Math.max(22,W/40),ty=Math.max(th,l.y);
-    octx.fillStyle='rgba(3,11,20,.88)';octx.fillRect(l.x,ty-th,Math.min(tw+12,W-l.x),th);
-    octx.fillStyle=color;octx.fillText(text,l.x+5,ty-5);
-  }
+  for(const s of signs)drawBox([s.x,s.y,s.w,s.h],`${s.label} ${Math.round(Math.min(s.conf,s.detScore)*100)}%`,'#ffc857');
+  for(const l of lights)drawBox(l.bbox,`SEMAFORO ${Math.round(l.score*100)}%`,'#29d7ff');
+}
+function drawBox(b,text,color){
+  const [x,y,w,h]=b;octx.lineWidth=Math.max(2,overlay.width/500);octx.strokeStyle=color;octx.strokeRect(x,y,w,h);
+  octx.font=`900 ${Math.max(14,overlay.width/58)}px system-ui`;const tw=octx.measureText(text).width,th=Math.max(22,overlay.width/40),ty=Math.max(th,y);
+  octx.fillStyle='rgba(3,11,20,.88)';octx.fillRect(x,ty-th,Math.min(tw+12,overlay.width-x),th);
+  octx.fillStyle=color;octx.fillText(text,x+5,ty-5);
 }
 
-function notifyDetection(label,score,important){
-  const now=Date.now(),last=lastAlerts.get(label)||0;if(now-last<3500)return;
-  lastAlerts.set(label,now);recentEvents.unshift({label,score});recentEvents=recentEvents.slice(0,10);renderEvents();
-  if(important)showAlert(label,/STOP|Divieto|Senso vietato/.test(label)?'danger':'info',2100);
+function notify(label,score,important){
+  const now=Date.now(),last=lastAlert.get(label)||0;if(now-last<4000)return;lastAlert.set(label,now);
+  recent.unshift({label,score});recent=recent.slice(0,10);renderEvents();
+  if(important)showAlert(label,'info',2000);
 }
 function renderEvents(){
-  const el=document.getElementById('events');
-  el.innerHTML=recentEvents.length?recentEvents.map(e=>`<span class="event">${escapeHtml(e.label)} · ${Math.round(e.score*100)}%</span>`).join(''):'<span class="note">Nessun rilevamento.</span>';
+  const e=document.getElementById('events');
+  e.innerHTML=recent.length?recent.map(x=>`<span class="event">${escapeHtml(x.label)} · ${Math.round(x.score*100)}%</span>`).join(''):'<span class="note">Nessun rilevamento.</span>';
 }
 function updateHud(){
-  const rate=lastCycleMs>0?(1000/lastCycleMs).toFixed(1):'—';
-  document.getElementById('hudSigns').textContent=`Cartelli: ${latestSigns.length}`;
-  document.getElementById('hudLight').textContent=`Semaforo: ${lastLightState}`;
-  document.getElementById('hudFps').textContent=`Analisi: ${rate}/s`;
-  document.getElementById('metricMs').textContent=lastCycleMs?Math.round(lastCycleMs):'—';
-  document.getElementById('metricRate').textContent=rate;
-  document.getElementById('metricSigns').textContent=latestSigns.length;
+  const rate=lastSignMs?1000/lastSignMs:0;
+  document.getElementById('hudSigns').textContent=`Cartelli: ${signs.length}`;
+  document.getElementById('hudLights').textContent=`Semafori: ${lights.length}`;
+  document.getElementById('hudRate').textContent=`Cartelli: ${rate?rate.toFixed(1):'—'}/s`;
+  document.getElementById('metricMs').textContent=lastSignMs?Math.round(lastSignMs):'—';
+  document.getElementById('metricRate').textContent=rate?rate.toFixed(1):'—';
+  document.getElementById('metricSigns').textContent=signs.length;
 }
-function showAlert(text,type='info',ms=2200){
-  bigAlert.textContent=text;bigAlert.className=`alert show ${type}`;clearTimeout(showAlert._t);
-  showAlert._t=setTimeout(()=>bigAlert.className='alert',ms);
-}
+function showAlert(t,type='info',ms=2000){bigAlert.textContent=t;bigAlert.className=`alert show ${type}`;clearTimeout(showAlert._t);showAlert._t=setTimeout(()=>bigAlert.className='alert',ms)}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
