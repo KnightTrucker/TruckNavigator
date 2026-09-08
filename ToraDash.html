@@ -4,14 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#07111f" />
-<title>ToraDash 0.3.0 AI</title>
+<title>ToraDash 0.4.0 SIGNS</title>
 <style>
 :root{--bg:#07111f;--panel:#0b1a2d;--line:#1d3a58;--cyan:#42d9ff;--green:#65f2a8;--amber:#ffc857;--red:#ff4d5e;--text:#f7fbff;--muted:#9ab1c7}
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
 button,input,select{font:inherit}.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;background:#000}.top{z-index:8;display:flex;align-items:center;gap:10px;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));background:linear-gradient(180deg,rgba(5,15,27,.96),rgba(5,15,27,.7));backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.08)}
 .brand{font-weight:900;letter-spacing:.4px;font-size:18px;color:#fff;white-space:nowrap}.brand b{color:var(--cyan)}.status{display:flex;align-items:center;gap:7px;margin-left:auto;font-size:12px;color:var(--muted)}.dot{width:9px;height:9px;border-radius:50%;background:#555}.dot.on{background:var(--green);box-shadow:0 0 12px var(--green)}.dot.rec{background:var(--red);box-shadow:0 0 12px var(--red);animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.35}}
 .stage{position:relative;min-height:0;background:#000;overflow:hidden}video{width:100%;height:100%;object-fit:cover;background:#050505}canvas#vision{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.18),transparent 20%,transparent 72%,rgba(0,0,0,.35))}
-.hud-left{position:absolute;left:10px;bottom:14px;display:flex;flex-direction:column;gap:6px}.speed{font-size:42px;font-weight:950;line-height:.9;text-shadow:0 3px 15px #000}.speed small{font-size:14px;font-weight:800;color:#dbe9f3}.gpsline,.lanestatus,.ai-status{font-size:12px;font-weight:750;background:rgba(5,15,27,.66);border:1px solid rgba(255,255,255,.14);padding:6px 8px;border-radius:10px;backdrop-filter:blur(4px)}.ai-status{color:#b9d9ee}.ai-status.ready{color:var(--green)}.ai-status.busy{color:var(--amber)}.ai-status.fail{color:#ff97a3}.lanestatus.ok{color:var(--green)}.lanestatus.warn{color:var(--amber)}.lanestatus.bad{color:#fff;background:rgba(166,18,35,.86)}
+.hud-left{position:absolute;left:10px;bottom:14px;display:flex;flex-direction:column;gap:6px}.speed{font-size:42px;font-weight:950;line-height:.9;text-shadow:0 3px 15px #000}.speed small{font-size:14px;font-weight:800;color:#dbe9f3}.gpsline,.ai-status{font-size:12px;font-weight:750;background:rgba(5,15,27,.66);border:1px solid rgba(255,255,255,.14);padding:6px 8px;border-radius:10px;backdrop-filter:blur(4px)}.ai-status{color:#b9d9ee}.ai-status.ready{color:var(--green)}.ai-status.busy{color:var(--amber)}.ai-status.fail{color:#ff97a3}
 .recbox{position:absolute;right:10px;bottom:14px;text-align:right;font-weight:800;text-shadow:0 2px 10px #000}.rectime{font-size:18px}.clock{font-size:12px;color:#e6f0f8;margin-top:3px}
 .sign-popup{position:absolute;left:50%;top:14%;transform:translateX(-50%) scale(.92);width:min(40vw,210px);min-width:128px;aspect-ratio:1/1;display:none;align-items:center;justify-content:center;z-index:7;filter:drop-shadow(0 8px 18px rgba(0,0,0,.55));animation:pop .18s ease-out}.sign-popup.show{display:flex}@keyframes pop{to{transform:translateX(-50%) scale(1)}}
 .sign-shape{width:100%;height:100%;border-radius:50%;border:14px solid #d71920;background:white;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:42px;font-weight:1000;line-height:.95;padding:7px;overflow:hidden}.sign-shape.stop{clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);border-radius:0;background:#cf2029;border:7px solid white;outline:7px solid #cf2029;color:#fff;font-size:34px}.sign-shape.photo{border:5px solid #fff;border-radius:18px;background:#07111f;padding:0;box-shadow:0 0 0 4px rgba(66,217,255,.55)}.sign-shape.photo img{width:100%;height:72%;object-fit:contain;background:#fff}.sign-label{width:100%;min-height:28%;display:flex;align-items:center;justify-content:center;padding:4px 5px;background:#07111f;color:#fff;font-size:12px;line-height:1.05;font-weight:950}.sign-sub{display:block;font-size:16px;line-height:1.1;margin-top:3px}.toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(88%,560px);padding:18px 22px;border-radius:18px;background:rgba(160,17,33,.94);border:2px solid rgba(255,255,255,.75);font-weight:950;text-align:center;font-size:24px;z-index:9;display:none;box-shadow:0 12px 35px rgba(0,0,0,.55)}.toast.show{display:block}.toast.amber{background:rgba(177,111,0,.94)}
@@ -24,7 +24,7 @@ button,input,select{font:inherit}.app{height:100%;display:grid;grid-template-row
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">Tora<b>Dash</b> <span style="font-size:10px;color:#7892aa">0.3 AI</span></div>
+    <div class="brand">Tora<b>Dash</b> <span style="font-size:10px;color:#7892aa">0.4 SIGNS</span></div>
     <div class="status"><span id="camDot" class="dot"></span><span id="camTxt">CAM OFF</span><span id="recDot" class="dot"></span><span id="recTxt">STOP</span></div>
   </div>
   <main class="stage" id="stage">
@@ -33,11 +33,10 @@ button,input,select{font:inherit}.app{height:100%;display:grid;grid-template-row
     <div class="shade"></div>
 
     <div id="signPopup" class="sign-popup" aria-live="polite"><div id="signShape" class="sign-shape">80</div></div>
-    <div id="alertToast" class="toast">ATTENZIONE — USCITA DALLA CORSIA</div>
+    <div id="alertToast" class="toast">ATTENZIONE</div>
 
     <div class="hud-left">
       <div class="speed"><span id="speed">0</span> <small>km/h</small></div>
-      <div id="laneStatus" class="lanestatus warn">CORSIA: calibrazione</div>
       <div id="signAIStatus" class="ai-status busy">CARTELLI: AI in attesa</div>
       <div id="gpsLine" class="gpsline">GPS: --</div>
     </div>
@@ -46,7 +45,7 @@ button,input,select{font:inherit}.app{height:100%;display:grid;grid-template-row
     <div id="startCover" class="start-cover">
       <div class="start-card">
         <h1>ToraDash</h1>
-        <p>Dashcam PWA con loop video, GPS, rilevamento corsia e riconoscimento AI dei cartelli.</p>
+        <p>Dashcam PWA con loop video, GPS e riconoscimento dei cartelli stradali.</p>
         <button id="startBtn">AVVIA FOTOCAMERA</button>
         <div class="mini">Serve HTTPS o localhost. Concedi fotocamera, posizione e microfono solo se vuoi registrare l'audio.</div>
       </div>
@@ -69,12 +68,10 @@ button,input,select{font:inherit}.app{height:100%;display:grid;grid-template-row
     <label class="field">Segmento video<select id="segmentSec"><option value="60">1 minuto</option><option value="180">3 minuti</option><option value="300">5 minuti</option><option value="600">10 minuti</option></select></label>
     <label class="field">Loop massimo<select id="bufferMin"><option value="10">10 minuti</option><option value="30" selected>30 minuti</option><option value="60">60 minuti</option><option value="120">120 minuti</option></select></label>
     <label class="field">Audio<select id="audioEnabled"><option value="0">No</option><option value="1">Sì</option></select></label>
-    <label class="field">Sensibilità corsia<select id="laneSensitivity"><option value="0.18">Bassa</option><option value="0.13" selected>Media</option><option value="0.09">Alta</option></select></label>
-    <label class="field">Avviso corsia<select id="laneWarnEnabled"><option value="1">Attivo</option><option value="0">Disattivo</option></select></label>
     <label class="field">Riconoscimento cartelli<select id="signEnabled"><option value="1">Attivo</option><option value="0">Disattivo</option></select></label>
   </div>
-  <p class="note">Il riconoscimento corsia è un ADAS sperimentale. I cartelli vengono individuati nei fotogrammi e classificati da un modello AI visivo in locale nel browser; l’OCR resta attivo per leggere numeri di velocità, peso, altezza e larghezza. Ogni cartello riconosciuto viene mostrato grande per <b>5 secondi</b>. Al primo avvio l’AI deve scaricare il modello. Non usare ToraDash come sostituto di sistemi ADAS omologati o della segnaletica reale.</p>
-  <div class="row"><button id="calibrateBtn" class="primary">CALIBRA CORSIA</button><button id="testSignBtn">TEST CARTELLO 80</button></div>
+  <p class="note">Il riconoscimento cartelli lavora direttamente sui fotogrammi della telecamera. Prima individua i cartelli per colore e geometria, poi prova a leggere numeri e testo con OCR. Un cartello confermato viene comunque mostrato grande per <b>5 secondi</b>, anche quando il tipo non è ancora identificato con certezza. Funziona anche senza REC.</p>
+  <div class="row"><button id="testSignBtn">TEST CARTELLO 80</button></div>
   <div class="footer-actions"><button id="saveSettings" class="primary">SALVA</button><button data-close="settingsModal">CHIUDI</button></div>
 </div></div>
 
@@ -90,8 +87,8 @@ button,input,select{font:inherit}.app{height:100%;display:grid;grid-template-row
 'use strict';
 const $=s=>document.querySelector(s);
 const video=$('#video'), canvas=$('#vision'), ctx=canvas.getContext('2d',{willReadFrequently:true});
-const state={stream:null,recorder:null,chunks:[],recording:false,segmentTimer:null,recStart:0,recTick:null,currentSegmentStart:0,protectPending:false,db:null,wake:null,gpsWatch:null,speed:0,lat:null,lon:null,heading:null,visionTimer:null,laneOffset:0,laneBadSince:0,lastLaneAlert:0,calibratedCenter:+localStorage.getItem('toradash.laneCenter')||0.5,laneRawCenter:null,lastLaneSeenAt:0,signBusy:false,lastSignKey:'',lastSignSeenAt:0,lastSignShownAt:0,lastSignScanAt:0,signHideTimer:null,ocrWorker:null,ocrLoading:false,aiLoading:false,aiReady:false,aiFailed:false,aiProcessor:null,aiVisionModel:null,aiTextEmbeddings:null,aiMod:null,aiConfirmKey:'',aiConfirmAt:0,aiConfirmCount:0};
-const cfg=Object.assign({quality:'1920x1080',segmentSec:60,bufferMin:30,audioEnabled:0,laneSensitivity:.13,laneWarnEnabled:1,signEnabled:1,cameraId:''}, JSON.parse(localStorage.getItem('toradash.cfg')||'{}'));
+const state={stream:null,recorder:null,chunks:[],recording:false,segmentTimer:null,recStart:0,recTick:null,currentSegmentStart:0,protectPending:false,db:null,wake:null,gpsWatch:null,speed:0,lat:null,lon:null,heading:null,visionTimer:null,signBusy:false,lastSignKey:'',lastSignSeenAt:0,lastSignShownAt:0,lastSignScanAt:0,signHideTimer:null,ocrWorker:null,ocrLoading:false,lastCandidate:null,candidateHits:0,lastCandidateAt:0,lastCandidateShownAt:0,scanSeq:0};
+const cfg=Object.assign({quality:'1920x1080',segmentSec:60,bufferMin:30,audioEnabled:0,signEnabled:1,cameraId:''}, JSON.parse(localStorage.getItem('toradash.cfg')||'{}'));
 
 function logClock(){const d=new Date();$('#clock').textContent=d.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});}setInterval(logClock,1000);logClock();
 function fmt(sec){sec=Math.max(0,sec|0);const h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');return `${h}:${m}:${s}`}
@@ -120,7 +117,7 @@ async function startCamera(){
     if(cfg.cameraId)videoConstraint.deviceId={exact:cfg.cameraId};
     state.stream=await navigator.mediaDevices.getUserMedia({video:videoConstraint,audio:!!+cfg.audioEnabled});video.srcObject=state.stream;await video.play();
     $('#startCover').classList.add('hidden');$('#camDot').classList.add('on');$('#camTxt').textContent='CAM ON';await listCameras();resizeVision();startGPS();startVision();requestWake();
-    if(+cfg.signEnabled){setSignAIStatus('CARTELLI: AI caricamento…','busy');setTimeout(()=>ensureSignAI(),500)}else setSignAIStatus('CARTELLI: disattivati','');
+    if(+cfg.signEnabled){setSignAIStatus('CARTELLI: ricerca attiva','ready');setTimeout(()=>ensureOCR(),700)}else setSignAIStatus('CARTELLI: disattivati','');
   }catch(e){toast('Fotocamera non disponibile: '+(e.message||e),true,4000)}
 }
 async function requestWake(){try{if('wakeLock'in navigator)state.wake=await navigator.wakeLock.request('screen')}catch{}}
@@ -136,78 +133,108 @@ function startGPS(){if(!navigator.geolocation)return;clearWatchMaybe();state.gps
 function clearWatchMaybe(){if(state.gpsWatch!=null)navigator.geolocation.clearWatch(state.gpsWatch)}
 function resizeVision(){const r=video.getBoundingClientRect();canvas.width=Math.max(1,Math.round(r.width*devicePixelRatio));canvas.height=Math.max(1,Math.round(r.height*devicePixelRatio));ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}window.addEventListener('resize',resizeVision);
 
-function startVision(){clearInterval(state.visionTimer);state.visionTimer=setInterval(runVision,180)}
+function startVision(){clearInterval(state.visionTimer);state.visionTimer=setInterval(runVision,240)}
 function runVision(){
-  if(video.readyState<2)return;
-  const W=480,H=270,off=runVision.off||(runVision.off=document.createElement('canvas')),oc=off.getContext('2d',{willReadFrequently:true});off.width=W;off.height=H;oc.drawImage(video,0,0,W,H);
-  const img=oc.getImageData(0,0,W,H);detectLane(img,W,H);if(+cfg.signEnabled)detectSignCandidate(img,W,H);
-}
-function detectLane(img,W,H){
-  const d=img.data,rows=[];
-  for(let y=Math.floor(H*.40);y<Math.floor(H*.84);y+=6){let left=-1,right=-1,bestL=0,bestR=0;for(let x=4;x<W-4;x++){const i=(y*W+x)*4,r=d[i],g=d[i+1],b=d[i+2],lum=(r+g+b)/3;const yellow=r>135&&g>105&&b<125&&r>b*1.25;const white=lum>165&&Math.max(r,g,b)-Math.min(r,g,b)<55;const v=(white||yellow)?lum:0;if(x<W*.5&&v>bestL){bestL=v;left=x}if(x>W*.5&&v>bestR){bestR=v;right=x}}if(left>6&&right>W*.54&&right-left>W*.20)rows.push({y,left,right})}
-  ctx.clearRect(0,0,canvas.width,canvas.height);const cw=video.clientWidth,ch=video.clientHeight;
-  if(rows.length<5){state.laneRawCenter=null;$('#laneStatus').textContent='CORSIA: non rilevata';$('#laneStatus').className='lanestatus warn';return}
-  const near=rows[rows.length-1],far=rows[0],center=(near.left+near.right)/2/W,laneWidth=(near.right-near.left)/W,offset=(state.calibratedCenter-center)/(laneWidth||.45);state.laneRawCenter=center;state.lastLaneSeenAt=Date.now();state.laneOffset=state.laneOffset*.72+offset*.28;
-  const sx=cw/W,sy=ch/H;ctx.lineWidth=4;ctx.strokeStyle='rgba(66,217,255,.92)';ctx.beginPath();ctx.moveTo(far.left*sx,far.y*sy);ctx.lineTo(near.left*sx,near.y*sy);ctx.moveTo(far.right*sx,far.y*sy);ctx.lineTo(near.right*sx,near.y*sy);ctx.stroke();ctx.lineWidth=2;ctx.setLineDash([10,8]);ctx.strokeStyle='rgba(101,242,168,.9)';ctx.beginPath();ctx.moveTo(((far.left+far.right)/2)*sx,far.y*sy);ctx.lineTo(((near.left+near.right)/2)*sx,near.y*sy);ctx.stroke();ctx.setLineDash([]);
-  const abs=Math.abs(state.laneOffset),th=+cfg.laneSensitivity;let cls='ok',txt=`CORSIA: OK ${(state.laneOffset*100).toFixed(0)}%`;if(abs>th*.7){cls='warn';txt=state.laneOffset>0?'CORSIA: deriva DESTRA':'CORSIA: deriva SINISTRA'}if(abs>th){cls='bad';txt=state.laneOffset>0?'USCITA CORSIA DESTRA':'USCITA CORSIA SINISTRA';if(!state.laneBadSince)state.laneBadSince=Date.now();if(+cfg.laneWarnEnabled&&Date.now()-state.laneBadSince>700&&Date.now()-state.lastLaneAlert>3500&&state.speed>15){state.lastLaneAlert=Date.now();toast('ATTENZIONE — USCITA DALLA CORSIA',false,1800);beep(980,.28)}}else state.laneBadSince=0;$('#laneStatus').className='lanestatus '+cls;$('#laneStatus').textContent=txt;
+  if(video.readyState<2||!+cfg.signEnabled)return;
+  const vw=video.videoWidth||1280,vh=video.videoHeight||720,W=Math.min(800,Math.max(560,Math.round(vw/2))),H=Math.max(300,Math.round(W*vh/vw));
+  const off=runVision.off||(runVision.off=document.createElement('canvas')),oc=off.getContext('2d',{willReadFrequently:true});off.width=W;off.height=H;oc.drawImage(video,0,0,W,H);
+  const img=oc.getImageData(0,0,W,H);detectSignCandidate(img,W,H);
 }
 
-const SIGN_MODEL='Xenova/mobileclip_s0';
-const AI_SIGNS=[
- ['speed20','a European circular road traffic sign with red border showing speed limit 20'],['speed30','a European circular road traffic sign with red border showing speed limit 30'],['speed50','a European circular road traffic sign with red border showing speed limit 50'],['speed60','a European circular road traffic sign with red border showing speed limit 60'],['speed70','a European circular road traffic sign with red border showing speed limit 70'],['speed80','a European circular road traffic sign with red border showing speed limit 80'],['end-speed80','a European end of speed limit 80 traffic sign'],['speed100','a European circular road traffic sign with red border showing speed limit 100'],['speed120','a European circular road traffic sign with red border showing speed limit 120'],
- ['no-overtaking','a European no overtaking road sign with two cars'],['no-overtaking-trucks','a European no overtaking by trucks road sign with a red truck and black car'],['right-of-way','a European warning sign meaning right of way at next intersection'],['priority-road','a yellow diamond priority road traffic sign'],['yield','a red and white inverted triangle yield give way road sign'],['stop','a red octagonal STOP road sign'],['no-vehicles','a European white circular road sign with red border prohibiting all vehicles'],['truck-prohibited','a European circular road sign prohibiting trucks over 3.5 tons'],['no-entry','a red no entry road traffic sign with a white horizontal bar'],
- ['general-warning','a European triangular general danger warning sign'],['curve-left','a European triangular warning sign for dangerous curve left'],['curve-right','a European triangular warning sign for dangerous curve right'],['double-curve','a European triangular warning sign for double curve'],['bumpy','a European triangular warning sign for bumpy road'],['slippery','a European triangular slippery road warning sign with skidding car'],['road-narrows','a European triangular warning sign road narrows on the right'],['roadworks','a European triangular roadworks warning sign with worker digging'],['traffic-lights','a European triangular warning sign with traffic lights'],['pedestrians','a European pedestrian warning road sign'],['children','a European children crossing warning road sign'],['bicycles','a European bicycle crossing warning road sign'],['ice-snow','a European ice or snow warning road sign with snowflake'],['wild-animals','a European wild animals crossing warning road sign with deer'],
- ['end-restrictions','a European end of all speed and overtaking restrictions sign with diagonal black stripes'],['turn-right','a blue circular mandatory turn right traffic sign'],['turn-left','a blue circular mandatory turn left traffic sign'],['ahead','a blue circular mandatory straight ahead traffic sign'],['ahead-right','a blue circular mandatory straight ahead or right traffic sign'],['ahead-left','a blue circular mandatory straight ahead or left traffic sign'],['keep-right','a blue circular keep right traffic sign with white arrow'],['keep-left','a blue circular keep left traffic sign with white arrow'],['roundabout','a blue circular mandatory roundabout traffic sign'],['end-no-overtaking','a European end of no overtaking road sign'],['end-no-overtaking-trucks','a European end of no overtaking by trucks road sign'],
- ['height-limit','a European circular maximum vehicle height restriction road sign in metres'],['width-limit','a European circular maximum vehicle width restriction road sign in metres'],['weight-limit','a European circular maximum vehicle weight restriction road sign in tons'],['axle-weight-limit','a European circular maximum axle weight restriction road sign in tons'],['not-sign','an ordinary road scene object that is not a traffic sign']
-];
-const AI_NAMES={
- 'end-speed80':'FINE LIMITE 80','no-overtaking':'DIVIETO DI SORPASSO','no-overtaking-trucks':'SORPASSO CAMION VIETATO','right-of-way':'PRECEDENZA ALL’INCROCIO','priority-road':'STRADA CON PRECEDENZA','yield':'DARE PRECEDENZA','stop':'STOP','no-vehicles':'DIVIETO DI TRANSITO','truck-prohibited':'DIVIETO CAMION','no-entry':'SENSO VIETATO','general-warning':'PERICOLO','curve-left':'CURVA A SINISTRA','curve-right':'CURVA A DESTRA','double-curve':'DOPPIA CURVA','bumpy':'DOSSI / STRADA IRREGOLARE','slippery':'STRADA SDRUCCIOLEVOLE','road-narrows':'STRETTOIA','roadworks':'LAVORI IN CORSO','traffic-lights':'SEMAFORO','pedestrians':'PEDONI','children':'BAMBINI','bicycles':'BICICLETTE','ice-snow':'GHIACCIO / NEVE','wild-animals':'ANIMALI SELVATICI','end-restrictions':'FINE DIVIETI','turn-right':'OBBLIGO A DESTRA','turn-left':'OBBLIGO A SINISTRA','ahead':'DIREZIONE OBBLIGATORIA DRITTO','ahead-right':'DRITTO O DESTRA','ahead-left':'DRITTO O SINISTRA','keep-right':'TENERE LA DESTRA','keep-left':'TENERE LA SINISTRA','roundabout':'ROTATORIA','end-no-overtaking':'FINE DIVIETO SORPASSO','end-no-overtaking-trucks':'FINE DIVIETO SORPASSO CAMION','height-limit':'LIMITE ALTEZZA','width-limit':'LIMITE LARGHEZZA','weight-limit':'LIMITE PESO','axle-weight-limit':'LIMITE PESO ASSE'};
 function setSignAIStatus(text,kind=''){const el=$('#signAIStatus');if(!el)return;el.textContent=text;el.className='ai-status'+(kind?' '+kind:'')}
-function aiProgress(info){if(!info)return;let pct='';if(Number.isFinite(info.progress))pct=` ${Math.round(info.progress)}%`;else if(Number.isFinite(info.loaded)&&Number.isFinite(info.total)&&info.total>0)pct=` ${Math.round(info.loaded/info.total*100)}%`;if(pct)setSignAIStatus(`CARTELLI: AI download${pct}`,'busy');else if(info.status==='initiate'||info.status==='download')setSignAIStatus('CARTELLI: AI download…','busy')}
-async function ensureSignAI(){
-  if(state.aiReady||state.aiFailed)return state.aiReady;if(state.aiLoading)return false;state.aiLoading=true;setSignAIStatus('CARTELLI: AI caricamento…','busy');
-  try{
-    const mod=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');state.aiMod=mod;try{mod.env.allowLocalModels=false}catch{}
-    const {AutoTokenizer,CLIPTextModelWithProjection,AutoProcessor,CLIPVisionModelWithProjection}=mod;
-    setSignAIStatus('CARTELLI: AI testi…','busy');
-    const tokenizer=await AutoTokenizer.from_pretrained(SIGN_MODEL,{progress_callback:aiProgress});
-    const textModel=await CLIPTextModelWithProjection.from_pretrained(SIGN_MODEL,{dtype:'q8',progress_callback:aiProgress});
-    const textInputs=tokenizer(AI_SIGNS.map(x=>x[1]),{padding:'max_length',truncation:true});const textOut=await textModel(textInputs);const norm=textOut.text_embeds.normalize();state.aiTextEmbeddings=norm.tolist();
-    try{await textModel.dispose()}catch{};
-    setSignAIStatus('CARTELLI: AI visione…','busy');state.aiProcessor=await AutoProcessor.from_pretrained(SIGN_MODEL,{progress_callback:aiProgress});state.aiVisionModel=await CLIPVisionModelWithProjection.from_pretrained(SIGN_MODEL,{dtype:'fp32',progress_callback:aiProgress});state.aiReady=true;setSignAIStatus('CARTELLI: AI pronta + OCR','ready');return true;
-  }catch(e){console.warn('AI cartelli non disponibile',e);state.aiFailed=true;setSignAIStatus('CARTELLI: AI non disponibile · OCR attivo','fail');return false}finally{state.aiLoading=false}
+function colorMaskAndComponents(img,W,H){
+  const d=img.data,mask=new Uint8Array(W*H),yMax=Math.floor(H*.88);
+  for(let y=3;y<yMax;y++)for(let x=3;x<W-3;x++){
+    const i=(y*W+x)*4,r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),sat=mx-mn;
+    const red=(r>88&&r>g*1.16&&r>b*1.10&&sat>28)||(r>135&&g<125&&b<125);
+    const blue=(b>82&&b>r*1.12&&b>g*1.02&&sat>26);
+    const yellow=(r>120&&g>105&&b<125&&r>b*1.18&&g>b*1.10);
+    if(red||blue||yellow)mask[y*W+x]=1;
+  }
+  // Chiusura morfologica leggera: unisce bordi di cartelli piccoli/sfocati.
+  const dil=new Uint8Array(mask.length),rad=2;
+  for(let y=rad;y<yMax-rad;y++)for(let x=rad;x<W-rad;x++)if(mask[y*W+x]){
+    for(let yy=y-rad;yy<=y+rad;yy++)for(let xx=x-rad;xx<=x+rad;xx++)dil[yy*W+xx]=1;
+  }
+  const seen=new Uint8Array(dil.length),out=[],stack=[];
+  for(let y=3;y<yMax;y++)for(let x=3;x<W-3;x++){
+    const idx=y*W+x;if(!dil[idx]||seen[idx])continue;
+    let minX=x,maxX=x,minY=y,maxY=y,count=0;colorCount=0;stack.length=0;stack.push(idx);seen[idx]=1;
+    while(stack.length){const q=stack.pop(),qy=(q/W)|0,qx=q-qy*W;count++;if(mask[q])colorCount++;if(qx<minX)minX=qx;if(qx>maxX)maxX=qx;if(qy<minY)minY=qy;if(qy>maxY)maxY=qy;
+      for(let yy=Math.max(0,qy-1);yy<=Math.min(yMax-1,qy+1);yy++)for(let xx=Math.max(0,qx-1);xx<=Math.min(W-1,qx+1);xx++){const n=yy*W+xx;if(dil[n]&&!seen[n]){seen[n]=1;stack.push(n)}}}
+    const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh,area=bw*bh;
+    if(colorCount>=5&&bw>=7&&bh>=7&&bw<W*.30&&bh<H*.38&&ratio>.48&&ratio<1.85&&area<W*H*.07){
+      const edgePenalty=(minX<W*.04||maxX>W*.96)?0.72:1;const size=Math.sqrt(area);const square=1-Math.min(.7,Math.abs(Math.log(ratio)));const score=(colorCount/Math.max(1,size))*square*edgePenalty;
+      out.push({x:minX,y:minY,w:bw,h:bh,colorCount,score});
+    }
+  }
+  // Unisce riquadri sovrapposti/adiacenti.
+  out.sort((a,b)=>b.score-a.score);const merged=[];
+  for(const c of out){let hit=null;for(const m of merged){const ax=c.x+c.w/2,ay=c.y+c.h/2,bx=m.x+m.w/2,by=m.y+m.h/2;if(Math.hypot(ax-bx,ay-by)<Math.max(c.w,c.h,m.w,m.h)*.75){hit=m;break}}if(hit){const x1=Math.min(hit.x,c.x),y1=Math.min(hit.y,c.y),x2=Math.max(hit.x+hit.w,c.x+c.w),y2=Math.max(hit.y+hit.h,c.y+c.h);hit.x=x1;hit.y=y1;hit.w=x2-x1;hit.h=y2-y1;hit.score=Math.max(hit.score,c.score)}else merged.push({...c});if(merged.length>=8)break}
+  return merged.sort((a,b)=>b.score-a.score).slice(0,5);
 }
-function colorCandidateComponents(img,W,H){
-  const d=img.data,mask=new Uint8Array(W*H),yMax=Math.floor(H*.80);for(let y=5;y<yMax;y++){for(let x=3;x<W-3;x++){const i=(y*W+x)*4,r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);const sat=mx-mn;const red=r>115&&r>g*1.22&&r>b*1.18&&sat>45;const blue=b>100&&b>r*1.18&&b>g*1.06&&sat>40;const yellow=r>145&&g>120&&b<115&&r>b*1.35;if(red||blue||yellow)mask[y*W+x]=1}}
-  const seen=new Uint8Array(mask.length),out=[],stack=[];for(let y=5;y<yMax;y+=1){for(let x=3;x<W-3;x+=1){let idx=y*W+x;if(!mask[idx]||seen[idx])continue;let minX=x,maxX=x,minY=y,maxY=y,count=0;stack.length=0;stack.push(idx);seen[idx]=1;while(stack.length){const q=stack.pop(),qy=(q/W)|0,qx=q-qy*W;count++;if(qx<minX)minX=qx;if(qx>maxX)maxX=qx;if(qy<minY)minY=qy;if(qy>maxY)maxY=qy;for(let yy=Math.max(0,qy-2);yy<=Math.min(yMax-1,qy+2);yy++)for(let xx=Math.max(0,qx-2);xx<=Math.min(W-1,qx+2);xx++){const n=yy*W+xx;if(mask[n]&&!seen[n]){seen[n]=1;stack.push(n)}}}const bw=maxX-minX+1,bh=maxY-minY+1,ratio=bw/bh,area=bw*bh;if(count>=10&&bw>=7&&bh>=7&&bw<W*.32&&bh<H*.42&&ratio>.45&&ratio<1.9&&area< W*H*.09){out.push({x:minX,y:minY,w:bw,h:bh,count,score:count/Math.sqrt(area)})}}}
-  return out.sort((a,b)=>b.score-a.score).slice(0,3)
+function candidateSame(a,b,W,H){if(!a||!b)return false;const acx=a.x+a.w/2,acy=a.y+a.h/2,bcx=b.x+b.w/2,bcy=b.y+b.h/2,dist=Math.hypot((acx-bcx)/W,(acy-bcy)/H),sr=Math.max(a.w/a.h,b.w/b.h),size=Math.max(a.w/a.h?Math.max(a.w,b.w)/Math.max(1,Math.min(a.w,b.w)):1,Math.max(a.h,b.h)/Math.max(1,Math.min(a.h,b.h)));return dist<.075&&size<1.9&&sr<2.2}
+function makeHighResCrop(c,W,H){
+  const vw=video.videoWidth||W,vh=video.videoHeight||H,pad=.55;let sx=(c.x-c.w*pad)/W*vw,sy=(c.y-c.h*pad)/H*vh,sw=c.w*(1+pad*2)/W*vw,sh=c.h*(1+pad*2)/H*vh;
+  sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(vw-sx,sw);sh=Math.min(vh-sy,sh);const crop=document.createElement('canvas');crop.width=360;crop.height=360;const cc=crop.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,360,360);const scale=Math.min(330/sw,330/sh),dw=sw*scale,dh=sh*scale;cc.drawImage(video,sx,sy,sw,sh,(360-dw)/2,(360-dh)/2,dw,dh);return crop;
 }
-function makeHighResCrop(c,W,H){const vw=video.videoWidth||W,vh=video.videoHeight||H,pad=.32;let sx=(c.x-c.w*pad)/W*vw,sy=(c.y-c.h*pad)/H*vh,sw=c.w*(1+pad*2)/W*vw,sh=c.h*(1+pad*2)/H*vh;sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(vw-sx,sw);sh=Math.min(vh-sy,sh);const crop=document.createElement('canvas');crop.width=256;crop.height=256;const cc=crop.getContext('2d');cc.fillStyle='#fff';cc.fillRect(0,0,256,256);const scale=Math.min(232/sw,232/sh),dw=sw*scale,dh=sh*scale;cc.drawImage(video,sx,sy,sw,sh,(256-dw)/2,(256-dh)/2,dw,dh);return crop}
-function detectSignCandidate(img,W,H){const now=Date.now();if(state.signBusy||now-state.lastSignScanAt<650)return;state.lastSignScanAt=now;const comps=colorCandidateComponents(img,W,H);if(!comps.length)return;recognizeCandidates(comps,W,H)}
-async function classifySignAI(crop){if(!state.aiReady)return null;try{const {RawImage,dot,softmax}=state.aiMod,raw=RawImage.fromCanvas(crop),inputs=await state.aiProcessor(raw),out=await state.aiVisionModel(inputs),norm=out.image_embeds.normalize().tolist()[0],scores=state.aiTextEmbeddings.map(v=>100*dot(norm,v)),probs=softmax(scores),rank=[...probs.keys()].sort((a,b)=>probs[b]-probs[a]),i=rank[0],j=rank[1],top={key:AI_SIGNS[i][0],score:probs[i],margin:probs[i]-probs[j]};try{Object.values(inputs).forEach(t=>t?.dispose?.())}catch{};if(top.key==='not-sign'||top.score<.30||top.margin<.018)return null;return top}catch(e){console.warn('classify AI',e);return null}}
-async function ensureOCR(){if(state.ocrWorker||state.ocrLoading)return state.ocrWorker;state.ocrLoading=true;try{if(!window.Tesseract){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}state.ocrWorker=await Tesseract.createWorker('eng',1,{logger:()=>{}});await state.ocrWorker.setParameters({tessedit_char_whitelist:'0123456789.,tTmMkKhHSTOPstop'});if(!state.aiReady&&!state.aiLoading)setSignAIStatus('CARTELLI: OCR pronto','ready');return state.ocrWorker}catch(e){console.warn('OCR non disponibile',e);return null}finally{state.ocrLoading=false}}
-async function classifySignOCR(crop){try{const worker=await ensureOCR();if(!worker)return null;const oc=document.createElement('canvas');oc.width=320;oc.height=320;const x=oc.getContext('2d');x.drawImage(crop,0,0,320,320);const {data:{text,confidence}}=await worker.recognize(oc),clean=(text||'').replace(/\s+/g,'').toLowerCase();if(!clean)return null;const nums=clean.match(/\d{1,3}(?:[.,]\d)?/g)||[];if(clean.includes('stop'))return {type:'stop',key:'STOP',main:'STOP',confidence};if(nums.length){const raw=nums[0].replace(',','.'),num=parseFloat(raw);if(/[tT]/.test(text)&&num>0&&num<100)return {type:'weight',key:'T'+raw,main:raw,sub:'t',confidence};if(/[mM]/.test(text)&&num>0&&num<20)return {type:'height',key:'M'+raw,main:raw,sub:'m',confidence};if(Number.isFinite(num)&&num>=10&&num<=140&&num%10===0)return {type:'speed',key:'S'+num,main:String(num),confidence}}return null}catch(e){console.warn('OCR cartello',e);return null}}
-function aiNeedsOCR(ai){return !ai||ai.key.startsWith('speed')||['end-speed80','height-limit','width-limit','weight-limit','axle-weight-limit','stop'].includes(ai.key)}
-function confirmAI(ai){const now=Date.now();if(ai.score>=.46)return true;if(ai.score<.34)return false;if(state.aiConfirmKey===ai.key&&now-state.aiConfirmAt<2300){state.aiConfirmCount++;state.aiConfirmAt=now}else{state.aiConfirmKey=ai.key;state.aiConfirmAt=now;state.aiConfirmCount=1}return state.aiConfirmCount>=2}
-function signFromAI(ai,crop,ocr){if(ocr)return ocr;if(!ai)return null;if(ai.key.startsWith('speed')){const n=ai.key.match(/\d+/)?.[0];if(n)return {type:'speed',key:'AI-S'+n,main:n}}if(ai.key==='stop')return {type:'stop',key:'AI-STOP',main:'STOP'};const label=AI_NAMES[ai.key]||ai.key.toUpperCase();return {type:'photo',key:'AI-'+ai.key,main:label,image:crop.toDataURL('image/jpeg',.88),score:ai.score}}
-async function recognizeCandidates(comps,W,H){state.signBusy=true;try{if(!state.aiReady&&!state.aiFailed&&!state.aiLoading)ensureSignAI();for(const comp of comps.slice(0,2)){const crop=makeHighResCrop(comp,W,H);const ai=await classifySignAI(crop);let ocr=null;if(aiNeedsOCR(ai))ocr=await classifySignOCR(crop);if(ocr){showSign(ocr);setSignAIStatus(state.aiReady?'CARTELLI: AI pronta + OCR':'CARTELLI: OCR attivo','ready');break}if(ai&&confirmAI(ai)){const sign=signFromAI(ai,crop,null);if(sign){showSign(sign);const name=AI_NAMES[ai.key]||(ai.key.startsWith('speed')?'LIMITE '+ai.key.match(/\d+/)?.[0]:ai.key);setSignAIStatus(`CARTELLI: ${name} ${Math.round(ai.score*100)}%`,'ready');break}}}}catch(e){console.warn(e)}finally{state.signBusy=false}}
-function showSign(sign){const now=Date.now(),same=sign.key===state.lastSignKey,continuous=same&&now-state.lastSignSeenAt<6000;state.lastSignKey=sign.key;state.lastSignSeenAt=now;if(continuous)return;state.lastSignShownAt=now;const shape=$('#signShape');if(sign.type==='photo'){shape.className='sign-shape photo';shape.innerHTML=`<img src="${sign.image}" alt=""><span class="sign-label">${sign.main}</span>`}else{shape.className='sign-shape'+(sign.type==='stop'?' stop':'');shape.innerHTML=`${sign.main}${sign.sub?`<span class="sign-sub">${sign.sub}</span>`:''}`}const pop=$('#signPopup');pop.classList.add('show');clearTimeout(state.signHideTimer);state.signHideTimer=setTimeout(()=>pop.classList.remove('show'),5000);beep(sign.type==='weight'||sign.type==='height'?820:660,.11)}
-async function calibrateLane(){
-  $('#settingsModal').classList.remove('open');if(!state.stream){toast('Avvia prima la fotocamera',true,1800);return}
-  for(const n of [3,2,1]){toast(`CALIBRAZIONE CORSIA — ${n}`,true,520);await new Promise(r=>setTimeout(r,600))}const samples=[],until=Date.now()+1800;while(Date.now()<until){if(state.laneRawCenter!=null&&Date.now()-state.lastLaneSeenAt<450)samples.push(state.laneRawCenter);await new Promise(r=>setTimeout(r,100))}
-  if(samples.length<6){toast('CALIBRAZIONE FALLITA — corsia non rilevata',false,2600);return}state.calibratedCenter=samples.reduce((a,b)=>a+b,0)/samples.length;state.laneOffset=0;localStorage.setItem('toradash.laneCenter',String(state.calibratedCenter));toast('CORSIA CALIBRATA',true,1500);beep(760,.12)
+function fastVisualSign(crop){
+  const c=document.createElement('canvas');c.width=128;c.height=128;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(crop,0,0,128,128);const d=x.getImageData(0,0,128,128).data;
+  let red=0,blue=0,yellow=0,white=0,centerWhite=0,centerRed=0,topRed=0,bottomRed=0,midBandWhite=0,midBandN=0,N=128*128;
+  for(let y=0;y<128;y++)for(let xx=0;xx<128;xx++){const i=(y*128+xx)*4,r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),sat=mx-mn;const R=r>95&&r>g*1.15&&r>b*1.10&&sat>28,B=b>88&&b>r*1.12&&b>g*1.02&&sat>25,Y=r>125&&g>108&&b<130&&r>b*1.16,W=mn>175&&sat<55;if(R){red++;if(y<43)topRed++;if(y>84)bottomRed++;}if(B)blue++;if(Y)yellow++;if(W)white++;if(xx>38&&xx<90&&y>38&&y<90){if(W)centerWhite++;if(R)centerRed++;}if(y>54&&y<74&&xx>26&&xx<102){midBandN++;if(W)midBandWhite++;}}
+  const rf=red/N,bf=blue/N,yf=yellow/N,cw=centerWhite/(52*52),cr=centerRed/(52*52),stripe=midBandWhite/Math.max(1,midBandN);
+  if(rf>.08&&cr>.18&&stripe>.34)return {type:'photo',key:'VIS-NOENTRY',main:'SENSO VIETATO',image:crop.toDataURL('image/jpeg',.90)};
+  if(rf>.10&&cr>.20&&cw>.025&&stripe<.30)return {type:'stop',key:'VIS-STOP',main:'STOP'};
+  if(yf>.065)return {type:'photo',key:'VIS-PRIORITY',main:'STRADA CON PRECEDENZA',image:crop.toDataURL('image/jpeg',.90)};
+  if(rf>.035&&cw>.18){if(topRed>bottomRed*1.28)return {type:'photo',key:'VIS-YIELD',main:'DARE PRECEDENZA',image:crop.toDataURL('image/jpeg',.90)};if(bottomRed>topRed*1.28)return {type:'photo',key:'VIS-WARN',main:'SEGNALE DI PERICOLO',image:crop.toDataURL('image/jpeg',.90)};return {type:'photo',key:'VIS-RED',main:'DIVIETO / LIMITE',image:crop.toDataURL('image/jpeg',.90)}}
+  if(bf>.055)return {type:'photo',key:'VIS-BLUE',main:'SEGNALE BLU / OBBLIGO',image:crop.toDataURL('image/jpeg',.90)};
+  return {type:'photo',key:'VIS-GENERIC',main:'CARTELLO RILEVATO',image:crop.toDataURL('image/jpeg',.90)};
+}
+async function ensureOCR(){
+  if(state.ocrWorker||state.ocrLoading)return state.ocrWorker;state.ocrLoading=true;setSignAIStatus('CARTELLI: caricamento OCR…','busy');
+  try{if(!window.Tesseract){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+    state.ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text'&&Number.isFinite(m.progress))setSignAIStatus(`CARTELLI: lettura ${Math.round(m.progress*100)}%`,'busy')}});
+    await state.ocrWorker.setParameters({tessedit_char_whitelist:'0123456789OoIiLl.,tTmMkKhHsSpPoO',tessedit_pageseg_mode:'7',preserve_interword_spaces:'0'});setSignAIStatus('CARTELLI: ricerca attiva','ready');return state.ocrWorker;
+  }catch(e){console.warn('OCR non disponibile',e);setSignAIStatus('CARTELLI: OCR non disponibile · rilevazione visiva attiva','fail');return null}finally{state.ocrLoading=false}
+}
+function prepOCR(crop,mode){const c=document.createElement('canvas');c.width=420;c.height=420;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(crop,0,0,420,420);if(mode===0)return c;const im=x.getImageData(0,0,420,420),d=im.data;let sum=0,n=d.length/4;for(let i=0;i<d.length;i+=4)sum+=(d[i]*.30+d[i+1]*.59+d[i+2]*.11);const mean=sum/n,thr=mode===1?Math.max(100,Math.min(190,mean*.88)):Math.max(115,Math.min(205,mean*1.02));for(let i=0;i<d.length;i+=4){const v=d[i]*.30+d[i+1]*.59+d[i+2]*.11;let q=v>thr?255:0;if(mode===2)q=255-q;d[i]=d[i+1]=d[i+2]=q;d[i+3]=255}x.putImageData(im,0,0);return c}
+function parseOCRText(text,confidence=0){
+  let raw=(text||'').replace(/\s+/g,'').toUpperCase();if(!raw)return null;const letters=raw;let norm=raw.replace(/O/g,'0').replace(/[IL]/g,'1').replace(/S(?=\d)/g,'5');
+  if(/S[T7][O0]P/.test(letters)||letters.includes('STOP'))return {type:'stop',key:'OCR-STOP',main:'STOP',confidence};
+  const m=norm.match(/\d{1,3}(?:[.,]\d)?/);if(!m)return null;const token=m[0].replace(',','.'),num=parseFloat(token);if(!Number.isFinite(num))return null;
+  if(/[T]/.test(letters)&&num>0&&num<=60)return {type:'weight',key:'OCR-T'+token,main:token,sub:'t',confidence};
+  if(/[M]/.test(letters)&&num>0&&num<10)return {type:'height',key:'OCR-M'+token,main:token,sub:'m',confidence};
+  const speeds=new Set([10,20,30,40,50,60,70,80,90,100,110,120,130]);if(speeds.has(Math.round(num)))return {type:'speed',key:'OCR-S'+Math.round(num),main:String(Math.round(num)),confidence};
+  return null;
+}
+async function classifySignOCR(crop){
+  try{const worker=await ensureOCR();if(!worker)return null;for(let mode=0;mode<3;mode++){const img=prepOCR(crop,mode);const {data:{text,confidence}}=await worker.recognize(img);const parsed=parseOCRText(text,confidence);if(parsed&&confidence>=18)return parsed}return null}catch(e){console.warn('OCR cartello',e);return null}
+}
+function detectSignCandidate(img,W,H){
+  const now=Date.now();if(state.signBusy||now-state.lastSignScanAt<420)return;state.lastSignScanAt=now;const comps=colorMaskAndComponents(img,W,H);state.scanSeq++;
+  if(!comps.length){if(now-state.lastCandidateAt>900){state.lastCandidate=null;state.candidateHits=0;setSignAIStatus('CARTELLI: ricerca · nessun candidato','')}return}
+  const best=comps[0];if(candidateSame(best,state.lastCandidate,W,H)&&now-state.lastCandidateAt<1300)state.candidateHits++;else state.candidateHits=1;state.lastCandidate={...best};state.lastCandidateAt=now;setSignAIStatus(`CARTELLI: candidato ${state.candidateHits}/2`,'busy');
+  if(state.candidateHits>=2){state.candidateHits=0;recognizeCandidate(best,W,H)}
+}
+async function recognizeCandidate(comp,W,H){
+  if(state.signBusy)return;state.signBusy=true;try{const crop=makeHighResCrop(comp,W,H),visual=fastVisualSign(crop);showSign(visual);setSignAIStatus(`CARTELLI: ${visual.main} · lettura…`,'busy');const exact=await classifySignOCR(crop);if(exact){showSign(exact,true);setSignAIStatus(`CARTELLI: ${exact.main}${exact.sub||' km/h'}`,'ready')}else setSignAIStatus(`CARTELLI: ${visual.main}`,'ready')}catch(e){console.warn(e);setSignAIStatus('CARTELLI: errore analisi','fail')}finally{state.signBusy=false}
+}
+function showSign(sign,force=false){
+  const now=Date.now(),same=sign.key===state.lastSignKey,continuous=same&&now-state.lastSignSeenAt<6500;state.lastSignKey=sign.key;state.lastSignSeenAt=now;if(continuous&&!force)return;state.lastSignShownAt=now;const shape=$('#signShape');
+  if(sign.type==='photo'){shape.className='sign-shape photo';shape.innerHTML=`<img src="${sign.image}" alt=""><span class="sign-label">${sign.main}</span>`}else{shape.className='sign-shape'+(sign.type==='stop'?' stop':'');shape.innerHTML=`${sign.main}${sign.sub?`<span class="sign-sub">${sign.sub}</span>`:''}`}
+  const pop=$('#signPopup');pop.classList.add('show');clearTimeout(state.signHideTimer);state.signHideTimer=setTimeout(()=>pop.classList.remove('show'),5000);beep(sign.type==='weight'||sign.type==='height'?820:660,.10)
 }
 
 async function snapshot(){if(video.readyState<2)return;const c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;const cctx=c.getContext('2d');cctx.drawImage(video,0,0);cctx.fillStyle='rgba(0,0,0,.55)';cctx.fillRect(12,c.height-52,Math.min(c.width-24,620),40);cctx.fillStyle='#fff';cctx.font='24px system-ui';cctx.fillText(`ToraDash · ${new Date().toLocaleString('it-IT')} · ${Math.round(state.speed)} km/h`,22,c.height-24);c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`ToraDash_${Date.now()}.jpg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)},'image/jpeg',.92)}
 async function renderClips(){const box=$('#clips'),items=(await dbAll()).sort((a,b)=>b.ts-a.ts);box.innerHTML='';let total=0;for(const it of items){total+=it.blob?.size||0;const d=document.createElement('div');d.className='clip';const meta=document.createElement('div');meta.innerHTML=`<b>${new Date(it.ts).toLocaleString('it-IT')}</b><br><small>${fmt(it.duration)} · ${((it.blob?.size||0)/1048576).toFixed(1)} MB ${it.protected?'<span class="badge lock">PROTETTO</span>':''}</small>`;const actions=document.createElement('div');const dl=document.createElement('button');dl.textContent='SALVA';dl.onclick=()=>{const u=URL.createObjectURL(it.blob),a=document.createElement('a');a.href=u;a.download=`ToraDash_${new Date(it.ts).toISOString().replace(/[:.]/g,'-')}.webm`;a.click();setTimeout(()=>URL.revokeObjectURL(u),3000)};actions.appendChild(dl);if(!it.protected){const del=document.createElement('button');del.textContent='✕';del.onclick=async()=>{await dbDelete(it.id);renderClips()};actions.appendChild(del)}d.append(meta,actions);box.appendChild(d)}$('#clipsInfo').textContent=`${items.length} segmenti · ${(total/1048576).toFixed(1)} MB. I segmenti protetti non vengono eliminati dal loop.`}
 
-function loadSettingsUI(){for(const id of ['quality','segmentSec','bufferMin','audioEnabled','laneSensitivity','laneWarnEnabled','signEnabled'])$('#'+id).value=String(cfg[id]);$('#cameraSelect').value=cfg.cameraId||''}
-async function saveSettings(){const old={cameraId:cfg.cameraId,quality:cfg.quality,audioEnabled:+cfg.audioEnabled};for(const id of ['quality','segmentSec','bufferMin','audioEnabled','laneSensitivity','laneWarnEnabled','signEnabled'])cfg[id]=$('#'+id).value;cfg.segmentSec=+cfg.segmentSec;cfg.bufferMin=+cfg.bufferMin;cfg.audioEnabled=+cfg.audioEnabled;cfg.laneSensitivity=+cfg.laneSensitivity;cfg.laneWarnEnabled=+cfg.laneWarnEnabled;cfg.signEnabled=+cfg.signEnabled;cfg.cameraId=$('#cameraSelect').value||'';localStorage.setItem('toradash.cfg',JSON.stringify(cfg));$('#settingsModal').classList.remove('open');const needRestart=!!state.stream&&(old.cameraId!==cfg.cameraId||old.quality!==cfg.quality||old.audioEnabled!==cfg.audioEnabled),wasRecording=state.recording;if(needRestart){if(wasRecording)stopRecording();await new Promise(r=>setTimeout(r,180));await startCamera();if(wasRecording)setTimeout(startRecording,350)}if(+cfg.signEnabled&&!state.aiReady&&!state.aiFailed)ensureSignAI();else if(!+cfg.signEnabled)setSignAIStatus('CARTELLI: disattivati','');toast('Impostazioni salvate',true,1300)}
+function loadSettingsUI(){for(const id of ['quality','segmentSec','bufferMin','audioEnabled','signEnabled'])$('#'+id).value=String(cfg[id]);$('#cameraSelect').value=cfg.cameraId||''}
+async function saveSettings(){const old={cameraId:cfg.cameraId,quality:cfg.quality,audioEnabled:+cfg.audioEnabled};for(const id of ['quality','segmentSec','bufferMin','audioEnabled','signEnabled'])cfg[id]=$('#'+id).value;cfg.segmentSec=+cfg.segmentSec;cfg.bufferMin=+cfg.bufferMin;cfg.audioEnabled=+cfg.audioEnabled;cfg.signEnabled=+cfg.signEnabled;cfg.cameraId=$('#cameraSelect').value||'';localStorage.setItem('toradash.cfg',JSON.stringify(cfg));$('#settingsModal').classList.remove('open');const needRestart=!!state.stream&&(old.cameraId!==cfg.cameraId||old.quality!==cfg.quality||old.audioEnabled!==cfg.audioEnabled),wasRecording=state.recording;if(needRestart){if(wasRecording)stopRecording();await new Promise(r=>setTimeout(r,180));await startCamera();if(wasRecording)setTimeout(startRecording,350)}if(+cfg.signEnabled){setSignAIStatus('CARTELLI: ricerca attiva','ready');ensureOCR()}else setSignAIStatus('CARTELLI: disattivati','');toast('Impostazioni salvate',true,1300)}
 
-$('#startBtn').onclick=startCamera;$('#recBtn').onclick=()=>state.recording?stopRecording():startRecording();$('#protectBtn').onclick=protect;$('#snapBtn').onclick=snapshot;$('#settingsBtn').onclick=async()=>{await listCameras();loadSettingsUI();$('#settingsModal').classList.add('open')};$('#clipsBtn').onclick=()=>{$('#clipsModal').classList.add('open');renderClips()};$('#refreshClips').onclick=renderClips;$('#saveSettings').onclick=saveSettings;$('#calibrateBtn').onclick=calibrateLane;$('#testSignBtn').onclick=()=>{$('#settingsModal').classList.remove('open');setTimeout(()=>showSign({type:'speed',key:'TEST80_'+Date.now(),main:'80'}),120)};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).classList.remove('open'));document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+$('#startBtn').onclick=startCamera;$('#recBtn').onclick=()=>state.recording?stopRecording():startRecording();$('#protectBtn').onclick=protect;$('#snapBtn').onclick=snapshot;$('#settingsBtn').onclick=async()=>{await listCameras();loadSettingsUI();$('#settingsModal').classList.add('open')};$('#clipsBtn').onclick=()=>{$('#clipsModal').classList.add('open');renderClips()};$('#refreshClips').onclick=renderClips;$('#saveSettings').onclick=saveSettings;$('#testSignBtn').onclick=()=>{$('#settingsModal').classList.remove('open');setTimeout(()=>showSign({type:'speed',key:'TEST80_'+Date.now(),main:'80'}),120)};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).classList.remove('open'));document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'))});
-window.addEventListener('beforeunload',()=>{clearWatchMaybe();if(state.stream)state.stream.getTracks().forEach(t=>t.stop());try{state.aiVisionModel?.dispose?.();state.ocrWorker?.terminate?.()}catch{}});
+window.addEventListener('beforeunload',()=>{clearWatchMaybe();if(state.stream)state.stream.getTracks().forEach(t=>t.stop());try{state.ocrWorker?.terminate?.()}catch{}});
 (async()=>{try{state.db=await openDB()}catch(e){console.warn(e)}loadSettingsUI();if(!navigator.mediaDevices?.getUserMedia){$('#startBtn').disabled=true;$('#startBtn').textContent='BROWSER NON COMPATIBILE'}})();
 })();
 </script>
