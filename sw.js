@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.88 EVENT-CANONICAL-SYNC */
-const CACHE='ktn-v01688-event-canonical-sync';
+/* ToraNavy 0.16.89 FULL-ROUTE-EVENTS */
+const CACHE='ktn-v01689-full-route-events';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
