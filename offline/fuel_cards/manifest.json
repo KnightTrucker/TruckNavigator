@@ -1,19 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-08T08:09:36.552919+00:00",
+  "generatedAt": "2026-09-15T08:42:58.705437+00:00",
   "networks": {
     "dkv": {
-      "count": 77038,
+      "count": 77104,
       "source": "https://my.dkv-mobility.com/apidnext/geo-static-content-service/v1/station-network,zip/dkv_standard_gpx.zip"
-    },
-    "as24": {
-      "count": 3995,
-      "source": "https://network.as24.com/stationfinder/en/stations"
-    },
-    "shell": {
-      "count": 3392,
-      "source": "https://shellretaillocator.geoapp.me/api/v2/locations/within_bounds",
-      "coverage": "official-public-shell-network"
     }
   }
 }
