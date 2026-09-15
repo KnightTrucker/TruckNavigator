@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.89 FULL-ROUTE-EVENTS */
-const CACHE='ktn-v01689-full-route-events';
+/* ToraNavy 0.16.90 WEATHER-CANONICAL */
+const CACHE='ktn-v01690-weather-canonical';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
