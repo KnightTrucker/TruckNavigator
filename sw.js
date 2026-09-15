@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.86 ROOT-ASSETS */
-const CACHE='ktn-v01686-root-assets';
+/* ToraNavy 0.16.88 EVENT-CANONICAL-SYNC */
+const CACHE='ktn-v01688-event-canonical-sync';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
