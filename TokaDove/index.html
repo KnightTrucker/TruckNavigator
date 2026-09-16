@@ -175,7 +175,7 @@
       <h1>TOKA DOVE</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.2</div>
+    <div class="version">v0.3.1</div>
   </header>
 
   <section class="card">
@@ -220,8 +220,8 @@
             </select>
           </div>
           <div class="field">
-            <label>Chiave OpenRouteService</label>
-            <input id="orsKey" type="password" placeholder="Richiesta per HGV">
+            <label>OpenRouteService HGV</label>
+            <div class="status good" style="margin-top:0">✓ Chiave HGV integrata da ToraNavy</div>
           </div>
         </div>
         <div class="grid2" style="margin-top:10px">
@@ -481,7 +481,6 @@
   function saveSettings(){
     const data={
       engine:$('engine').value,
-      orsKey:$('orsKey').value,
       vehHeight:$('vehHeight').value,
       vehWidth:$('vehWidth').value,
       vehLength:$('vehLength').value,
@@ -516,8 +515,7 @@
   }
 
   async function routeORS(points){
-    const key=$('orsKey').value.trim();
-    if(!key) throw new Error('Per il percorso camion HGV inserisci la chiave OpenRouteService.');
+    const key='eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZkYTk5MTIyYWQ5ZTRhM2VhZTBmZjRmNGE2OTYyYTZlIiwiaCI6Im11cm11cjY0In0=';
     const body={
       coordinates:points.map(p=>[p.lon,p.lat]),
       preference:'recommended',
@@ -537,7 +535,7 @@
         }
       }
     };
-    const r=await fetch('https://api.openrouteservice.org/v2/directions/driving-hgv/geojson',{
+    const r=await fetch('https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson',{
       method:'POST',
       headers:{'Authorization':key,'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify(body)

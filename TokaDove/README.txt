@@ -1,13 +1,25 @@
-TOKA DOVE v0.2
-
-App autonoma e separata da ToraNavy.
-
-Modifica v0.2:
-- i parcheggi generici OpenStreetMap non vengono più considerati parcheggi camion;
-- amenity=parking e parking=layby richiedono hgv=yes oppure hgv=designated;
-- distributori inclusi solo se HGV esplicito;
-- highway=services e highway=rest_area restano disponibili come aree stradali;
-- i risultati indicano se il dato HGV è esplicitamente verificato in OSM.
+TOKA DOVE v0.3.1 CORRETTO
 
 File principale:
-tokadove.html
+index.html
+
+Questo pacchetto è stato rigenerato dall'ultima TOKA DOVE con:
+- chiave OpenRouteService HGV integrata da ToraNavy;
+- routing camion ORS driving-hgv;
+- partenza facoltativa: se vuota usa il GPS;
+- POI / indirizzo / coordinate;
+- tappe intermedie;
+- tempo di guida residuo;
+- finestra 20 / 30 / 40 km prima del punto teorico;
+- tolleranza +5 / +10 / +15 minuti;
+- filtro parcheggi camion con HGV esplicito;
+- aree di servizio / aree di sosta OSM;
+- mappa e ricerca soste.
+
+Per GitHub Pages caricare questi file nella stessa cartella:
+index.html
+manifest.webmanifest
+sw.js
+icon.svg
+
+NON è presente alcun tokadove.html.
