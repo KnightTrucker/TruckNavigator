@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.91 CANONICAL-TIME-WEATHER-HUB */
-const CACHE='ktn-v01691-canonical-time-weather-hub';
+/* ToraNavy 0.16.92 TIME-CALIBRATION-RESUME */
+const CACHE='ktn-v01692-time-calibration-resume';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
