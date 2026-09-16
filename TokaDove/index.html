@@ -278,7 +278,7 @@
       <h1>ToraDove</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.3.8</div>
+    <div class="version">v0.3.9</div>
   </header>
 
   <section class="card">
@@ -413,7 +413,7 @@
 
   <section id="resultsCard" class="card hidden">
     <h2>5 · Dove fermarti</h2>
-    <div class="subtitle">Le proposte vengono filtrate rispetto alla route. I parcheggi generici non vengono accettati: per i parcheggi e le piazzole è richiesta un’indicazione HGV esplicita in OpenStreetMap; aree di servizio e aree di sosta stradali restano ammesse e vengono identificate separatamente.</div>
+    <div class="subtitle">Mostro solo aree stradali OSM classificate come servizi/sosta oppure parcheggi con HGV esplicito. Escludo accessi privati, piazzali aziendali ambigui e semplici distributori.</div>
     <div id="results" class="results"></div>
   </section>
 
@@ -962,18 +962,154 @@
 
   function buildOverpassQuery(minLat,minLon,maxLat,maxLon){
     const box=`${minLat},${minLon},${maxLat},${maxLon}`;
-    return `[out:json][timeout:30];
+    return `[out:json][timeout:25];
 (
-  nwr["amenity"="parking"]["hgv"="yes"](${box});
-  nwr["amenity"="parking"]["hgv"="designated"](${box});
   nwr["highway"="services"](${box});
   nwr["highway"="rest_area"](${box});
-  nwr["amenity"="fuel"]["hgv"="yes"](${box});
-  nwr["amenity"="fuel"]["hgv"="designated"](${box});
-  nwr["parking"="layby"]["hgv"="yes"](${box});
-  nwr["parking"="layby"]["hgv"="designated"](${box});
+  nwr["amenity"="parking"]["hgv"~"^(yes|designated)$"](${box});
+  nwr["parking"="layby"]["hgv"~"^(yes|designated)$"](${box});
 );
 out center tags;`;
+  }
+
+
+  function normTag(v){
+    return String(v==null?'':v).trim().toLowerCase();
+  }
+
+  function isRestrictedStopAccess(tags){
+    const bad=new Set(['private','no','customers','delivery','emergency','permit']);
+    return bad.has(normTag(tags.access)) ||
+           bad.has(normTag(tags.vehicle)) ||
+           bad.has(normTag(tags.motor_vehicle)) ||
+           normTag(tags.hgv)==='no';
+  }
+
+  function publicParkingEvidence(tags){
+    const access=normTag(tags.access);
+    if(['yes','permissive','designated'].includes(access)) return true;
+    if(tags['capacity:hgv']!=null || tags['parking:hgv']!=null) return true;
+    if(normTag(tags.truck_stop)==='yes') return true;
+    if(normTag(tags.toilets)==='yes' || normTag(tags.shower)==='yes') return true;
+    if(tags.maxstay!=null || tags.fee!=null || tags.supervised!=null) return true;
+    return false;
+  }
+
+  function looksLikeBusinessYard(name,tags){
+    const s=[
+      name,tags.name,tags.brand,tags.operator,tags.description,
+      tags.company,tags.office,tags.industrial
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    /* Usato SOLO per parking HGV ambigui senza evidenza di accesso pubblico.
+       Non viene applicato a highway=services/rest_area. */
+    return /\b(autogru|autotrasport|trasporti|logistica|logistik|spedition|spedizioni|warehouse|magazzin|deposito|depot|gru|crane|s\.?r\.?l\.?|s\.?n\.?c\.?|gmbh|sarl|sas|ltd)\b/i.test(s);
+  }
+
+  function classifyVerifiedStop(name,tags){
+    if(!tags || isRestrictedStopAccess(tags)) return null;
+
+    const hw=normTag(tags.highway);
+    const amenity=normTag(tags.amenity);
+    const parking=normTag(tags.parking);
+    const hgv=normTag(tags.hgv);
+
+    /* OSM highway=services/rest_area è già una classificazione stradale
+       specifica. La rifiutiamo soltanto se l'accesso/HGV è esplicitamente vietato. */
+    if(hw==='services'){
+      return {
+        kind:'service',
+        label:'Area di servizio',
+        proof:hgv==='yes'||hgv==='designated' ? 'Area di servizio OSM · HGV esplicito' : 'Area di servizio OSM'
+      };
+    }
+
+    if(hw==='rest_area'){
+      return {
+        kind:'rest',
+        label:'Area di sosta',
+        proof:hgv==='yes'||hgv==='designated' ? 'Area di sosta OSM · HGV esplicito' : 'Area di sosta stradale OSM'
+      };
+    }
+
+    /* Parcheggi: qui l'HGV deve essere ESPLICITO. */
+    if((amenity==='parking' || parking==='layby') && (hgv==='yes'||hgv==='designated')){
+      const publicEvidence=publicParkingEvidence(tags);
+
+      /* hgv=designated è forte; hgv=yes senza altri dati è più ambiguo.
+         Se sembra un piazzale aziendale e non c'è evidenza pubblica, lo escludiamo. */
+      if(looksLikeBusinessYard(name,tags) && !publicEvidence) return null;
+      if(hgv==='yes' && !publicEvidence) return null;
+
+      return {
+        kind:parking==='layby' ? 'layby' : 'hgv_parking',
+        label:parking==='layby' ? 'Piazzola camion' : 'Parcheggio camion',
+        proof:`HGV=${hgv}${publicEvidence?' · accesso/servizi pubblici confermati':''}`
+      };
+    }
+
+    return null;
+  }
+
+  async function overpassRequest(endpoint,query,method='POST'){
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),16000);
+    try{
+      const opts={
+        method,
+        signal:ctrl.signal,
+        cache:'no-store',
+        headers:{'Accept':'application/json'}
+      };
+      let url=endpoint;
+
+      if(method==='POST'){
+        opts.headers['Content-Type']='application/x-www-form-urlencoded;charset=UTF-8';
+        opts.body='data='+encodeURIComponent(query);
+      }else{
+        url=endpoint+'?data='+encodeURIComponent(query);
+      }
+
+      const r=await fetch(url,opts);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      if(!j || !Array.isArray(j.elements)) throw new Error('Risposta OSM non valida');
+      return j;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
+  async function fetchOverpassWithFallback(query){
+    const endpoints=[
+      'https://overpass.private.coffee/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+    ];
+    const errors=[];
+
+    for(let i=0;i<endpoints.length;i++){
+      const ep=endpoints[i];
+      if($('results')){
+        $('results').innerHTML=
+          `<div class="empty">Cerco soste camion verificate · server OSM ${i+1}/${endpoints.length}…</div>`;
+      }
+
+      /* Prima POST, poi GET sullo stesso server: alcuni proxy mobili
+         gestiscono uno dei due metodi meglio dell'altro. */
+      for(const method of ['POST','GET']){
+        try{
+          return await overpassRequest(ep,query,method);
+        }catch(e){
+          errors.push(`${i+1}/${method}: ${e?.name==='AbortError'?'timeout':(e?.message||'errore rete')}`);
+        }
+      }
+    }
+
+    throw new Error(
+      'I server OpenStreetMap per le soste non stanno rispondendo. '+
+      'Riprova tra poco. ('+errors.slice(-3).join(' · ')+')'
+    );
   }
 
   async function searchStopsNearRoute(route,target,beforeMeters,afterMeters){
@@ -988,13 +1124,7 @@ out center tags;`;
     const minLat=Math.min(...lats)-margin,maxLat=Math.max(...lats)+margin;
     const minLon=Math.min(...lons)-margin,maxLon=Math.max(...lons)+margin;
     const q=buildOverpassQuery(minLat,minLon,maxLat,maxLon);
-    const r=await fetch('https://overpass-api.de/api/interpreter',{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-      body:'data='+encodeURIComponent(q)
-    });
-    if(!r.ok) throw new Error(`Ricerca soste non disponibile (${r.status}).`);
-    const j=await r.json();
+    const j=await fetchOverpassWithFallback(q);
     const raw=(j.elements||[]).map(x=>{
       const lat=x.lat??x.center?.lat,lon=x.lon??x.center?.lon;
       if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
@@ -1007,10 +1137,18 @@ out center tags;`;
         tags.ref ||
         (tags.highway==='services'?'Area di servizio':
          tags.highway==='rest_area'?'Area di sosta':
-         tags.amenity==='fuel'?'Stazione di servizio HGV':
          tags.parking==='layby'?'Piazzola camion':
          tags.amenity==='parking'?'Parcheggio camion':'Sosta camion');
-      return {lat,lon,name,tags,id:`${x.type}/${x.id}`};
+
+      const verified=classifyVerifiedStop(name,tags);
+      if(!verified)return null;
+
+      return {
+        lat,lon,name,tags,id:`${x.type}/${x.id}`,
+        stopKind:verified.kind,
+        stopLabel:verified.label,
+        stopProof:verified.proof
+      };
     }).filter(Boolean);
 
     const seen=new Map();
@@ -1022,7 +1160,7 @@ out center tags;`;
     const projected=[];
     for(const p of seen.values()){
       const near=nearestOnTimeline(p,route.timeline);
-      if(near.offRoute>10000) continue; // max ~10 km from route
+      if(near.offRoute>5000) continue; // max 5 km laterali dalla route
       if(near.distance<fromD-1500 || near.distance>toD+1500) continue;
       const delta=near.distance-target.distance;
       projected.push({...p,routeDistance:near.distance,routeTime:near.time,offRoute:near.offRoute,delta});
@@ -1039,24 +1177,25 @@ out center tags;`;
     return tags.hgv==='yes' || tags.hgv==='designated';
   }
 
-  function typeLabel(tags){
-    if(tags.highway==='services')return isExplicitHgv(tags) ? 'Area di servizio · HGV' : 'Area di servizio';
-    if(tags.highway==='rest_area')return isExplicitHgv(tags) ? 'Area di sosta · HGV' : 'Area di sosta';
-    if(tags.amenity==='fuel')return 'Carburante · HGV';
-    if(tags.parking==='layby')return 'Piazzola · HGV';
-    if(tags.amenity==='parking')return 'Parcheggio camion · HGV';
-    return 'Sosta';
+  function typeLabel(tags,stopLabel){
+    return stopLabel || (
+      tags.highway==='services' ? 'Area di servizio' :
+      tags.highway==='rest_area' ? 'Area di sosta' :
+      tags.parking==='layby' ? 'Piazzola camion' :
+      tags.amenity==='parking' ? 'Parcheggio camion' :
+      'Sosta'
+    );
   }
 
-  function facilityText(tags){
+  function facilityText(tags,proof){
     const a=[];
-    if(tags.hgv==='yes'||tags.hgv==='designated')a.push('HGV verificato OSM');
-    else if(tags.highway==='services'||tags.highway==='rest_area')a.push('Area stradale OSM');
+    if(proof)a.push(proof);
     if(tags.toilets==='yes')a.push('WC');
     if(tags.shower==='yes')a.push('Docce');
     if(tags.restaurant==='yes')a.push('Ristorante');
     if(tags.shop==='yes')a.push('Negozio');
     if(tags.fee==='yes')a.push('A pagamento');
+    if(tags.lit==='yes')a.push('Illuminato');
     return a.join(' · ');
   }
 
@@ -1073,12 +1212,12 @@ out center tags;`;
       else if(secDiff>overSec){cls='late';label='OLTRE TOLLERANZA'}
       const rel=p.delta<=0?`${fmtKm(Math.abs(p.delta))} prima del punto`:`${fmtKm(p.delta)} dopo il punto`;
       const dev=p.offRoute<800?'sulla route':`~${fmtKm(p.offRoute)} dalla route`;
-      const extra=facilityText(p.tags);
+      const extra=facilityText(p.tags,p.stopProof);
       return `<div class="result">
         <div class="resultTop">
           <div>
             <div class="resultName">${esc(p.name)}</div>
-            <div class="small muted">${esc(typeLabel(p.tags))}</div>
+            <div class="small muted">${esc(typeLabel(p.tags,p.stopLabel))}</div>
           </div>
           <span class="badge ${cls}">${label}</span>
         </div>
@@ -1124,7 +1263,7 @@ out center tags;`;
       });
       const m=L.marker([p.lat,p.lon],{icon})
         .addTo(state.map)
-        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(typeLabel(p.tags))}`)
+        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(typeLabel(p.tags,p.stopLabel))}`)
         .bindTooltip(esc(p.name),{
           permanent:true,
           direction:'top',
