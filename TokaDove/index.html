@@ -175,7 +175,7 @@
       <h1>TOKA DOVE</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.3.1</div>
+    <div class="version">v0.3.2</div>
   </header>
 
   <section class="card">
@@ -215,8 +215,8 @@
           <div class="field">
             <label>Motore percorso</label>
             <select id="engine">
-              <option value="ors">OpenRouteService HGV · camion</option>
-              <option value="osrm">OSRM pubblico · auto/fallback</option>
+              <option value="ors">OpenRouteService HGV · CAMION</option>
+              <option value="osrm">OSRM pubblico · AUTO (solo prova)</option>
             </select>
           </div>
           <div class="field">
@@ -229,6 +229,7 @@
           <div class="field"><label>Larghezza (m)</label><input id="vehWidth" type="number" value="2.55" min="1" max="4" step=".05"></div>
           <div class="field"><label>Lunghezza (m)</label><input id="vehLength" type="number" value="16.50" min="2" max="30" step=".10"></div>
           <div class="field"><label>Peso totale (t)</label><input id="vehWeight" type="number" value="40" min="1" max="100" step=".5"></div>
+          <div class="field"><label>Carico asse max (t)</label><input id="vehAxle" type="number" value="11.5" min="1" max="30" step=".1"></div>
         </div>
       </div>
     </details>
@@ -485,6 +486,7 @@
       vehWidth:$('vehWidth').value,
       vehLength:$('vehLength').value,
       vehWeight:$('vehWeight').value,
+      vehAxle:$('vehAxle').value,
       beforeKm:$('beforeKm').value,
       allowOver:$('allowOver').checked,
       overMinutes:$('overMinutes').value
@@ -515,44 +517,68 @@
   }
 
   async function routeORS(points){
+    /* Stessa impostazione HGV di ToraNavy:
+       endpoint driving-hgv + profile_params.restrictions.
+       Nessun vehicle_type aggiuntivo dentro options. */
     const key='eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZkYTk5MTIyYWQ5ZTRhM2VhZTBmZjRmNGE2OTYyYTZlIiwiaCI6Im11cm11cjY0In0=';
+    const restrictions={
+      height:+$('vehHeight').value||4,
+      width:+$('vehWidth').value||2.55,
+      length:+$('vehLength').value||16.5,
+      weight:+$('vehWeight').value||40,
+      axleload:+$('vehAxle').value||11.5
+    };
     const body={
       coordinates:points.map(p=>[p.lon,p.lat]),
-      preference:'recommended',
-      units:'m',
       instructions:false,
-      geometry_simplify:false,
-      extra_info:['waytype'],
+      elevation:false,
       options:{
-        vehicle_type:'hgv',
         profile_params:{
-          restrictions:{
-            height:+$('vehHeight').value||4,
-            width:+$('vehWidth').value||2.55,
-            length:+$('vehLength').value||16.5,
-            weight:+$('vehWeight').value||40
-          }
+          restrictions
         }
       }
     };
-    const r=await fetch('https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson',{
-      method:'POST',
-      headers:{'Authorization':key,'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify(body)
-    });
+
+    let r;
+    try{
+      r=await fetch('https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':key,
+          'Accept':'application/json'
+        },
+        body:JSON.stringify(body)
+      });
+    }catch(e){
+      throw new Error('ORS HGV non raggiungibile: '+(e?.message||'errore di rete'));
+    }
+
     let j=null;
-    try{j=await r.json()}catch{}
-    if(!r.ok) throw new Error(j?.error?.message || j?.message || `OpenRouteService: errore ${r.status}`);
-    const f=j.features?.[0];
-    if(!f) throw new Error('OpenRouteService non ha restituito un percorso.');
-    const coords=f.geometry.coordinates.map(c=>({lon:c[0],lat:c[1]}));
-    const summary=f.properties.summary;
+    try{ j=await r.json(); }catch{}
+
+    if(!r.ok){
+      const detail =
+        j?.error?.message ||
+        j?.error ||
+        j?.message ||
+        `HTTP ${r.status}`;
+      throw new Error('ORS HGV: '+detail);
+    }
+
+    const f=j?.features?.[0];
+    const summary=f?.properties?.summary;
+    if(!f || !summary || !f.geometry?.coordinates?.length){
+      throw new Error('ORS HGV non ha restituito un percorso valido.');
+    }
+
+    const coords=f.geometry.coordinates.map(c=>({lon:+c[0],lat:+c[1]}));
     return {
       source:'ORS HGV',
       coords,
-      distance:summary.distance,
-      duration:summary.duration,
-      timeline:buildDistanceTimeline(coords,summary.distance,summary.duration)
+      distance:+summary.distance||0,
+      duration:+summary.duration||0,
+      timeline:buildDistanceTimeline(coords,+summary.distance||0,+summary.duration||0)
     };
   }
 
@@ -682,14 +708,11 @@
       const points=await buildPoints();
       const engine=$('engine').value;
       let route;
-      try{
-        route=engine==='ors'?await routeORS(points):await routeOSRM(points);
-      }catch(e){
-        if(engine==='ors'){
-          setStatus(`${e.message} Provo il fallback OSRM (non camion)…`,'warn');
-          route=await routeOSRM(points);
-          route.warning='ATTENZIONE: fallback OSRM non specifico per camion.';
-        }else throw e;
+      if(engine==='ors'){
+        route=await routeORS(points);
+      }else{
+        route=await routeOSRM(points);
+        route.warning='ATTENZIONE: OSRM è un percorso auto/manuale, non specifico per camion.';
       }
       state.route=route;state.target=null;state.places=[];
       $('summaryCard').classList.add('hidden');
