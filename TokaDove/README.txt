@@ -1,18 +1,13 @@
-ToraDove v0.4.3 - REAL TORA TITLE
+ToraDove v0.4.4
 
-Titolo:
-- stemma araldico reale ricavato dal riferimento ToraNavy fornito;
-- wordmark centrale ToraDove:
-  Tora argento / Dove blu elettrico;
-- linea luminosa inferiore;
-- blocco reale POWERED BY ANDREA ZOLLET a destra;
-- eliminato completamente il falso scudetto D/coroncina.
+Modifiche UI:
+- ombreggiature / pannelli secondari portati sul blu;
+- dropdown suggerimenti blu, non più verde;
+- più spazio sotto "+ Aggiungi tappa";
+- "Impostazioni percorso camion" rinominato in "IMPOSTAZIONI CAMION";
+- freccia summary sostituita da badge/camionino blu vicino al testo;
+- più spazio sotto il titolo della sezione impostazioni.
 
-Restano:
-- testo normale ingrandito;
-- A/B blu elettrico;
-- footer rimosso;
-- motore soste v0.4.1;
-- routing ORS HGV.
-
-File principale: index.html
+Ricerca soste:
+- endpoint Overpass aggiuntivi e timeout più larghi;
+- messaggio errore più chiaro quando i server OSM non rispondono.

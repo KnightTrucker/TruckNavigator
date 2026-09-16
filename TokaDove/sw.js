@@ -1,4 +1,4 @@
-const CACHE='toradove-v0.4.3-real-title';
+const CACHE='toradove-v0.4.4-blue-truck-ui';
 const SHELL=[
   './',
   './index.html',

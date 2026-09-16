@@ -382,23 +382,27 @@
     }
     .suggestions{
       position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:900;
-      background:#0f1f17;border:1px solid #365b45;border-radius:12px;overflow:auto;
-      max-height:230px;box-shadow:var(--shadow)
+      background:#0c1831;border:1px solid #2f63a8;border-radius:12px;overflow:auto;
+      max-height:230px;box-shadow:0 10px 24px rgba(9,87,255,.22)
     }
-    .suggestion{padding:9px 10px;border-bottom:1px solid #243c2f;cursor:pointer;font-size:12px;line-height:1.35}
+    .suggestion{padding:9px 10px;border-bottom:1px solid #1d3f73;cursor:pointer;font-size:12px;line-height:1.35}
     .suggestion:last-child{border:0}
-    .suggestion:hover{background:#193024}
-    .coords{font-size:10px;color:#73927c;margin-top:2px}
-    .fieldHelp{font-size:10px;color:#71897a;line-height:1.35}
-    .divider{height:1px;background:#254031;margin:12px 0}
+    .suggestion:hover{background:#12315d}
+    .coords{font-size:10px;color:#84b9ff;margin-top:2px}
+    .fieldHelp{font-size:10px;color:#8db6e8;line-height:1.35}
+    .divider{height:1px;background:#254f86;margin:12px 0}
 
     .switch{display:flex;align-items:center;gap:8px;min-height:42px}
-    .switch input{width:18px;height:18px;accent-color:#83e88d}
-    .switch label{font-size:12px;color:#d1e1d5}
+    .switch input{width:18px;height:18px;accent-color:#39bfff}
+    .switch label{font-size:12px;color:#d6e8ff}
 
-    details{margin-top:10px}
-    summary{cursor:pointer;color:#cce4d2;font-size:12px}
-    details .inside{padding-top:10px}
+    details{margin-top:18px}
+    summary{cursor:pointer;color:#d8ebff;font-size:12px}
+    details .inside{padding-top:16px}
+    .truckSummary{display:flex;align-items:center;gap:10px;color:#e4f2ff!important;font-weight:700!important;letter-spacing:.2px;text-transform:uppercase}
+    .truckSummary .truckBadge{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(145deg,#79ecff 0%,#22a8ff 42%,#1458ff 100%);border:1px solid #8aeaff;color:#04172c;font-size:15px;box-shadow:0 6px 16px rgba(25,114,255,.28), inset 0 1px 0 rgba(255,255,255,.34)}
+    .truckSummary .truckText{display:inline-block;transform:translateY(1px)}
+
 
     .status{
       margin-top:10px;padding:10px 12px;border-radius:12px;
@@ -409,13 +413,13 @@
     .status.bad{border-color:#78423b;color:#ffc5bf}
 
     .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-    .stat{padding:10px;border:1px solid #284737;border-radius:14px;background:#0c1912}
+    .stat{padding:10px;border:1px solid #2d5f9f;border-radius:14px;background:#0d1b34}
     .stat span{display:block;font-size:10px;color:var(--muted)}
     .stat b{display:block;font-size:18px;margin-top:3px}
 
     .target{
-      margin-top:10px;padding:12px;border:1px solid #4d7b59;border-radius:15px;
-      background:linear-gradient(135deg,#102a1b,#173823)
+      margin-top:10px;padding:12px;border:1px solid #3b76c8;border-radius:15px;
+      background:linear-gradient(135deg,#102445,#17315d)
     }
     .target strong{color:var(--green2)}
     .target .big{font-size:19px;font-weight:850;margin:4px 0}
@@ -438,12 +442,12 @@
     .resultTop{display:flex;justify-content:space-between;align-items:flex-start;gap:9px}
     .resultName{font-weight:800;line-height:1.2}
     .badge{font-size:10px;font-weight:850;border-radius:999px;padding:4px 8px;white-space:nowrap}
-    .before{background:#1e4c2d;color:#c0fac8}
+    .before{background:#103d6d;color:#d8f3ff}
     .tolerance{background:#5b4a18;color:#ffe794}
     .late{background:#542a26;color:#ffbdb6}
     .meta{font-size:11px;color:var(--muted);line-height:1.5}
     .empty{padding:18px;text-align:center;color:#a8c8ea;font-size:12px;border:1px dashed #325f9b;border-radius:14px}
-    .footer{text-align:center;color:#7ea3d3;font-size:10px;padding:12px 5px}
+    .footer{text-align:center;color:#7ea3d3;font-size:10px;padding:12px 5px;display:none}
 
     .map-stop-label{
       background:rgba(10,22,43,.96)!important;
@@ -499,7 +503,7 @@
       <img src="./powered_by_az.png" alt="Powered by Andrea Zollet">
     </div>
 
-    <div class="version">v0.4.3</div>
+    <div class="version">v0.4.4</div>
   </header>
 
   <section class="card">
@@ -527,12 +531,12 @@
       </div>
     </div>
 
-    <div class="row" style="margin-top:11px">
+    <div class="row" style="margin-top:14px;margin-bottom:18px">
       <button class="btn soft mini" id="addWaypointBtn">+ Aggiungi tappa</button>
     </div>
 
     <details>
-      <summary>Impostazioni percorso camion</summary>
+      <summary class="truckSummary"><span class="truckBadge">🚚</span><span class="truckText">IMPOSTAZIONI CAMION</span></summary>
       <div class="inside">
         <div class="grid2">
           <div class="field">
@@ -1336,6 +1340,7 @@
        Evita la vecchia catena 3 server x POST/GET che poteva durare troppo. */
     const primary=[
       'https://overpass-api.de/api/interpreter',
+      'https://lz4.overpass-api.de/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter'
     ];
 
@@ -1344,13 +1349,16 @@
     }
 
     try{
-      return await Promise.any(primary.map(ep=>overpassRequest(ep,query,8500)));
+      return await Promise.any(primary.map(ep=>overpassRequest(ep,query,12000)));
     }catch(firstErr){
       /* Un solo fallback finale. */
       try{
-        return await overpassRequest('https://overpass.private.coffee/api/interpreter',query,7000);
+        return await Promise.any([
+          overpassRequest('https://overpass.private.coffee/api/interpreter',query,10000),
+          overpassRequest('https://z.overpass-api.de/api/interpreter',query,10000)
+        ]);
       }catch(e){
-        throw new Error('I server OpenStreetMap per le soste non stanno rispondendo. Riprova tra poco.');
+        throw new Error('I server OpenStreetMap usati per cercare aree di servizio e parcheggi camion non hanno risposto in tempo o hanno rifiutato la richiesta. Riprova tra poco.');
       }
     }
   }
