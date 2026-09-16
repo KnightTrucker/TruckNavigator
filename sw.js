@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.92 TIME-CALIBRATION-RESUME */
-const CACHE='ktn-v01692-time-calibration-resume';
+/* ToraNavy 0.16.93 FULL-ITINERARY-TIME */
+const CACHE='ktn-v01693-full-itinerary-time';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
