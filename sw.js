@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.95 STOP-SEARCH-PARITY */
-const CACHE='ktn-v01695-stop-search-parity';
+/* ToraNavy 0.16.96 GUIDANCE-MODEL */
+const CACHE='ktn-v01696-guidance-model';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
