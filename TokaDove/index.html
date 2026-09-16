@@ -175,7 +175,7 @@
       <h1>TOKA DOVE</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.3.2</div>
+    <div class="version">v0.3.3</div>
   </header>
 
   <section class="card">
@@ -519,7 +519,8 @@
   async function routeORS(points){
     /* Stessa impostazione HGV di ToraNavy:
        endpoint driving-hgv + profile_params.restrictions.
-       Nessun vehicle_type aggiuntivo dentro options. */
+       Nessun vehicle_type aggiuntivo dentro options.
+       NON forzare Accept: application/json sull'endpoint /geojson. */
     const key='eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZkYTk5MTIyYWQ5ZTRhM2VhZTBmZjRmNGE2OTYyYTZlIiwiaCI6Im11cm11cjY0In0=';
     const restrictions={
       height:+$('vehHeight').value||4,
@@ -545,8 +546,7 @@
         method:'POST',
         headers:{
           'Content-Type':'application/json',
-          'Authorization':key,
-          'Accept':'application/json'
+          'Authorization':key
         },
         body:JSON.stringify(body)
       });
@@ -560,10 +560,10 @@
     if(!r.ok){
       const detail =
         j?.error?.message ||
-        j?.error ||
         j?.message ||
+        (typeof j?.error === 'string' ? j.error : '') ||
         `HTTP ${r.status}`;
-      throw new Error('ORS HGV: '+detail);
+      throw new Error(`ORS HGV HTTP ${r.status}: ${detail}`);
     }
 
     const f=j?.features?.[0];
