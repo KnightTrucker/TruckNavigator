@@ -1,18 +1,18 @@
-ToraDove v0.4.6 - SEMANTIC MAP
+ToraDove v0.4.7 — TRUCK TIME + STOPS
 
-CORREZIONE MAPPA:
-- route Leaflet rossa;
-- il punto teorico e le soste NON dipendono più dai marker Leaflet;
-- overlay DOM indipendente e ancorato al riquadro mappa;
-- overlay aggiornato a ogni pan, zoom e resize;
-- punto teorico: giallo + etichetta PUNTO TEORICO;
-- soste prima del limite: azzurro + numero + nome;
-- soste in tolleranza: arancio + numero + nome;
-- i numeri corrispondono alla lista "Dove fermarti";
-- "Mostra sulla mappa" centra e fa pulsare il marker;
-- drawRoute(false) evita il vecchio fitBounds asincrono che poteva cambiare inquadratura.
+TEMPO CAMION
+- ORS driving-hgv resta autorità geometrica e legale.
+- ORS richiesto con instructions=true.
+- Timeline costruita dalle duration reali degli step ORS (way_points), non più tempo uniforme per km.
+- Se nello stesso origin è presente la chiave TomTom di ToraNavy (ktn57_tomtom_api_key), viene richiesta una route truck no-traffic con peso/assi/dimensioni reali.
+- Il tempo TomTom viene usato solo se distanza e corridoio sono coerenti con ORS HGV; gli step ORS vengono scalati al totale canonico.
+- Se TomTom non è disponibile, resta ORS HGV ma con timeline step-by-step corretta.
 
-ICONA:
-- icona ToraDove fucsia approvata mantenuta in icon-192.png e icon-512.png.
+RICERCA SOSTE
+- eliminata query Overpass a 28 scansioni around;
+- una sola bbox stretta sulla finestra utile della route;
+- tre endpoint in parallelo, timeout 15 s;
+- cache 5 minuti;
+- se Overpass fallisce, punto teorico e mappa restano comunque visibili e validi.
 
 File principale: index.html

@@ -635,7 +635,7 @@
       <img src="./powered_by_az.png" alt="Powered by Andrea Zollet">
     </div>
 
-    <div class="version">v0.4.6</div>
+    <div class="version">v0.4.7</div>
   </header>
 
   <section class="card">
@@ -794,6 +794,7 @@
     semanticOverlay:null,
     semanticData:null,
     semanticNodes:[],
+    stopCache:new Map(),
     userGps:null
   };
 
@@ -1022,7 +1023,8 @@
     };
     const body={
       coordinates:points.map(p=>[p.lon,p.lat]),
-      instructions:false,
+      instructions:true,
+      instructions_format:'text',
       elevation:false,
       options:{
         profile_params:{
@@ -1064,13 +1066,117 @@
     }
 
     const coords=f.geometry.coordinates.map(c=>({lon:+c[0],lat:+c[1]}));
+    const orsDuration=+summary.duration||0;
+    const distance=+summary.distance||0;
+
+    /* ToraNavy 0.16.91: ORS HGV resta l'autorità geometrica/legale.
+       Se la chiave TomTom Truck già usata da ToraNavy è presente nello stesso
+       origin GitHub Pages, usiamo il suo tempo NO-TRAFFIC solo come baseline
+       temporale, dopo controllo di coerenza del corridoio. */
+    const calibrated=await calibrateTruckDuration(points,coords,distance,orsDuration).catch(()=>null);
+    const canonicalDuration=calibrated?.duration||orsDuration;
+    const timeSource=calibrated?.source||'ORS HGV';
+
     return {
       source:'ORS HGV',
+      timeSource,
       coords,
-      distance:+summary.distance||0,
-      duration:+summary.duration||0,
-      timeline:buildDistanceTimeline(coords,+summary.distance||0,+summary.duration||0)
+      distance,
+      duration:canonicalDuration,
+      orsDuration,
+      timeline:buildOrsStepTimeline(coords,f.properties,canonicalDuration),
+      timeCalibration:calibrated||null
     };
+  }
+
+  function toraTomTomKey(){
+    try{return String(localStorage.getItem('ktn57_tomtom_api_key')||'').trim()}catch(e){return''}
+  }
+
+  function vehicleRestrictions(){
+    return {
+      height:+$('vehHeight').value||4,
+      width:+$('vehWidth').value||2.55,
+      length:+$('vehLength').value||16.5,
+      weight:+$('vehWeight').value||40,
+      axleload:+$('vehAxle').value||11.5
+    };
+  }
+
+  function nearestRouteVertexDistance(p,coords){
+    let best=Infinity;
+    const step=Math.max(1,Math.floor(coords.length/900));
+    for(let i=0;i<coords.length;i+=step){
+      const d=hav(p,coords[i]);
+      if(d<best)best=d;
+    }
+    return best;
+  }
+
+  function tomTomRoutePoints(route){
+    const out=[];
+    (route?.legs||[]).forEach(leg=>{
+      (leg?.points||[]).forEach(p=>{
+        const q={lat:+p.latitude,lon:+p.longitude};
+        if(!Number.isFinite(q.lat)||!Number.isFinite(q.lon))return;
+        const z=out[out.length-1];
+        if(!z||Math.abs(z.lat-q.lat)>1e-7||Math.abs(z.lon-q.lon)>1e-7)out.push(q);
+      });
+    });
+    return out;
+  }
+
+  async function calibrateTruckDuration(points,orsCoords,orsDistance,orsDuration){
+    const key=toraTomTomKey();
+    if(!key)return null;
+
+    const v=vehicleRestrictions();
+    const loc=points.map(p=>`${(+p.lat).toFixed(6)},${(+p.lon).toFixed(6)}`).join(':');
+    const u='https://api.tomtom.com/routing/1/calculateRoute/'+loc+'/json';
+    const q=new URLSearchParams({
+      key,
+      routeType:'fastest',
+      traffic:'false',
+      travelMode:'truck',
+      vehicleWeight:String(Math.round(v.weight*1000)),
+      vehicleAxleWeight:String(Math.round(v.axleload*1000)),
+      vehicleLength:String(v.length),
+      vehicleWidth:String(v.width),
+      vehicleHeight:String(v.height),
+      vehicleCommercial:'true',
+      routeRepresentation:'polyline',
+      maxAlternatives:'0'
+    });
+
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),10000);
+    try{
+      const r=await fetch(u+'?'+q.toString(),{cache:'no-store',signal:ctrl.signal});
+      if(!r.ok)return null;
+      const j=await r.json();
+      const tt=j?.routes?.[0];
+      const s=tt?.summary||{};
+      const td=+s.travelTimeInSeconds, tm=+s.lengthInMeters;
+      if(!Number.isFinite(td)||td<=0||!Number.isFinite(orsDuration)||orsDuration<=0)return null;
+
+      /* Stesso gate dimensionale di ToraNavy: niente tempo TomTom se il corridoio
+         è palesemente diverso da quello ORS HGV. */
+      const dr=(Number.isFinite(tm)&&tm>0&&orsDistance>0)?orsDistance/tm:1;
+      const tr=td/orsDuration;
+      if(dr<.85||dr>1.15||tr<.50||tr>1.50)return null;
+
+      /* Controllo fisico aggiuntivo: almeno il 75% dei campioni TomTom deve stare
+         entro 2.5 km dalla geometria ORS HGV. */
+      const pts=tomTomRoutePoints(tt);
+      if(pts.length){
+        const n=Math.min(24,pts.length), sample=[];
+        for(let i=0;i<n;i++)sample.push(pts[Math.round(i*(pts.length-1)/Math.max(1,n-1))]);
+        const good=sample.filter(p=>nearestRouteVertexDistance(p,orsCoords)<=2500).length;
+        if(good/Math.max(1,sample.length)<.75)return null;
+      }
+
+      return {duration:td,source:'TomTom Truck · ORS HGV',distance:tm};
+    }finally{clearTimeout(timer)}
   }
 
   async function routeOSRM(points){
@@ -1107,6 +1213,71 @@
       time += Number.isFinite(+durs[i-1]) ? +durs[i-1] : 0;
       out.push({...coords[i],distance:dist,time});
     }
+    return out;
+  }
+
+  function buildOrsStepTimeline(coords,properties,canonicalDuration){
+    const n=coords.length;
+    if(n<2)return buildDistanceTimeline(coords,+properties?.summary?.distance||0,canonicalDuration||0);
+
+    const edgeDist=new Array(n-1).fill(0);
+    for(let i=0;i<n-1;i++)edgeDist[i]=hav(coords[i],coords[i+1]);
+
+    const edgeTime=new Array(n-1).fill(0);
+    const touched=new Array(n-1).fill(false);
+    const segments=Array.isArray(properties?.segments)?properties.segments:[];
+
+    segments.forEach(seg=>{
+      (Array.isArray(seg?.steps)?seg.steps:[]).forEach(st=>{
+        const wp=st?.way_points;
+        if(!Array.isArray(wp)||wp.length<2)return;
+        let a=Math.max(0,Math.min(n-2,Math.floor(+wp[0]||0)));
+        let b=Math.max(a+1,Math.min(n-1,Math.floor(+wp[1]||a+1)));
+        const dur=+st.duration;
+        if(!Number.isFinite(dur)||dur<0)return;
+        let sum=0;
+        for(let i=a;i<b;i++)sum+=edgeDist[i];
+        for(let i=a;i<b;i++){
+          const frac=sum>0?edgeDist[i]/sum:1/Math.max(1,b-a);
+          edgeTime[i]+=dur*frac;
+          touched[i]=true;
+        }
+      });
+    });
+
+    const orsTotal=+properties?.summary?.duration||0;
+    const assigned=edgeTime.reduce((a,b)=>a+b,0);
+    const avgSecPerM=(orsTotal>0&&(+properties?.summary?.distance||0)>0)
+      ? orsTotal/(+properties.summary.distance)
+      : (assigned>0 ? assigned/Math.max(1,edgeDist.reduce((a,b)=>a+b,0)) : 0);
+
+    for(let i=0;i<edgeTime.length;i++){
+      if(!touched[i]||edgeTime[i]<=0)edgeTime[i]=edgeDist[i]*avgSecPerM;
+    }
+
+    let rawTotal=edgeTime.reduce((a,b)=>a+b,0);
+    if(!(rawTotal>0))return buildDistanceTimeline(coords,+properties?.summary?.distance||0,canonicalDuration||orsTotal);
+
+    const target=(Number.isFinite(+canonicalDuration)&&+canonicalDuration>0)?+canonicalDuration:rawTotal;
+    const scale=target/rawTotal;
+    let dist=0,time=0;
+    const totalMeasured=edgeDist.reduce((a,b)=>a+b,0);
+    const totalDist=+properties?.summary?.distance||totalMeasured;
+    const out=[{...coords[0],distance:0,time:0}];
+
+    for(let i=1;i<n;i++){
+      dist+=edgeDist[i-1];
+      time+=edgeTime[i-1]*scale;
+      out.push({
+        ...coords[i],
+        distance:totalMeasured>0?(dist/totalMeasured)*totalDist:dist,
+        time
+      });
+    }
+
+    /* Chiusura numerica esatta sul totale canonico. */
+    out[out.length-1].distance=totalDist;
+    out[out.length-1].time=target;
     return out;
   }
 
@@ -1405,7 +1576,7 @@
       $('mapCard').classList.remove('hidden');
       drawRoute();
       $('targetBtn').disabled=false;
-      setStatus(`Percorso pronto · ${fmtKm(route.distance)} · ${fmtTime(route.duration)} · ${route.source}${route.warning?' · '+route.warning:''}`,route.warning?'warn':'good');
+      setStatus(`Percorso pronto · ${fmtKm(route.distance)} · ${fmtTime(route.duration)} · ${route.source}${route.timeSource&&route.timeSource!==route.source?' · tempo '+route.timeSource:''}${route.warning?' · '+route.warning:''}`,route.warning?'warn':'good');
     }catch(e){
       console.error(e);setStatus(e.message||String(e),'bad');
     }finally{$('routeBtn').disabled=false}
@@ -1427,22 +1598,35 @@
     }catch{return null}
   }
 
-  function buildOverpassQuery(samples){
-    /* Query corridor: niente bounding box enorme.
-       Campioni lungo SOLO la finestra utile, come filosofia ToraNavy. */
-    const blocks=[];
-    const radius=4200;
-    (samples||[]).forEach(p=>{
-      if(!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lon))return;
-      const a=`(around:${radius},${p.lat.toFixed(6)},${p.lon.toFixed(6)})`;
-      blocks.push(
-        `nwr${a}["highway"="services"];`,
-        `nwr${a}["highway"="rest_area"];`,
-        `nwr${a}["amenity"="parking"]["hgv"~"^(yes|designated)$"];`,
-        `nwr${a}["parking"="layby"]["hgv"~"^(yes|designated)$"];`
-      );
+  function buildOverpassWindowQuery(route,fromD,toD){
+    const pts=[];
+    pts.push(pointAtDistance(route.timeline,fromD));
+    for(const p of route.timeline){
+      if(p.distance>=fromD&&p.distance<=toD)pts.push(p);
+    }
+    pts.push(pointAtDistance(route.timeline,toD));
+
+    if(!pts.length)throw new Error('Finestra route non disponibile.');
+
+    let minLat=90,maxLat=-90,minLon=180,maxLon=-180;
+    pts.forEach(p=>{
+      minLat=Math.min(minLat,p.lat);maxLat=Math.max(maxLat,p.lat);
+      minLon=Math.min(minLon,p.lon);maxLon=Math.max(maxLon,p.lon);
     });
-    return `[out:json][timeout:10];(${blocks.join('')});out center tags 120;`;
+
+    /* Padding ~2.2 km. Il filtro preciso 1.2/1.5 km resta locale. */
+    const midLat=(minLat+maxLat)/2*Math.PI/180;
+    const padLat=2200/111320;
+    const padLon=2200/(111320*Math.max(.25,Math.cos(midLat)));
+    const box=[minLat-padLat,minLon-padLon,maxLat+padLat,maxLon+padLon]
+      .map(x=>x.toFixed(6)).join(',');
+
+    return `[out:json][timeout:18];(
+      nwr["highway"="services"](${box});
+      nwr["highway"="rest_area"](${box});
+      nwr["amenity"="parking"]["hgv"~"^(yes|designated)$"](${box});
+      nwr["parking"="layby"]["hgv"~"^(yes|designated)$"](${box});
+    );out center tags 180;`;
   }
 
   function normTag(v){
@@ -1578,30 +1762,20 @@
   }
 
   async function fetchOverpassWithFallback(query){
-    /* Due server in parallelo: il primo che risponde vince.
-       Evita la vecchia catena 3 server x POST/GET che poteva durare troppo. */
-    const primary=[
+    const endpoints=[
       'https://overpass-api.de/api/interpreter',
-      'https://lz4.overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter'
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.private.coffee/api/interpreter'
     ];
 
     if($('results')){
-      $('results').innerHTML='<div class="empty">Cerco solo le soste realmente utili nella finestra selezionata…</div>';
+      $('results').innerHTML='<div class="empty">Cerco aree di servizio e parcheggi camion nella sola finestra utile…</div>';
     }
 
     try{
-      return await Promise.any(primary.map(ep=>overpassRequest(ep,query,12000)));
-    }catch(firstErr){
-      /* Un solo fallback finale. */
-      try{
-        return await Promise.any([
-          overpassRequest('https://overpass.private.coffee/api/interpreter',query,10000),
-          overpassRequest('https://z.overpass-api.de/api/interpreter',query,10000)
-        ]);
-      }catch(e){
-        throw new Error('I server OpenStreetMap usati per cercare aree di servizio e parcheggi camion non hanno risposto in tempo o hanno rifiutato la richiesta. Riprova tra poco.');
-      }
+      return await Promise.any(endpoints.map(ep=>overpassRequest(ep,query,15000)));
+    }catch(e){
+      throw new Error('Ricerca soste OSM temporaneamente non disponibile. La route e il punto teorico restano validi: riprova solo la ricerca soste tra poco.');
     }
   }
 
@@ -1685,15 +1859,25 @@
   async function searchStopsNearRoute(route,target,beforeMeters,afterMeters){
     const fromD=Math.max(0,target.distance-beforeMeters);
     const toD=Math.min(route.distance,target.distance+afterMeters);
-    const span=Math.max(1,toD-fromD);
+    const cacheKey=[
+      Math.round(route.distance/500),
+      Math.round(fromD/500),
+      Math.round(toD/500),
+      route.coords?.[0]?.lat?.toFixed(3),
+      route.coords?.[0]?.lon?.toFixed(3),
+      route.coords?.[route.coords.length-1]?.lat?.toFixed(3),
+      route.coords?.[route.coords.length-1]?.lon?.toFixed(3)
+    ].join('|');
 
-    /* Massimo ~7 campioni anche con finestra 40 km. */
-    const sampleStep=Math.max(7000,span/6);
-    const samples=[];
-    for(let d=fromD;d<=toD;d+=sampleStep)samples.push(pointAtDistance(route.timeline,d));
-    samples.push(pointAtDistance(route.timeline,toD));
+    const cached=state.stopCache.get(cacheKey);
+    if(cached && Date.now()-cached.at<5*60*1000){
+      return cached.rows.map(x=>({...x,tags:{...(x.tags||{})}}));
+    }
 
-    const q=buildOverpassQuery(samples);
+    /* Una sola query compatta sul rettangolo della porzione di route utile.
+       Il vecchio motore ripeteva 4 query attorno a ~7 campioni (fino a 28
+       scansioni Overpass nella stessa richiesta), causa dei timeout. */
+    const q=buildOverpassWindowQuery(route,fromD,toD);
     const j=await fetchOverpassWithFallback(q);
 
     const raw=(j.elements||[]).map(x=>{
@@ -1778,6 +1962,7 @@
 
     /* Un ultimo controllo sul nome risolto. */
     selected=selected.filter(p=>!suspiciousStopName(p.name,p.tags||{}));
+    state.stopCache.set(cacheKey,{at:Date.now(),rows:selected.map(x=>({...x,tags:{...(x.tags||{})}}))});
     return selected;
   }
 
@@ -1925,11 +2110,23 @@
       });
 
       $('results').innerHTML='<div class="empty">Cerco le migliori soste camion nella finestra selezionata…</div>';
-      const stops=await searchStopsNearRoute(state.route,target,beforeM,afterMeters);
+      let stops=[];
+      let stopError=null;
+      try{
+        stops=await searchStopsNearRoute(state.route,target,beforeM,afterMeters);
+      }catch(e){
+        stopError=e;
+        console.warn('Ricerca soste:',e);
+      }
       state.places=stops;
 
+      /* Il punto teorico NON dipende dal successo di Overpass. */
       drawTargetAndStops(target,stops,effectiveTargetSec,overSec);
-      renderStops(stops,effectiveTargetSec,overSec);
+      if(stopError){
+        $('results').innerHTML=`<div class="empty">${esc(stopError.message||String(stopError))}</div>`;
+      }else{
+        renderStops(stops,effectiveTargetSec,overSec);
+      }
       await addrPromise;
     }catch(e){
       console.error(e);

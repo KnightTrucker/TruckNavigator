@@ -1,4 +1,4 @@
-const CACHE='toradove-v0.4.6-semantic-map';
+const CACHE='toradove-v0.4.7-truck-time-stops';
 const SHELL=[
   './',
   './index.html',
