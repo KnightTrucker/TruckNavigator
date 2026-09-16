@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.01 PORTRAIT-HUD-FIX */
-const CACHE='ktn-v01701-portrait-hud-fix';
+/* ToraNavy 0.17.02 OVERTAKE-RETIRED-COMPACT-SERVICES */
+const CACHE='ktn-v01702-overtake-retired-compact-services';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
