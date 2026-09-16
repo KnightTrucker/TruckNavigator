@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.96 GUIDANCE-MODEL */
-const CACHE='ktn-v01696-guidance-model';
+/* ToraNavy 0.16.98 LIMIT-SOURCE-TRUTH */
+const CACHE='ktn-v01698-limit-source-truth';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
