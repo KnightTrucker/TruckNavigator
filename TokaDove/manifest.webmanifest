@@ -4,14 +4,14 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#09110d",
-  "theme_color": "#163b2a",
-  "description": "ToraDove - trova aree di servizio e soste camion verificate lungo la route.",
+  "background_color": "#06101f",
+  "theme_color": "#0b4dff",
+  "description": "ToraDove - trova poche soste camion verificate vicino al punto teorico di fine guida.",
   "icons": [
     {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

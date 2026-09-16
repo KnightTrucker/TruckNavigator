@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#163b2a">
+  <meta name="theme-color" content="#0b4dff">
   <meta name="description" content="ToraDove - pianifica dove fermarti in base al tempo di guida residuo">
   <title>ToraDove</title>
 
@@ -19,19 +19,19 @@
   <style>
     :root{
       color-scheme:dark;
-      --bg:#09110d;
-      --panel:#101c16;
-      --panel2:#14251b;
-      --line:#284737;
-      --line2:#3b654c;
-      --text:#f1f7f2;
-      --muted:#9fb3a4;
-      --green:#83e88d;
-      --green2:#caff8a;
+      --bg:#06101f;
+      --panel:#0d1830;
+      --panel2:#132445;
+      --line:#1e4f8d;
+      --line2:#3f8df0;
+      --text:#f3f8ff;
+      --muted:#97b6dc;
+      --green:#39bfff;
+      --green2:#7fe4ff;
       --yellow:#ffd96a;
-      --red:#ff8378;
-      --blue:#8fd7ff;
-      --shadow:0 14px 36px rgba(0,0,0,.30);
+      --red:#ff8d97;
+      --blue:#7fd6ff;
+      --shadow:0 16px 40px rgba(0,0,0,.34);
     }
     *{box-sizing:border-box}
 
@@ -107,67 +107,278 @@
     .leaflet-control-zoom a:last-child{border-radius:0 0 4px 4px}
 
     html,body{margin:0;min-height:100%;background:
-      radial-gradient(circle at 100% 0,#183825 0,transparent 34%),
-      radial-gradient(circle at 0 15%,#13261b 0,transparent 28%),
-      var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+      radial-gradient(circle at 100% 0,rgba(27,112,255,.26) 0,transparent 33%),
+      radial-gradient(circle at 0 15%,rgba(27,202,255,.18) 0,transparent 30%),
+      linear-gradient(180deg,#071427 0%,#08111d 100%);
+      color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
     body{min-height:100vh}
     button,input,select{font:inherit}
     .app{max-width:1020px;margin:auto;padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
     .top{
-      display:flex;align-items:center;gap:12px;padding:7px 3px 12px;
-      position:sticky;top:0;z-index:500;
-      background:linear-gradient(180deg,rgba(9,17,13,.97),rgba(9,17,13,.88),transparent);
-      backdrop-filter:blur(7px)
+      display:flex;align-items:center;gap:14px;padding:14px 14px 16px;
+      position:sticky;top:0;z-index:500;border-radius:22px;
+      border:1px solid rgba(90,164,255,.42);
+      background:
+        linear-gradient(180deg,rgba(10,23,47,.97),rgba(9,18,36,.96)),
+        radial-gradient(circle at 10% 10%,rgba(52,189,255,.12),transparent 38%);
+      box-shadow:
+        0 10px 26px rgba(0,0,0,.30),
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 0 0 1px rgba(26,126,255,.10);
+      backdrop-filter:blur(9px)
     }
-    .brand{
-      width:48px;height:48px;display:grid;place-items:center;border-radius:15px;
-      background:linear-gradient(145deg,#a8ff9f,#4cac69);box-shadow:var(--shadow);
-      color:#0a2711;font-size:25px;font-weight:900;flex:none
+    .version{
+      margin-left:auto;color:#9ec8ff;font-size:11px;white-space:nowrap;font-weight:800;
+      padding:6px 10px;border-radius:999px;border:1px solid rgba(100,174,255,.35);
+      background:rgba(19,44,86,.72)
     }
-    .top h1{margin:0;font-size:25px;letter-spacing:.1px}
-    .top p{margin:2px 0 0;color:var(--muted);font-size:12px}
-    .version{margin-left:auto;color:#70907a;font-size:10px;white-space:nowrap}
+
+    
+    /* ===== Titolo ToraDove - vero layout serie Tora ===== */
+    .top.toraRealTitle{
+      min-height:104px;
+      display:grid;
+      grid-template-columns:112px minmax(0,1fr) 165px auto;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px 7px;
+      border-radius:21px;
+      border:1px solid rgba(65,145,255,.54);
+      background:
+        linear-gradient(180deg,rgba(2,8,19,.98),rgba(3,10,22,.98));
+      box-shadow:
+        0 10px 26px rgba(0,0,0,.36),
+        inset 0 1px 0 rgba(255,255,255,.035);
+      overflow:hidden;
+    }
+
+    .realCrest{
+      align-self:stretch;
+      min-width:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:visible;
+    }
+    .realCrest img{
+      width:108px;
+      height:96px;
+      object-fit:contain;
+      display:block;
+      filter:drop-shadow(0 5px 8px rgba(0,0,0,.36));
+    }
+
+    .realName{
+      min-width:0;
+      align-self:center;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      padding-top:2px;
+    }
+    .realWordmark{
+      display:flex;
+      align-items:baseline;
+      white-space:nowrap;
+      font-family:Impact,Haettenschweiler,"Arial Narrow Bold",Arial,sans-serif;
+      font-style:italic;
+      font-weight:900;
+      font-size:43px;
+      line-height:.92;
+      letter-spacing:-1.5px;
+      transform:skewX(-4deg);
+      transform-origin:left center;
+      -webkit-text-stroke:1px #071328;
+      filter:drop-shadow(0 4px 4px rgba(0,0,0,.42));
+    }
+    .wordTora{
+      background:linear-gradient(180deg,#ffffff 0%,#eef3f7 28%,#aeb8c5 63%,#f9fbff 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:
+        0 1px 0 rgba(255,255,255,.28),
+        0 3px 0 #1a2737;
+    }
+    .wordDove{
+      background:linear-gradient(180deg,#1de8ff 0%,#08bfff 34%,#0877ff 69%,#164cff 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:
+        0 0 10px rgba(0,170,255,.30),
+        0 3px 0 #081c4a;
+    }
+    .realUnderline{
+      height:3px;
+      width:96%;
+      margin:8px 0 0 2px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#23e3ff 0%,#08b7ff 32%,#125eff 72%,transparent 100%);
+      box-shadow:
+        0 0 8px rgba(0,174,255,.65),
+        0 0 18px rgba(20,99,255,.32);
+    }
+
+    .realPower{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .realPower img{
+      display:block;
+      width:160px;
+      height:88px;
+      object-fit:contain;
+      filter:drop-shadow(0 4px 7px rgba(0,0,0,.38));
+    }
+
+    .top.toraRealTitle .version{
+      align-self:start;
+      justify-self:end;
+      margin:0;
+      font-size:8px;
+      color:#6faee9;
+      background:transparent;
+      border:0;
+      padding:2px 0 0 2px;
+    }
+
+    @media(max-width:620px){
+      .top.toraRealTitle{
+        grid-template-columns:80px minmax(0,1fr) 105px;
+        min-height:88px;
+        gap:5px;
+        padding:4px 7px 5px;
+      }
+      .realCrest img{
+        width:78px;
+        height:80px;
+      }
+      .realWordmark{
+        font-size:31px;
+        letter-spacing:-1px;
+        -webkit-text-stroke:.8px #071328;
+      }
+      .realUnderline{
+        margin-top:6px;
+        height:2px;
+      }
+      .realPower img{
+        width:103px;
+        height:68px;
+      }
+      .top.toraRealTitle .version{
+        display:none;
+      }
+    }
+
+    /* Tutto il testo NON bold più grande e leggibile */
+    body{font-size:16px}
+    .subtitle,
+    label,
+    .fieldHelp,
+    .muted,
+    .small,
+    .meta,
+    .status,
+    .legend,
+    .footer,
+    .coords{
+      font-size:15px!important;
+      line-height:1.38!important;
+      font-weight:400!important;
+    }
+    input,select{
+      font-size:18px!important;
+      font-weight:400!important;
+    }
+    .card h2{
+      font-size:18px!important;
+    }
+    .resultName{
+      font-size:19px!important;
+    }
+    .badge{
+      font-size:13px!important;
+    }
+    details summary{
+      font-size:16px!important;
+      font-weight:400!important;
+    }
+    .btn{
+      font-size:16px;
+    }
+    .btn.primary{
+      font-size:18px;
+    }
+
+    /* A / B blu elettrico */
+    .step{
+      width:38px!important;height:38px!important;
+      background:linear-gradient(145deg,#79ecff 0%,#22a8ff 42%,#1458ff 100%)!important;
+      border:1px solid #8aeaff!important;
+      color:#04172c!important;
+      box-shadow:
+        0 6px 16px rgba(25,114,255,.34),
+        inset 0 1px 0 rgba(255,255,255,.34)!important;
+      font-size:18px!important;
+      font-weight:950!important;
+    }
+
+    @media(max-width:620px){
+      .top.toraTitle{
+        grid-template-columns:62px minmax(0,1fr) 50px;
+        min-height:82px;padding:9px 10px;
+      }
+      .top.toraTitle .version{display:none}
+    }
 
     .card{
-      margin:10px 0;padding:14px;border-radius:19px;
-      border:1px solid var(--line);
-      background:linear-gradient(180deg,rgba(20,37,27,.98),rgba(13,26,19,.98));
+      margin:12px 0;padding:14px;border-radius:22px;
+      border:1px solid rgba(59,125,214,.42);
+      background:linear-gradient(180deg,rgba(15,27,53,.98),rgba(10,20,39,.99));
       box-shadow:var(--shadow)
     }
-    .card h2{margin:0 0 11px;font-size:15px;color:#ddf0e2}
+    .card h2{margin:0 0 11px;font-size:15px;color:#ebf5ff}
     .subtitle{font-size:11px;color:var(--muted);margin:-5px 0 11px;line-height:1.45}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
     .field{display:flex;flex-direction:column;gap:6px;min-width:0}
-    label{font-size:11px;color:var(--muted)}
+    label{font-size:11px;color:#9ec0e7}
     input,select{
-      width:100%;border:1px solid #30513e;background:#0b1711;color:var(--text);
-      border-radius:12px;padding:11px 12px;outline:none
+      width:100%;border:1px solid #285491;background:#0a1730;color:var(--text);
+      border-radius:14px;padding:11px 12px;outline:none;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.03)
     }
     input:focus,select:focus{border-color:var(--green)}
-    input::placeholder{color:#667e6c}
+    input::placeholder{color:#5b7da8}
     .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .btn{
-      border:1px solid #355a44;border-radius:12px;padding:11px 14px;
-      background:#1b3125;color:#f5fff6;font-weight:750;cursor:pointer
+      border:1px solid #2c5da8;border-radius:14px;padding:11px 14px;
+      background:#12284d;color:#f5fbff;font-weight:800;cursor:pointer
     }
     .btn:hover{filter:brightness(1.07)}
-    .btn.primary{border:0;background:linear-gradient(135deg,#70d77e,#a6f49c);color:#08220e}
-    .btn.soft{background:#15281e}
-    .btn.warn{background:#55471d;border-color:#76672c;color:#fff3b8}
-    .btn.danger{background:#482622;border-color:#703a34;color:#ffd2ce}
+    .btn.primary{
+      border:0;background:linear-gradient(135deg,#35baff,#7ce8ff);color:#04172d;
+      box-shadow:0 10px 24px rgba(31,145,255,.26)
+    }
+    .btn.soft{background:#102240}
+    .btn.warn{background:#4d4310;border-color:#8e781c;color:#fff3b8}
+    .btn.danger{background:#4a2430;border-color:#7b3950;color:#ffd7dc}
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .mini{padding:8px 10px;font-size:12px}
 
     .placeField{position:relative}
     .placeLine{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:end;margin-top:9px}
     .startLine{grid-template-columns:34px minmax(0,1fr) auto;align-items:end}
-    .startLine .step{align-self:end;margin-bottom:6px}
+    .startLine .step{align-self:end;margin-bottom:4px}
     .gpsInline{height:48px;white-space:nowrap;align-self:end;margin-bottom:0;padding:0 13px}
     @media(max-width:520px){.gpsInline{padding:0 10px;font-size:0}.gpsInline::after{content:'📍 GPS';font-size:13px}}
     .step{
       width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
-      margin-bottom:6px;background:#203b2b;border:1px solid #3d684e;color:#bfe8c7;font-weight:900
+      margin-bottom:4px;background:#203b2b;border:1px solid #3d684e;color:#bfe8c7;font-weight:900
     }
     .suggestions{
       position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:900;
@@ -191,10 +402,10 @@
 
     .status{
       margin-top:10px;padding:10px 12px;border-radius:12px;
-      border:1px solid #294738;background:#0a1710;color:#c7ddcc;font-size:12px;line-height:1.45
+      border:1px solid #29579e;background:#112240;color:#eaf5ff;font-size:12px;line-height:1.45
     }
-    .status.good{border-color:#376b47;color:#c9f4d1}
-    .status.warn{border-color:#7a6429;color:#ffe79c}
+    .status.good{border-color:#2e80d8;color:#d7f4ff}
+    .status.warn{border-color:#8c7422;color:#ffe79c}
     .status.bad{border-color:#78423b;color:#ffc5bf}
 
     .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -211,7 +422,7 @@
     .muted{color:var(--muted)}
     .small{font-size:11px}
 
-    .mapWrap{overflow:hidden;border-radius:17px;border:1px solid #315641;background:#050805}
+    .mapWrap{overflow:hidden;border-radius:17px;border:1px solid #2f63a8;background:#040d18}
     #map{height:460px;width:100%;background:#050805;display:block}
     .leaflet-control-attribution{font-size:9px!important}
 
@@ -231,14 +442,14 @@
     .tolerance{background:#5b4a18;color:#ffe794}
     .late{background:#542a26;color:#ffbdb6}
     .meta{font-size:11px;color:var(--muted);line-height:1.5}
-    .empty{padding:18px;text-align:center;color:#7f9885;font-size:12px;border:1px dashed #2e4a39;border-radius:14px}
-    .footer{text-align:center;color:#617768;font-size:10px;padding:12px 5px}
+    .empty{padding:18px;text-align:center;color:#a8c8ea;font-size:12px;border:1px dashed #325f9b;border-radius:14px}
+    .footer{text-align:center;color:#7ea3d3;font-size:10px;padding:12px 5px}
 
     .map-stop-label{
-      background:rgba(7,20,13,.94)!important;
-      border:1px solid #72c884!important;
+      background:rgba(10,22,43,.96)!important;
+      border:1px solid #58b5ff!important;
       border-radius:8px!important;
-      color:#f3fff5!important;
+      color:#eef8ff!important;
       box-shadow:0 3px 10px rgba(0,0,0,.42)!important;
       font-size:11px!important;
       font-weight:800!important;
@@ -248,10 +459,10 @@
     }
     .map-stop-label:before{display:none!important}
     .map-target-label{
-      background:rgba(39,55,11,.95)!important;
-      border:1px solid #dfff73!important;
+      background:rgba(12,38,78,.95)!important;
+      border:1px solid #7fe4ff!important;
       border-radius:8px!important;
-      color:#f6ffc9!important;
+      color:#dcfbff!important;
       box-shadow:0 3px 10px rgba(0,0,0,.42)!important;
       font-size:10px!important;
       font-weight:850!important;
@@ -272,13 +483,23 @@
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <div class="brand">D</div>
-    <div>
-      <h1>ToraDove</h1>
-      <p>DOVE E COME · app autonoma</p>
+  <header class="top toraRealTitle">
+    <div class="realCrest">
+      <img src="./tora_crest.png" alt="" aria-hidden="true">
     </div>
-    <div class="version">v0.3.9</div>
+
+    <div class="realName">
+      <div class="realWordmark" aria-label="ToraDove">
+        <span class="wordTora">Tora</span><span class="wordDove">Dove</span>
+      </div>
+      <div class="realUnderline"></div>
+    </div>
+
+    <div class="realPower">
+      <img src="./powered_by_az.png" alt="Powered by Andrea Zollet">
+    </div>
+
+    <div class="version">v0.4.3</div>
   </header>
 
   <section class="card">
@@ -413,11 +634,11 @@
 
   <section id="resultsCard" class="card hidden">
     <h2>5 · Dove fermarti</h2>
-    <div class="subtitle">Mostro solo aree stradali OSM classificate come servizi/sosta oppure parcheggi con HGV esplicito. Escludo accessi privati, piazzali aziendali ambigui e semplici distributori.</div>
+    <div class="subtitle">Mostro al massimo 6 soste realmente utili: aree stradali vicine alla route o parcheggi con HGV esplicito. Escludo piazzali aziendali, aree di esercitazione e risultati troppo lontani dalla traccia.</div>
     <div id="results" class="results"></div>
   </section>
 
-  <div class="footer">ToraDove è indipendente da ToraNavy. Dati mappa © OpenStreetMap contributors.</div>
+  
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -960,18 +1181,23 @@
     }catch{return null}
   }
 
-  function buildOverpassQuery(minLat,minLon,maxLat,maxLon){
-    const box=`${minLat},${minLon},${maxLat},${maxLon}`;
-    return `[out:json][timeout:25];
-(
-  nwr["highway"="services"](${box});
-  nwr["highway"="rest_area"](${box});
-  nwr["amenity"="parking"]["hgv"~"^(yes|designated)$"](${box});
-  nwr["parking"="layby"]["hgv"~"^(yes|designated)$"](${box});
-);
-out center tags;`;
+  function buildOverpassQuery(samples){
+    /* Query corridor: niente bounding box enorme.
+       Campioni lungo SOLO la finestra utile, come filosofia ToraNavy. */
+    const blocks=[];
+    const radius=4200;
+    (samples||[]).forEach(p=>{
+      if(!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lon))return;
+      const a=`(around:${radius},${p.lat.toFixed(6)},${p.lon.toFixed(6)})`;
+      blocks.push(
+        `nwr${a}["highway"="services"];`,
+        `nwr${a}["highway"="rest_area"];`,
+        `nwr${a}["amenity"="parking"]["hgv"~"^(yes|designated)$"];`,
+        `nwr${a}["parking"="layby"]["hgv"~"^(yes|designated)$"];`
+      );
+    });
+    return `[out:json][timeout:10];(${blocks.join('')});out center tags 120;`;
   }
-
 
   function normTag(v){
     return String(v==null?'':v).trim().toLowerCase();
@@ -985,42 +1211,56 @@ out center tags;`;
            normTag(tags.hgv)==='no';
   }
 
+  function suspiciousStopName(name,tags){
+    const s=[
+      name,tags?.name,tags?.brand,tags?.operator,tags?.description,
+      tags?.company,tags?.office,tags?.industrial,tags?.landuse
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return /\b(autogru|autotrasport|trasporti|logistica|logistik|spedition|spedizioni|warehouse|magazzin|deposito|depot|gru|crane|officina|workshop|azienda|factory|fabbrica|cantiere|esercitazioni|addestramento|training|vigili del fuoco|\bvvf\b|fire brigade|military|caserma|s\.?r\.?l\.?|s\.?n\.?c\.?|gmbh|sarl|sas|ltd)\b/i.test(s);
+  }
+
   function publicParkingEvidence(tags){
     const access=normTag(tags.access);
-    if(['yes','permissive','designated'].includes(access)) return true;
-    if(tags['capacity:hgv']!=null || tags['parking:hgv']!=null) return true;
-    if(normTag(tags.truck_stop)==='yes') return true;
-    if(normTag(tags.toilets)==='yes' || normTag(tags.shower)==='yes') return true;
-    if(tags.maxstay!=null || tags.fee!=null || tags.supervised!=null) return true;
+    const hgv=normTag(tags.hgv);
+    if(['yes','permissive','designated'].includes(access))return true;
+    if(hgv==='designated')return true;
+    if(Number(tags['capacity:hgv'])>0)return true;
+    if(normTag(tags.truck_stop)==='yes')return true;
+    if(normTag(tags['parking:hgv'])==='yes' || normTag(tags['parking:hgv'])==='designated')return true;
     return false;
   }
 
-  function looksLikeBusinessYard(name,tags){
-    const s=[
-      name,tags.name,tags.brand,tags.operator,tags.description,
-      tags.company,tags.office,tags.industrial
-    ].filter(Boolean).join(' ').toLowerCase();
-
-    /* Usato SOLO per parking HGV ambigui senza evidenza di accesso pubblico.
-       Non viene applicato a highway=services/rest_area. */
-    return /\b(autogru|autotrasport|trasporti|logistica|logistik|spedition|spedizioni|warehouse|magazzin|deposito|depot|gru|crane|s\.?r\.?l\.?|s\.?n\.?c\.?|gmbh|sarl|sas|ltd)\b/i.test(s);
+  function serviceSupport(tags){
+    return (
+      ['yes','designated'].includes(normTag(tags.hgv)) ||
+      normTag(tags.toilets)==='yes' ||
+      normTag(tags.shower)==='yes' ||
+      normTag(tags.fuel)==='yes' ||
+      normTag(tags.restaurant)==='yes' ||
+      !!tags.operator || !!tags.ref ||
+      Number(tags.capacity)>0 ||
+      Number(tags['capacity:hgv'])>0 ||
+      normTag(tags.picnic_table)==='yes' ||
+      normTag(tags.lit)==='yes'
+    );
   }
 
   function classifyVerifiedStop(name,tags){
-    if(!tags || isRestrictedStopAccess(tags)) return null;
+    if(!tags || isRestrictedStopAccess(tags))return null;
+    if(suspiciousStopName(name,tags))return null;
 
     const hw=normTag(tags.highway);
     const amenity=normTag(tags.amenity);
     const parking=normTag(tags.parking);
     const hgv=normTag(tags.hgv);
 
-    /* OSM highway=services/rest_area è già una classificazione stradale
-       specifica. La rifiutiamo soltanto se l'accesso/HGV è esplicitamente vietato. */
     if(hw==='services'){
       return {
         kind:'service',
         label:'Area di servizio',
-        proof:hgv==='yes'||hgv==='designated' ? 'Area di servizio OSM · HGV esplicito' : 'Area di servizio OSM'
+        proof:'Area di servizio stradale OSM',
+        support:serviceSupport(tags)
       };
     }
 
@@ -1028,52 +1268,63 @@ out center tags;`;
       return {
         kind:'rest',
         label:'Area di sosta',
-        proof:hgv==='yes'||hgv==='designated' ? 'Area di sosta OSM · HGV esplicito' : 'Area di sosta stradale OSM'
+        proof:'Area di sosta stradale OSM',
+        support:serviceSupport(tags)
       };
     }
 
-    /* Parcheggi: qui l'HGV deve essere ESPLICITO. */
-    if((amenity==='parking' || parking==='layby') && (hgv==='yes'||hgv==='designated')){
-      const publicEvidence=publicParkingEvidence(tags);
-
-      /* hgv=designated è forte; hgv=yes senza altri dati è più ambiguo.
-         Se sembra un piazzale aziendale e non c'è evidenza pubblica, lo escludiamo. */
-      if(looksLikeBusinessYard(name,tags) && !publicEvidence) return null;
-      if(hgv==='yes' && !publicEvidence) return null;
-
+    if((amenity==='parking'||parking==='layby') && (hgv==='yes'||hgv==='designated')){
+      if(!publicParkingEvidence(tags))return null;
       return {
-        kind:parking==='layby' ? 'layby' : 'hgv_parking',
-        label:parking==='layby' ? 'Piazzola camion' : 'Parcheggio camion',
-        proof:`HGV=${hgv}${publicEvidence?' · accesso/servizi pubblici confermati':''}`
+        kind:parking==='layby'?'layby':'hgv_parking',
+        label:parking==='layby'?'Piazzola camion':'Parcheggio camion',
+        proof:`Parcheggio HGV=${hgv}`,
+        support:true
       };
     }
 
     return null;
   }
 
-  async function overpassRequest(endpoint,query,method='POST'){
+  function acceptProjectedStop(p,near){
+    if(!p||!near||!Number.isFinite(near.offRoute))return false;
+    if(suspiciousStopName(p.name,p.tags||{}))return false;
+
+    /* ToraNavy usa una tolleranza finale di 1,5 km.
+       Qui le aree stradali sono ancora più strette: 1,2 km. */
+    if(p.stopKind==='service'||p.stopKind==='rest'){
+      if(near.offRoute>1200)return false;
+      /* Se il centro OSM è già parecchio fuori traccia, richiedi almeno
+         un indizio strutturale tipico di una vera area stradale. */
+      if(near.offRoute>650 && !p.stopSupport)return false;
+      return true;
+    }
+
+    if(p.stopKind==='hgv_parking'||p.stopKind==='layby'){
+      if(near.offRoute>1500)return false;
+      return publicParkingEvidence(p.tags||{});
+    }
+
+    return false;
+  }
+
+  async function overpassRequest(endpoint,query,timeoutMs=8500){
     const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),16000);
+    const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
     try{
-      const opts={
-        method,
+      const r=await fetch(endpoint,{
+        method:'POST',
         signal:ctrl.signal,
         cache:'no-store',
-        headers:{'Accept':'application/json'}
-      };
-      let url=endpoint;
-
-      if(method==='POST'){
-        opts.headers['Content-Type']='application/x-www-form-urlencoded;charset=UTF-8';
-        opts.body='data='+encodeURIComponent(query);
-      }else{
-        url=endpoint+'?data='+encodeURIComponent(query);
-      }
-
-      const r=await fetch(url,opts);
-      if(!r.ok) throw new Error('HTTP '+r.status);
+        headers:{
+          'Accept':'application/json',
+          'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body:'data='+encodeURIComponent(query)
+      });
+      if(!r.ok)throw new Error('HTTP '+r.status);
       const j=await r.json();
-      if(!j || !Array.isArray(j.elements)) throw new Error('Risposta OSM non valida');
+      if(!j||!Array.isArray(j.elements))throw new Error('Risposta OSM non valida');
       return j;
     }finally{
       clearTimeout(timer);
@@ -1081,100 +1332,203 @@ out center tags;`;
   }
 
   async function fetchOverpassWithFallback(query){
-    const endpoints=[
-      'https://overpass.private.coffee/api/interpreter',
+    /* Due server in parallelo: il primo che risponde vince.
+       Evita la vecchia catena 3 server x POST/GET che poteva durare troppo. */
+    const primary=[
       'https://overpass-api.de/api/interpreter',
-      'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+      'https://overpass.kumi.systems/api/interpreter'
     ];
-    const errors=[];
 
-    for(let i=0;i<endpoints.length;i++){
-      const ep=endpoints[i];
-      if($('results')){
-        $('results').innerHTML=
-          `<div class="empty">Cerco soste camion verificate · server OSM ${i+1}/${endpoints.length}…</div>`;
-      }
-
-      /* Prima POST, poi GET sullo stesso server: alcuni proxy mobili
-         gestiscono uno dei due metodi meglio dell'altro. */
-      for(const method of ['POST','GET']){
-        try{
-          return await overpassRequest(ep,query,method);
-        }catch(e){
-          errors.push(`${i+1}/${method}: ${e?.name==='AbortError'?'timeout':(e?.message||'errore rete')}`);
-        }
-      }
+    if($('results')){
+      $('results').innerHTML='<div class="empty">Cerco solo le soste realmente utili nella finestra selezionata…</div>';
     }
 
-    throw new Error(
-      'I server OpenStreetMap per le soste non stanno rispondendo. '+
-      'Riprova tra poco. ('+errors.slice(-3).join(' · ')+')'
-    );
+    try{
+      return await Promise.any(primary.map(ep=>overpassRequest(ep,query,8500)));
+    }catch(firstErr){
+      /* Un solo fallback finale. */
+      try{
+        return await overpassRequest('https://overpass.private.coffee/api/interpreter',query,7000);
+      }catch(e){
+        throw new Error('I server OpenStreetMap per le soste non stanno rispondendo. Riprova tra poco.');
+      }
+    }
+  }
+
+  function genericStopName(name){
+    const s=String(name||'').trim().toLowerCase();
+    return !s ||
+      /^area di servizio$/.test(s) ||
+      /^area di sosta$/.test(s) ||
+      /^parcheggio camion$/.test(s) ||
+      /^piazzola camion$/.test(s) ||
+      /^sosta camion$/.test(s);
+  }
+
+  function osmLookupCode(p){
+    const t=String(p.osmType||'').toLowerCase();
+    const prefix=t==='node'?'N':t==='way'?'W':t==='relation'?'R':'';
+    return prefix && p.osmId!=null ? prefix+String(p.osmId) : '';
+  }
+
+  async function enrichStopNames(stops){
+    stops=Array.isArray(stops)?stops:[];
+    if(!stops.length)return stops;
+
+    const ids=stops.map(osmLookupCode).filter(Boolean);
+    let rows=[];
+    if(ids.length){
+      try{
+        const u='https://nominatim.openstreetmap.org/lookup?format=jsonv2&addressdetails=1&namedetails=1&accept-language=it&osm_ids='+encodeURIComponent(ids.join(','));
+        const r=await fetch(u,{cache:'no-store',headers:{'Accept':'application/json','Accept-Language':'it'}});
+        if(r.ok)rows=await r.json();
+      }catch(e){}
+    }
+
+    const byId=new Map();
+    (rows||[]).forEach(x=>{
+      const code=(String(x.osm_type||'').toLowerCase()==='node'?'N':
+                  String(x.osm_type||'').toLowerCase()==='way'?'W':
+                  String(x.osm_type||'').toLowerCase()==='relation'?'R':'')+String(x.osm_id||'');
+      if(code)byId.set(code,x);
+    });
+
+    return stops.map(p=>{
+      const x=byId.get(osmLookupCode(p));
+      const named=x?.namedetails?.name || x?.name || '';
+      if(named && !genericStopName(named) && !suspiciousStopName(named,p.tags||{})){
+        p.name=named;
+      }else if(genericStopName(p.name)){
+        const a=x?.address||{};
+        const road=a.road||a.motorway||a.trunk||'';
+        const place=a.city||a.town||a.village||a.municipality||a.county||'';
+        const suffix=road||place;
+        p.name=p.stopLabel+(suffix?' · '+suffix:'');
+      }
+      p.address=x?.display_name||p.address||'';
+      return p;
+    });
+  }
+
+  function physicalDedupe(rows){
+    const out=[];
+    for(const p of rows){
+      let duplicate=false;
+      for(const q of out){
+        const d=hav(p,q);
+        const sameRoute=Math.abs((p.routeDistance||0)-(q.routeDistance||0))<900;
+        const bothNamed=!genericStopName(p.name)&&!genericStopName(q.name);
+        const differentNamed=bothNamed && String(p.name).toLowerCase()!==String(q.name).toLowerCase();
+
+        /* Non fondere due aree con nomi diversi (es. Est/Ovest),
+           ma fondi duplicati node/way della stessa struttura. */
+        if(d<350 && sameRoute && !differentNamed){
+          duplicate=true;
+          break;
+        }
+      }
+      if(!duplicate)out.push(p);
+    }
+    return out;
   }
 
   async function searchStopsNearRoute(route,target,beforeMeters,afterMeters){
     const fromD=Math.max(0,target.distance-beforeMeters);
     const toD=Math.min(route.distance,target.distance+afterMeters);
-    const samples=[];
-    const step=5000;
-    for(let d=fromD;d<=toD;d+=step) samples.push(pointAtDistance(route.timeline,d));
-    samples.push(pointAtDistance(route.timeline,toD));
-    const lats=samples.map(p=>p.lat),lons=samples.map(p=>p.lon);
-    const margin=.09; // ~10 km latitude
-    const minLat=Math.min(...lats)-margin,maxLat=Math.max(...lats)+margin;
-    const minLon=Math.min(...lons)-margin,maxLon=Math.max(...lons)+margin;
-    const q=buildOverpassQuery(minLat,minLon,maxLat,maxLon);
-    const j=await fetchOverpassWithFallback(q);
-    const raw=(j.elements||[]).map(x=>{
-      const lat=x.lat??x.center?.lat,lon=x.lon??x.center?.lon;
-      if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
-      const tags=x.tags||{};
-      const name=
-        tags['name:it'] ||
-        tags.name ||
-        tags.brand ||
-        tags.operator ||
-        tags.ref ||
-        (tags.highway==='services'?'Area di servizio':
-         tags.highway==='rest_area'?'Area di sosta':
-         tags.parking==='layby'?'Piazzola camion':
-         tags.amenity==='parking'?'Parcheggio camion':'Sosta camion');
+    const span=Math.max(1,toD-fromD);
 
+    /* Massimo ~7 campioni anche con finestra 40 km. */
+    const sampleStep=Math.max(7000,span/6);
+    const samples=[];
+    for(let d=fromD;d<=toD;d+=sampleStep)samples.push(pointAtDistance(route.timeline,d));
+    samples.push(pointAtDistance(route.timeline,toD));
+
+    const q=buildOverpassQuery(samples);
+    const j=await fetchOverpassWithFallback(q);
+
+    const raw=(j.elements||[]).map(x=>{
+      const lat=x.lat??x.center?.lat;
+      const lon=x.lon??x.center?.lon;
+      if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+
+      const tags=x.tags||{};
+      const fallback=
+        tags.highway==='services'?'Area di servizio':
+        tags.highway==='rest_area'?'Area di sosta':
+        tags.parking==='layby'?'Piazzola camion':
+        tags.amenity==='parking'?'Parcheggio camion':'Sosta camion';
+
+      const name=tags['name:it']||tags.name||tags.brand||tags.operator||tags.ref||fallback;
       const verified=classifyVerifiedStop(name,tags);
       if(!verified)return null;
 
       return {
-        lat,lon,name,tags,id:`${x.type}/${x.id}`,
+        lat,lon,name,tags,
+        osmType:x.type,osmId:x.id,
+        id:`${x.type}/${x.id}`,
         stopKind:verified.kind,
         stopLabel:verified.label,
-        stopProof:verified.proof
+        stopProof:verified.proof,
+        stopSupport:verified.support
       };
     }).filter(Boolean);
 
-    const seen=new Map();
-    for(const p of raw){
-      const key=`${p.lat.toFixed(4)},${p.lon.toFixed(4)},${p.name}`;
-      if(!seen.has(key))seen.set(key,p);
-    }
+    /* Dedupe OSM identity prima della proiezione. */
+    const identity=new Map();
+    raw.forEach(p=>{
+      const k=p.id||`${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+      if(!identity.has(k))identity.set(k,p);
+    });
 
     const projected=[];
-    for(const p of seen.values()){
+    for(const p of identity.values()){
       const near=nearestOnTimeline(p,route.timeline);
-      if(near.offRoute>5000) continue; // max 5 km laterali dalla route
-      if(near.distance<fromD-1500 || near.distance>toD+1500) continue;
-      const delta=near.distance-target.distance;
-      projected.push({...p,routeDistance:near.distance,routeTime:near.time,offRoute:near.offRoute,delta});
-    }
-    projected.sort((a,b)=>{
-      const aa=a.delta<=0?0:1,bb=b.delta<=0?0:1;
-      if(aa!==bb)return aa-bb;
-      return Math.abs(a.delta)-Math.abs(b.delta);
-    });
-    return projected.slice(0,30);
-  }
+      if(!acceptProjectedStop(p,near))continue;
+      if(near.distance<fromD-700 || near.distance>toD+700)continue;
 
-  function isExplicitHgv(tags){
-    return tags.hgv==='yes' || tags.hgv==='designated';
+      const delta=near.distance-target.distance;
+      projected.push({
+        ...p,
+        routeDistance:near.distance,
+        routeTime:near.time,
+        offRoute:near.offRoute,
+        delta
+      });
+    }
+
+    /* Prima le soste vicine al punto teorico, penalizzando le deviazioni laterali. */
+    projected.sort((a,b)=>{
+      const sideA=a.delta<=0?0:1, sideB=b.delta<=0?0:1;
+      if(sideA!==sideB)return sideA-sideB;
+      const scoreA=Math.abs(a.delta)+a.offRoute*1.8;
+      const scoreB=Math.abs(b.delta)+b.offRoute*1.8;
+      return scoreA-scoreB;
+    });
+
+    const deduped=physicalDedupe(projected);
+
+    /* Lista corta: massimo 6.
+       Con tolleranza attiva riserviamo almeno un posto alla prima soluzione dopo il punto. */
+    const before=deduped.filter(p=>p.delta<=0).sort((a,b)=>Math.abs(a.delta)-Math.abs(b.delta));
+    const after=deduped.filter(p=>p.delta>0).sort((a,b)=>a.delta-b.delta);
+
+    let selected=[];
+    if(afterMeters>0 && after.length){
+      selected=before.slice(0,5);
+      selected.push(after[0]);
+      if(selected.length<6){
+        selected=selected.concat(after.slice(1,1+(6-selected.length)));
+      }
+    }else{
+      selected=before.slice(0,6);
+    }
+
+    selected=selected.slice(0,6);
+    selected=await enrichStopNames(selected);
+
+    /* Un ultimo controllo sul nome risolto. */
+    selected=selected.filter(p=>!suspiciousStopName(p.name,p.tags||{}));
+    return selected;
   }
 
   function typeLabel(tags,stopLabel){
@@ -1187,7 +1541,7 @@ out center tags;`;
     );
   }
 
-  function facilityText(tags,proof){
+  function facilityText(tags,proof,address){
     const a=[];
     if(proof)a.push(proof);
     if(tags.toilets==='yes')a.push('WC');
@@ -1196,23 +1550,29 @@ out center tags;`;
     if(tags.shop==='yes')a.push('Negozio');
     if(tags.fee==='yes')a.push('A pagamento');
     if(tags.lit==='yes')a.push('Illuminato');
+    if(address)a.push(address);
     return a.join(' · ');
   }
 
   function renderStops(stops,targetSec,overSec){
     const el=$('results');
     if(!stops.length){
-      el.innerHTML='<div class="empty">Nessuna sosta compatibile trovata nella finestra selezionata.</div>';
+      el.innerHTML='<div class="empty">Nessuna area di servizio o parcheggio camion verificato nella finestra selezionata.</div>';
       return;
     }
+
     el.innerHTML=stops.map((p,i)=>{
       const secDiff=p.routeTime-targetSec;
       let cls='before',label='PRIMA DEL LIMITE';
       if(secDiff>0 && secDiff<=overSec){cls='tolerance';label='IN TOLLERANZA'}
       else if(secDiff>overSec){cls='late';label='OLTRE TOLLERANZA'}
-      const rel=p.delta<=0?`${fmtKm(Math.abs(p.delta))} prima del punto`:`${fmtKm(p.delta)} dopo il punto`;
-      const dev=p.offRoute<800?'sulla route':`~${fmtKm(p.offRoute)} dalla route`;
-      const extra=facilityText(p.tags,p.stopProof);
+
+      const rel=p.delta<=0
+        ? `${fmtKm(Math.abs(p.delta))} prima del punto`
+        : `${fmtKm(p.delta)} dopo il punto`;
+      const dev=p.offRoute<500?'sulla route':`${fmtKm(p.offRoute)} dalla route`;
+      const extra=facilityText(p.tags,p.stopProof,p.address);
+
       return `<div class="result">
         <div class="resultTop">
           <div>
@@ -1230,56 +1590,76 @@ out center tags;`;
         </div>
       </div>`;
     }).join('');
+
     [...el.querySelectorAll('[data-zoom]')].forEach(b=>{
       b.onclick=()=>{
         const p=stops[+b.dataset.zoom];
-        state.map.setView([p.lat,p.lon],15);
+        if(!p||!state.map)return;
+        $('mapCard').scrollIntoView({behavior:'smooth',block:'start'});
+        mapLayoutReady(()=>{
+          state.map.setView([p.lat,p.lon],15,{animate:false});
+          if(p._marker){
+            try{p._marker.openTooltip()}catch(e){}
+            try{p._marker.openPopup()}catch(e){}
+          }
+        });
       };
     });
   }
 
   function drawTargetAndStops(target,stops,targetSec,overSec){
     if(!state.map)return;
-    // remove all markers except start/end by redrawing route
     drawRoute();
-    const targetIcon=L.divIcon({
-      className:'',
-      html:'<div style="width:22px;height:22px;border-radius:50%;background:#dfff73;border:4px solid #385127;box-shadow:0 0 0 4px rgba(223,255,115,.25)"></div>',
-      iconSize:[22,22],iconAnchor:[11,11]
-    });
-    const tm=L.marker([target.lat,target.lon],{icon:targetIcon})
+
+    const tm=L.circleMarker([target.lat,target.lon],{
+      radius:9,
+      color:'#dfff73',
+      weight:3,
+      fillColor:'#dfff73',
+      fillOpacity:1,
+      pane:'markerPane'
+    })
       .addTo(state.map)
       .bindPopup('Punto teorico di fine guida')
-      .bindTooltip('Punto teorico',{permanent:true,direction:'top',offset:[0,-12],className:'map-target-label'});
+      .bindTooltip('Punto teorico',{
+        permanent:true,direction:'top',offset:[0,-10],className:'map-target-label'
+      });
     state.markers.push(tm);
 
     stops.forEach(p=>{
       const inTol=p.routeTime>targetSec && p.routeTime<=targetSec+overSec;
-      const c=inTol?'#ffd36b':'#8fd7ff';
-      const icon=L.divIcon({
-        className:'',
-        html:`<div style="width:16px;height:16px;border-radius:50%;background:${c};border:3px solid #173224;box-shadow:0 0 0 3px rgba(255,255,255,.10)"></div>`,
-        iconSize:[16,16],iconAnchor:[8,8]
-      });
-      const m=L.marker([p.lat,p.lon],{icon})
+      const c=inTol?'#ffd36b':'#80d8ff';
+
+      const m=L.circleMarker([p.lat,p.lon],{
+        radius:8,
+        color:'#06101f',
+        weight:3,
+        fillColor:c,
+        fillOpacity:1,
+        pane:'markerPane'
+      })
         .addTo(state.map)
-        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(typeLabel(p.tags,p.stopLabel))}`)
+        .bindPopup(
+          `<b>${esc(p.name)}</b><br>${esc(typeLabel(p.tags,p.stopLabel))}`+
+          (p.address?`<br><small>${esc(p.address)}</small>`:'')
+        )
         .bindTooltip(esc(p.name),{
           permanent:true,
           direction:'top',
-          offset:[0,-10],
+          offset:[0,-9],
           className:'map-stop-label',
           opacity:1
         });
+
+      p._marker=m;
       state.markers.push(m);
     });
 
-    /* Inquadra i dati soltanto quando il contenitore ha la misura reale. */
     mapLayoutReady(()=>{
-      const all=[[target.lat,target.lon], ...stops.map(p=>[p.lat,p.lon])];
+      const all=[[target.lat,target.lon],...stops.map(p=>[p.lat,p.lon])];
       if(all.length>1){
         state.map.fitBounds(L.latLngBounds(all),{
-          padding:[45,45],
+          padding:[55,55],
           maxZoom:13,
           animate:false
         });
@@ -1327,12 +1707,12 @@ out center tags;`;
         $('targetMeta').textContent=addr || 'Indirizzo non disponibile';
       });
 
-      $('results').innerHTML='<div class="empty">Cerco aree di servizio e parcheggi camion lungo la route…</div>';
+      $('results').innerHTML='<div class="empty">Cerco le migliori soste camion nella finestra selezionata…</div>';
       const stops=await searchStopsNearRoute(state.route,target,beforeM,afterMeters);
       state.places=stops;
 
-      renderStops(stops,effectiveTargetSec,overSec);
       drawTargetAndStops(target,stops,effectiveTargetSec,overSec);
+      renderStops(stops,effectiveTargetSec,overSec);
       await addrPromise;
     }catch(e){
       console.error(e);

@@ -1,23 +1,18 @@
-ToraDove v0.3.9 - STOPS VERIFIED
+ToraDove v0.4.3 - REAL TORA TITLE
 
-Correzioni:
-- Overpass multi-server:
-  1) overpass.private.coffee
-  2) overpass-api.de
-  3) maps.mail.ru
-- su ogni server prova POST e poi GET;
-- timeout controllato, niente più messaggio grezzo "Failed to fetch";
-- rimossi i distributori HGV come categoria autonoma di sosta;
-- accettate solo:
-  * highway=services;
-  * highway=rest_area;
-  * amenity=parking con hgv=yes/designated e validazione pubblica;
-  * parking=layby con hgv=yes/designated e validazione pubblica;
-- esclusi access=private/no/customers/delivery/emergency/permit;
-- esclusi piazzali aziendali ambigui;
-- parcheggi hgv=yes senza altra evidenza pubblica esclusi;
-- corridoio laterale ristretto da 10 km a 5 km;
-- nei risultati viene mostrata la prova OSM usata per la validazione.
+Titolo:
+- stemma araldico reale ricavato dal riferimento ToraNavy fornito;
+- wordmark centrale ToraDove:
+  Tora argento / Dove blu elettrico;
+- linea luminosa inferiore;
+- blocco reale POWERED BY ANDREA ZOLLET a destra;
+- eliminato completamente il falso scudetto D/coroncina.
 
-Mappa v0.3.8 e routing ORS HGV invariati.
+Restano:
+- testo normale ingrandito;
+- A/B blu elettrico;
+- footer rimosso;
+- motore soste v0.4.1;
+- routing ORS HGV.
+
 File principale: index.html
