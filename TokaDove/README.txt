@@ -1,14 +1,13 @@
-ToraDove v0.3.7
+ToraDove v0.3.8
 
-MAP REAL FIX:
-- rimossi Esri + overlay CARTO a due griglie;
-- satellite ibrido Google, stessa sorgente già usata in ToraNavy;
-- ResizeObserver sul contenitore mappa;
-- MutationObserver quando la card mappa diventa visibile;
-- niente zoom/fade animation Leaflet su Android;
-- route/marker/fitBounds applicati solo dopo la misura reale del contenitore;
-- eliminati i setTimeout usati come toppa per ridimensionare la mappa;
-- coordinate -> indirizzo e GPS -> indirizzo invariati;
-- routing ORS HGV invariato.
+CORREZIONE DEFINITIVA MAPPA:
+- corretto hash SRI ufficiale del CSS Leaflet 1.9.4;
+- causa del problema: il browser bloccava leaflet.css per hash errato;
+- aggiunto fallback CSS Leaflet critico direttamente in index.html;
+- le tile restano sempre position:absolute e non possono più disporsi a blocchi;
+- mantenuto satellite ibrido;
+- mantenuti nomi soste, percorso, punto teorico;
+- mantenuti coordinate -> indirizzo, GPS -> indirizzo;
+- mantenuto routing ORS HGV.
 
 File principale: index.html
