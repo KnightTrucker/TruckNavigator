@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.94 PLANNER-WEIGHT-SEGMENTS */
-const CACHE='ktn-v01694-planner-weight-segments';
+/* ToraNavy 0.16.95 STOP-SEARCH-PARITY */
+const CACHE='ktn-v01695-stop-search-parity';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
