@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.99 MANEUVER-ROOT-ASSETS */
-const CACHE='ktn-v01699-maneuver-root-assets';
+/* ToraNavy 0.17.00 PORTRAIT-CLEANUP */
+const CACHE='ktn-v01700-portrait-cleanup';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
