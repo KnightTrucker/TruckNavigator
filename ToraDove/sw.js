@@ -1,4 +1,4 @@
-const CACHE='toradove-v0.4.5-map-markers-icon';
+const CACHE='toradove-v0.4.6-semantic-map';
 const SHELL=[
   './',
   './index.html',
@@ -10,7 +10,11 @@ const SHELL=[
 ];
 
 self.addEventListener('install',e=>
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c=>c.addAll(SHELL))
+      .then(()=>self.skipWaiting())
+  )
 );
 
 self.addEventListener('activate',e=>

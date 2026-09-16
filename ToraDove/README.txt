@@ -1,21 +1,18 @@
-ToraDove v0.4.5
+ToraDove v0.4.6 - SEMANTIC MAP
 
-Mappa:
-- percorso rosso;
-- legenda percorso aggiornata in rosso;
-- punto teorico mostrato con marker giallo permanente;
-- aree/parcheggi trovati mostrati con marker numerati;
-- blu = sosta prima del limite;
-- arancio = sosta in tolleranza;
-- nome della sosta visibile direttamente sulla mappa;
-- numero marker riportato anche nella lista risultati;
-- marker DOM nel markerPane, sopra la route.
+CORREZIONE MAPPA:
+- route Leaflet rossa;
+- il punto teorico e le soste NON dipendono più dai marker Leaflet;
+- overlay DOM indipendente e ancorato al riquadro mappa;
+- overlay aggiornato a ogni pan, zoom e resize;
+- punto teorico: giallo + etichetta PUNTO TEORICO;
+- soste prima del limite: azzurro + numero + nome;
+- soste in tolleranza: arancio + numero + nome;
+- i numeri corrispondono alla lista "Dove fermarti";
+- "Mostra sulla mappa" centra e fa pulsare il marker;
+- drawRoute(false) evita il vecchio fitBounds asincrono che poteva cambiare inquadratura.
 
-Icona:
-- nuova icona ToraDove fucsia approvata;
-- icon-512.png ufficiale;
-- icon-192.png per compatibilità;
-- favicon e manifest aggiornati;
-- service worker aggiornato.
+ICONA:
+- icona ToraDove fucsia approvata mantenuta in icon-192.png e icon-512.png.
 
 File principale: index.html

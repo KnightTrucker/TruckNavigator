@@ -428,7 +428,7 @@
     .small{font-size:11px}
 
     .mapWrap{overflow:hidden;border-radius:17px;border:1px solid #2f63a8;background:#040d18}
-    #map{height:460px;width:100%;background:#050805;display:block}
+    #map{height:460px;width:100%;background:#050805;display:block;position:relative}
     .leaflet-control-attribution{font-size:9px!important}
 
     .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted)}
@@ -452,6 +452,89 @@
 
     
     /* Marker mappa: devono corrispondere SEMPRE alla legenda */
+
+    /* Overlay semantico indipendente da Leaflet marker:
+       punto teorico e soste restano visibili sopra qualunque tile/layer. */
+    .mapSemanticOverlay{
+      position:absolute;
+      inset:0;
+      z-index:950;
+      pointer-events:none;
+      overflow:hidden;
+    }
+    .semanticMarker{
+      position:absolute;
+      transform:translate(-50%,-50%);
+      display:flex;
+      align-items:center;
+      gap:7px;
+      will-change:left,top;
+      filter:drop-shadow(0 2px 4px rgba(0,0,0,.8));
+    }
+    .semanticPin{
+      flex:none;
+      display:grid;
+      place-items:center;
+      border:3px solid #071427;
+      box-shadow:0 0 0 2px rgba(255,255,255,.95),0 0 16px rgba(64,160,255,.65);
+      color:#051426;
+      font:950 15px/1 Arial,sans-serif;
+    }
+    .semanticMarker.target .semanticPin{
+      width:31px;height:31px;
+      border-radius:7px;
+      transform:rotate(45deg);
+      background:#dfff73;
+      box-shadow:0 0 0 2px rgba(223,255,115,.95),0 0 18px rgba(223,255,115,.8);
+    }
+    .semanticMarker.target .semanticPin span{
+      transform:rotate(-45deg);
+      display:block;
+      font-size:15px;
+    }
+    .semanticMarker.stop .semanticPin{
+      width:32px;height:32px;
+      border-radius:50%;
+      background:#8fd7ff;
+    }
+    .semanticMarker.stop.tolerance .semanticPin{
+      background:#ffd36b;
+      box-shadow:0 0 0 2px rgba(255,255,255,.95),0 0 18px rgba(255,187,65,.75);
+    }
+    .semanticLabel{
+      max-width:170px;
+      padding:5px 7px;
+      border-radius:8px;
+      background:rgba(7,19,40,.94);
+      border:1px solid #5ebaff;
+      color:#f4f9ff;
+      font-size:12px;
+      font-weight:800;
+      line-height:1.15;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      box-shadow:0 3px 10px rgba(0,0,0,.48);
+    }
+    .semanticMarker.target .semanticLabel{
+      border-color:#dfff73;
+      color:#f6ffc9;
+    }
+    .semanticMarker.focus .semanticPin{
+      animation:semanticPulse .75s ease-in-out 3;
+    }
+    @keyframes semanticPulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.38)}
+    }
+    .semanticMarker.target.focus .semanticPin{
+      animation:semanticTargetPulse .75s ease-in-out 3;
+    }
+    @keyframes semanticTargetPulse{
+      0%,100%{transform:rotate(45deg) scale(1)}
+      50%{transform:rotate(45deg) scale(1.38)}
+    }
+
     .map-div-icon{
       background:transparent!important;
       border:0!important;
@@ -552,7 +635,7 @@
       <img src="./powered_by_az.png" alt="Powered by Andrea Zollet">
     </div>
 
-    <div class="version">v0.4.5</div>
+    <div class="version">v0.4.6</div>
   </header>
 
   <section class="card">
@@ -708,6 +791,9 @@
     route:null,target:null,places:[],
     map:null,routeLayer:null,markers:[],
     mapResizeObserver:null,
+    semanticOverlay:null,
+    semanticData:null,
+    semanticNodes:[],
     userGps:null
   };
 
@@ -1136,6 +1222,11 @@
     hybrid.on('load',()=>{
       if(state.map)state.map.invalidateSize({pan:false,animate:false});
     });
+
+    /* Overlay semantico: segue sempre pan/zoom/resize della mappa. */
+    ['move','zoom','moveend','zoomend','viewreset','resize'].forEach(ev=>{
+      state.map.on(ev,()=>updateSemanticOverlayPositions());
+    });
   }
 
   function mapLayoutReady(callback){
@@ -1159,14 +1250,114 @@
     requestAnimationFrame(run);
   }
 
-  function clearMapLayers(){
+  function ensureSemanticOverlay(){
+    ensureMap();
+    if(state.semanticOverlay && state.semanticOverlay.isConnected)return state.semanticOverlay;
+
+    const host=$('map');
+    const layer=document.createElement('div');
+    layer.className='mapSemanticOverlay';
+    layer.setAttribute('aria-hidden','true');
+    host.appendChild(layer);
+
+    state.semanticOverlay=layer;
+    state.semanticNodes=[];
+    return layer;
+  }
+
+  function clearSemanticOverlay(){
+    if(state.semanticOverlay)state.semanticOverlay.innerHTML='';
+    state.semanticNodes=[];
+    state.semanticData=null;
+  }
+
+  function makeSemanticMarker(kind,index,label,inTolerance=false){
+    const wrap=document.createElement('div');
+    wrap.className='semanticMarker '+kind+(inTolerance?' tolerance':'');
+    wrap.dataset.kind=kind;
+    wrap.dataset.index=String(index);
+
+    const pin=document.createElement('div');
+    pin.className='semanticPin';
+
+    if(kind==='target'){
+      const s=document.createElement('span');
+      s.textContent='◆';
+      pin.appendChild(s);
+    }else{
+      pin.textContent=String(index+1);
+    }
+
+    const name=document.createElement('div');
+    name.className='semanticLabel';
+    name.textContent=label;
+
+    wrap.append(pin,name);
+    return wrap;
+  }
+
+  function updateSemanticOverlayPositions(){
+    if(!state.map || !state.semanticOverlay || !state.semanticData)return;
+
+    const target=state.semanticData.target;
+    const stops=state.semanticData.stops||[];
+    const rows=[{kind:'target',lat:target.lat,lon:target.lon},...stops.map((p,i)=>({
+      kind:'stop',index:i,lat:p.lat,lon:p.lon
+    }))];
+
+    rows.forEach((row,k)=>{
+      const node=state.semanticNodes[k];
+      if(!node)return;
+      try{
+        const pt=state.map.latLngToContainerPoint([row.lat,row.lon]);
+        node.style.left=pt.x+'px';
+        node.style.top=pt.y+'px';
+
+        const size=state.map.getSize();
+        const visible=pt.x>-210 && pt.y>-80 && pt.x<size.x+210 && pt.y<size.y+80;
+        node.style.display=visible?'flex':'none';
+      }catch(e){}
+    });
+  }
+
+  function renderSemanticOverlay(target,stops,targetSec,overSec){
+    const layer=ensureSemanticOverlay();
+    layer.innerHTML='';
+    state.semanticNodes=[];
+
+    const t=makeSemanticMarker('target',0,'PUNTO TEORICO',false);
+    layer.appendChild(t);
+    state.semanticNodes.push(t);
+
+    (stops||[]).forEach((p,i)=>{
+      const inTol=p.routeTime>targetSec && p.routeTime<=targetSec+overSec;
+      const n=makeSemanticMarker('stop',i,`${i+1}. ${p.name}`,inTol);
+      layer.appendChild(n);
+      state.semanticNodes.push(n);
+    });
+
+    state.semanticData={target,stops:[...(stops||[])],targetSec,overSec};
+    updateSemanticOverlayPositions();
+  }
+
+  function focusSemanticStop(i){
+    const node=state.semanticNodes[i+1]; // target occupa indice 0
+    if(!node)return;
+    node.classList.remove('focus');
+    void node.offsetWidth;
+    node.classList.add('focus');
+    setTimeout(()=>node.classList.remove('focus'),2500);
+  }
+
+  function clearMapLayers(clearSemantic=true){
     if(state.routeLayer){state.map.removeLayer(state.routeLayer);state.routeLayer=null}
     state.markers.forEach(m=>state.map.removeLayer(m));
     state.markers=[];
+    if(clearSemantic)clearSemanticOverlay();
   }
 
-  function drawRoute(){
-    ensureMap(); clearMapLayers();
+  function drawRoute(fitRoute=true){
+    ensureMap(); clearMapLayers(fitRoute);
     const pts=state.route.coords.map(p=>[p.lat,p.lon]);
 
     state.routeLayer=L.polyline(pts,{
@@ -1181,14 +1372,16 @@
     const e=L.marker([state.end.lat,state.end.lon]).addTo(state.map).bindPopup('Destinazione');
     state.markers.push(s,e);
 
-    mapLayoutReady(()=>{
-      if(state.routeLayer && state.map){
-        state.map.fitBounds(state.routeLayer.getBounds(),{
-          padding:[30,30],
-          animate:false
-        });
-      }
-    });
+    if(fitRoute){
+      mapLayoutReady(()=>{
+        if(state.routeLayer && state.map){
+          state.map.fitBounds(state.routeLayer.getBounds(),{
+            padding:[30,30],
+            animate:false
+          });
+        }
+      });
+    }
   }
 
   $('routeBtn').onclick=async()=>{
@@ -1655,10 +1848,10 @@
         $('mapCard').scrollIntoView({behavior:'smooth',block:'start'});
         mapLayoutReady(()=>{
           state.map.setView([p.lat,p.lon],15,{animate:false});
-          if(p._marker){
-            try{p._marker.openTooltip()}catch(e){}
-            try{p._marker.openPopup()}catch(e){}
-          }
+          requestAnimationFrame(()=>{
+            updateSemanticOverlayPositions();
+            focusSemanticStop(+b.dataset.zoom);
+          });
         });
       };
     });
@@ -1667,70 +1860,18 @@
   function drawTargetAndStops(target,stops,targetSec,overSec){
     if(!state.map)return;
 
-    /* Ridisegna la route, poi aggiunge target e soste nel markerPane:
-       i marker restano sempre sopra la linea rossa. */
-    drawRoute();
+    /* Non rilanciare il fit della route: era una fonte di conflitto asincrono. */
+    drawRoute(false);
 
-    const targetIcon=L.divIcon({
-      className:'map-div-icon',
-      html:'<div class="map-target-pin"><span>◆</span></div>',
-      iconSize:[34,34],
-      iconAnchor:[17,17]
-    });
-
-    const tm=L.marker([target.lat,target.lon],{
-      icon:targetIcon,
-      zIndexOffset:1500
-    })
-      .addTo(state.map)
-      .bindPopup('<b>Punto teorico di fine guida</b>')
-      .bindTooltip('PUNTO TEORICO',{
-        permanent:true,
-        direction:'top',
-        offset:[0,-18],
-        className:'map-target-label',
-        opacity:1
-      });
-
-    state.markers.push(tm);
-
-    stops.forEach((p,i)=>{
-      const inTol=p.routeTime>targetSec && p.routeTime<=targetSec+overSec;
-      const pinClass=inTol?'tolerance':'before';
-
-      const icon=L.divIcon({
-        className:'map-div-icon',
-        html:`<div class="map-stop-pin ${pinClass}">${i+1}</div>`,
-        iconSize:[36,36],
-        iconAnchor:[18,18]
-      });
-
-      const m=L.marker([p.lat,p.lon],{
-        icon,
-        zIndexOffset:1600+i
-      })
-        .addTo(state.map)
-        .bindPopup(
-          `<b>${i+1}. ${esc(p.name)}</b><br>${esc(typeLabel(p.tags,p.stopLabel))}`+
-          (p.address?`<br><small>${esc(p.address)}</small>`:'')
-        )
-        .bindTooltip(`${i+1}. ${esc(p.name)}`,{
-          permanent:true,
-          direction:'top',
-          offset:[0,-19],
-          className:'map-stop-label',
-          opacity:1
-        });
-
-      p._marker=m;
-      state.markers.push(m);
-    });
+    /* I marker non dipendono più da Leaflet: overlay DOM indipendente. */
+    renderSemanticOverlay(target,stops,targetSec,overSec);
 
     mapLayoutReady(()=>{
-      const all=[[target.lat,target.lon],...stops.map(p=>[p.lat,p.lon])];
+      const all=[[target.lat,target.lon],...(stops||[]).map(p=>[p.lat,p.lon])];
+
       if(all.length>1){
         state.map.fitBounds(L.latLngBounds(all),{
-          padding:[70,70],
+          padding:[80,80],
           maxZoom:13,
           animate:false
         });
@@ -1738,11 +1879,9 @@
         state.map.setView([target.lat,target.lon],12,{animate:false});
       }
 
-      /* Secondo invalidate immediato nel frame successivo:
-         non cambia zoom, ma garantisce che marker/tooltip appena aggiunti
-         vengano calcolati sulla misura reale del contenitore. */
       requestAnimationFrame(()=>{
         state.map.invalidateSize({pan:false,animate:false});
+        updateSemanticOverlayPositions();
       });
     });
   }
