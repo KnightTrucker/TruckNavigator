@@ -447,6 +447,18 @@
     .tolerance{background:#5b4a18;color:#ffe794}
     .late{background:#542a26;color:#ffbdb6}
     .meta{font-size:11px;color:var(--muted);line-height:1.5}
+
+    .stopSearchError{
+      padding:9px 11px;
+      border-radius:10px;
+      border:1px solid #315f99;
+      background:#0c1a31;
+      color:#a9c7e9;
+      font-size:13px;
+      line-height:1.35;
+      text-align:left;
+    }
+
     .empty{padding:18px;text-align:center;color:#a8c8ea;font-size:12px;border:1px dashed #325f9b;border-radius:14px}
     .footer{text-align:center;color:#7ea3d3;font-size:10px;padding:12px 5px;display:none}
 
@@ -481,16 +493,17 @@
       font:950 15px/1 Arial,sans-serif;
     }
     .semanticMarker.target .semanticPin{
-      width:31px;height:31px;
-      border-radius:7px;
+      width:22px;height:22px;
+      border-radius:5px;
+      border-width:2px;
       transform:rotate(45deg);
       background:#dfff73;
-      box-shadow:0 0 0 2px rgba(223,255,115,.95),0 0 18px rgba(223,255,115,.8);
+      box-shadow:0 0 0 2px rgba(223,255,115,.92),0 0 12px rgba(223,255,115,.65);
     }
     .semanticMarker.target .semanticPin span{
       transform:rotate(-45deg);
       display:block;
-      font-size:15px;
+      font-size:10px;
     }
     .semanticMarker.stop .semanticPin{
       width:32px;height:32px;
@@ -517,8 +530,7 @@
       box-shadow:0 3px 10px rgba(0,0,0,.48);
     }
     .semanticMarker.target .semanticLabel{
-      border-color:#dfff73;
-      color:#f6ffc9;
+      display:none;
     }
     .semanticMarker.focus .semanticPin{
       animation:semanticPulse .75s ease-in-out 3;
@@ -635,7 +647,7 @@
       <img src="./powered_by_az.png" alt="Powered by Andrea Zollet">
     </div>
 
-    <div class="version">v0.4.7</div>
+    <div class="version">v0.4.8</div>
   </header>
 
   <section class="card">
@@ -746,7 +758,7 @@
     <h2>3 · Punto teorico</h2>
     <div class="stats">
       <div class="stat"><span>Route totale</span><b id="statDistance">—</b></div>
-      <div class="stat"><span>Tempo route</span><b id="statDuration">—</b></div>
+      <div class="stat"><span>Tempo camion</span><b id="statDuration">—</b></div>
       <div class="stat"><span>Fine guida tra</span><b id="statDrive">—</b></div>
       <div class="stat"><span>Distanza stimata</span><b id="statTargetKm">—</b></div>
     </div>
@@ -1136,7 +1148,8 @@
     const q=new URLSearchParams({
       key,
       routeType:'fastest',
-      traffic:'false',
+      traffic:'true',
+      computeTravelTimeFor:'all',
       travelMode:'truck',
       vehicleWeight:String(Math.round(v.weight*1000)),
       vehicleAxleWeight:String(Math.round(v.axleload*1000)),
@@ -1175,7 +1188,15 @@
         if(good/Math.max(1,sample.length)<.75)return null;
       }
 
-      return {duration:td,source:'TomTom Truck · ORS HGV',distance:tm};
+      return {
+        duration:td,
+        source:'TomTom Truck LIVE · ORS HGV',
+        distance:tm,
+        trafficDelay:+s.trafficDelayInSeconds||0,
+        noTrafficDuration:+s.noTrafficTravelTimeInSeconds||0,
+        historicDuration:+s.historicTrafficTravelTimeInSeconds||0,
+        liveDuration:+s.liveTrafficIncidentsTravelTimeInSeconds||0
+      };
     }finally{clearTimeout(timer)}
   }
 
@@ -1738,27 +1759,37 @@
     return false;
   }
 
-  async function overpassRequest(endpoint,query,timeoutMs=8500){
-    const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
-    try{
-      const r=await fetch(endpoint,{
-        method:'POST',
-        signal:ctrl.signal,
-        cache:'no-store',
-        headers:{
-          'Accept':'application/json',
-          'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'
-        },
-        body:'data='+encodeURIComponent(query)
-      });
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      const j=await r.json();
-      if(!j||!Array.isArray(j.elements))throw new Error('Risposta OSM non valida');
-      return j;
-    }finally{
-      clearTimeout(timer);
+  async function overpassRequest(endpoint,query,timeoutMs=9000){
+    let lastErr=null;
+    for(const method of ['POST','GET']){
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+      try{
+        const opts={
+          method,
+          signal:ctrl.signal,
+          cache:'no-store',
+          headers:{'Accept':'application/json'}
+        };
+        let url=endpoint;
+        if(method==='POST'){
+          opts.headers['Content-Type']='application/x-www-form-urlencoded;charset=UTF-8';
+          opts.body='data='+encodeURIComponent(query);
+        }else{
+          url=endpoint+'?data='+encodeURIComponent(query);
+        }
+        const r=await fetch(url,opts);
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        const j=await r.json();
+        if(!j||!Array.isArray(j.elements))throw new Error('Risposta OSM non valida');
+        return j;
+      }catch(e){
+        lastErr=e;
+      }finally{
+        clearTimeout(timer);
+      }
     }
+    throw lastErr||new Error('Overpass non disponibile');
   }
 
   async function fetchOverpassWithFallback(query){
@@ -1777,6 +1808,177 @@
     }catch(e){
       throw new Error('Ricerca soste OSM temporaneamente non disponibile. La route e il punto teorico restano validi: riprova solo la ricerca soste tra poco.');
     }
+  }
+
+
+  function sampleWindowRoute(route,fromD,toD,maxPoints=22){
+    const span=Math.max(1,toD-fromD);
+    const n=Math.max(2,Math.min(maxPoints,Math.ceil(span/3000)+1));
+    const out=[];
+    for(let i=0;i<n;i++){
+      const d=fromD+(span*i/Math.max(1,n-1));
+      const p=pointAtDistance(route.timeline,d);
+      out.push({lat:+p.lat,lon:+p.lon});
+    }
+    return out;
+  }
+
+  async function tomTomAlongRouteRequest(query,routePoints,key){
+    if(!key||!Array.isArray(routePoints)||routePoints.length<2)return [];
+
+    const u='https://api.tomtom.com/search/2/searchAlongRoute/'+encodeURIComponent(query)+'.json';
+    const qs=new URLSearchParams({
+      key,
+      maxDetourTime:'900',
+      limit:'12',
+      language:'it-IT',
+      detourOffset:'true',
+      sortBy:'detourOffset'
+    });
+
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),10000);
+    try{
+      const r=await fetch(u+'?'+qs.toString(),{
+        method:'POST',
+        cache:'no-store',
+        signal:ctrl.signal,
+        headers:{
+          'Accept':'application/json',
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({route:{points:routePoints}})
+      });
+      if(!r.ok)throw new Error('TomTom Search '+r.status);
+      const j=await r.json();
+      return Array.isArray(j?.results)?j.results:[];
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
+  function tomTomCategoryText(x){
+    const a=[];
+    (x?.poi?.categories||[]).forEach(v=>a.push(String(v||'')));
+    (x?.poi?.classifications||[]).forEach(c=>{
+      a.push(String(c?.code||''));
+      (c?.names||[]).forEach(n=>a.push(String(n?.name||'')));
+    });
+    return a.join(' ').toLowerCase();
+  }
+
+  function tomTomStopFromResult(x,kindHint){
+    const lat=+x?.position?.lat, lon=+x?.position?.lon;
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+
+    const name=String(x?.poi?.name||x?.address?.freeformAddress||'').trim();
+    const cats=tomTomCategoryText(x);
+    const n=name.toLowerCase();
+
+    if(suspiciousStopName(name,{}))return null;
+
+    let stopKind='service', stopLabel='Area di servizio';
+    if(kindHint==='parking'){
+      /* Ricerca testuale truck parking: richiedi almeno un segnale coerente. */
+      const ok=/truck|camion|tir|hgv|lorry|parking|parcheggio|area di sosta/.test(n+' '+cats);
+      if(!ok)return null;
+      stopKind='hgv_parking';
+      stopLabel='Parcheggio camion';
+    }else if(kindHint==='rest'){
+      const ok=/rest|sosta|parking|parcheggio|service|servizio|fuel|benzina|petrol/.test(n+' '+cats);
+      if(!ok)return null;
+      stopKind='rest';
+      stopLabel='Area di sosta';
+    }else{
+      const ok=/service|servizio|fuel|benzina|petrol|rest|sosta|autogrill|chef express/.test(n+' '+cats);
+      if(!ok)return null;
+      stopKind='service';
+      stopLabel='Area di servizio';
+    }
+
+    const tags = stopKind==='hgv_parking'
+      ? {amenity:'parking',hgv:'designated'}
+      : stopKind==='rest'
+        ? {highway:'rest_area'}
+        : {highway:'services'};
+
+    return {
+      lat,lon,
+      name:name||stopLabel,
+      address:String(x?.address?.freeformAddress||''),
+      tags,
+      id:'tt:'+String(x?.id||`${lat.toFixed(5)},${lon.toFixed(5)}`),
+      source:'TomTom',
+      stopKind,
+      stopLabel,
+      stopProof:`TomTom Along Route${Number.isFinite(+x?.detourTime)?` · deviazione ~${Math.max(0,Math.round(+x.detourTime/60))} min`:''}`,
+      stopSupport:true,
+      detourTime:Number.isFinite(+x?.detourTime)?+x.detourTime:null,
+      detourDistance:Number.isFinite(+x?.detourDistance)?+x.detourDistance:null
+    };
+  }
+
+  async function fetchTomTomStopsAlongRoute(route,fromD,toD){
+    const key=toraTomTomKey();
+    if(!key)return [];
+
+    const routePoints=sampleWindowRoute(route,fromD,toD,22);
+    if(routePoints.length<2)return [];
+
+    const specs=[
+      ['area di servizio','service'],
+      ['parcheggio camion','parking'],
+      ['area di sosta','rest']
+    ];
+
+    const settled=await Promise.allSettled(
+      specs.map(([q])=>tomTomAlongRouteRequest(q,routePoints,key))
+    );
+
+    const rows=[];
+    settled.forEach((res,i)=>{
+      if(res.status!=='fulfilled')return;
+      const kind=specs[i][1];
+      (res.value||[]).forEach(x=>{
+        const p=tomTomStopFromResult(x,kind);
+        if(p)rows.push(p);
+      });
+    });
+
+    return rows;
+  }
+
+  async function overpassStopRows(route,fromD,toD){
+    const q=buildOverpassWindowQuery(route,fromD,toD);
+    const j=await fetchOverpassWithFallback(q);
+
+    return (j.elements||[]).map(x=>{
+      const lat=x.lat??x.center?.lat;
+      const lon=x.lon??x.center?.lon;
+      if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+
+      const tags=x.tags||{};
+      const fallback=
+        tags.highway==='services'?'Area di servizio':
+        tags.highway==='rest_area'?'Area di sosta':
+        tags.parking==='layby'?'Piazzola camion':
+        tags.amenity==='parking'?'Parcheggio camion':'Sosta camion';
+
+      const name=tags['name:it']||tags.name||tags.brand||tags.operator||tags.ref||fallback;
+      const verified=classifyVerifiedStop(name,tags);
+      if(!verified)return null;
+
+      return {
+        lat,lon,name,tags,
+        osmType:x.type,osmId:x.id,
+        id:`${x.type}/${x.id}`,
+        source:'OSM',
+        stopKind:verified.kind,
+        stopLabel:verified.label,
+        stopProof:verified.proof,
+        stopSupport:verified.support
+      };
+    }).filter(Boolean);
   }
 
   function genericStopName(name){
@@ -1874,40 +2076,34 @@
       return cached.rows.map(x=>({...x,tags:{...(x.tags||{})}}));
     }
 
-    /* Una sola query compatta sul rettangolo della porzione di route utile.
-       Il vecchio motore ripeteva 4 query attorno a ~7 campioni (fino a 28
-       scansioni Overpass nella stessa richiesta), causa dei timeout. */
-    const q=buildOverpassWindowQuery(route,fromD,toD);
-    const j=await fetchOverpassWithFallback(q);
+    const raw=[];
+    const errors=[];
 
-    const raw=(j.elements||[]).map(x=>{
-      const lat=x.lat??x.center?.lat;
-      const lon=x.lon??x.center?.lon;
-      if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+    /* 1) Fonte primaria: TomTom Search Along Route.
+       Usa esattamente la porzione di route 20/30/40 km interessata. */
+    if($('results')){
+      $('results').innerHTML='<div class="empty">Cerco aree di servizio e parcheggi camion lungo la route…</div>';
+    }
+    try{
+      raw.push(...await fetchTomTomStopsAlongRoute(route,fromD,toD));
+    }catch(e){
+      errors.push('TomTom: '+(e?.message||String(e)));
+    }
 
-      const tags=x.tags||{};
-      const fallback=
-        tags.highway==='services'?'Area di servizio':
-        tags.highway==='rest_area'?'Area di sosta':
-        tags.parking==='layby'?'Piazzola camion':
-        tags.amenity==='parking'?'Parcheggio camion':'Sosta camion';
+    /* 2) OSM/Overpass è solo integrazione/fallback.
+       Se TomTom ha già trovato abbastanza candidati, non interroghiamo Overpass. */
+    if(raw.length<4){
+      try{
+        raw.push(...await overpassStopRows(route,fromD,toD));
+      }catch(e){
+        errors.push('OSM: '+(e?.message||String(e)));
+      }
+    }
 
-      const name=tags['name:it']||tags.name||tags.brand||tags.operator||tags.ref||fallback;
-      const verified=classifyVerifiedStop(name,tags);
-      if(!verified)return null;
+    if(!raw.length && errors.length){
+      throw new Error('Ricerca soste temporaneamente non disponibile. Riprova tra poco.');
+    }
 
-      return {
-        lat,lon,name,tags,
-        osmType:x.type,osmId:x.id,
-        id:`${x.type}/${x.id}`,
-        stopKind:verified.kind,
-        stopLabel:verified.label,
-        stopProof:verified.proof,
-        stopSupport:verified.support
-      };
-    }).filter(Boolean);
-
-    /* Dedupe OSM identity prima della proiezione. */
     const identity=new Map();
     raw.forEach(p=>{
       const k=p.id||`${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
@@ -1917,7 +2113,16 @@
     const projected=[];
     for(const p of identity.values()){
       const near=nearestOnTimeline(p,route.timeline);
-      if(!acceptProjectedStop(p,near))continue;
+
+      if(p.source==='OSM'){
+        if(!acceptProjectedStop(p,near))continue;
+      }else{
+        /* TomTom ha già cercato Along Route; manteniamo comunque un gate
+           fisico stretto sulla route canonica HGV. */
+        if(!near||near.offRoute>1800)continue;
+        if(suspiciousStopName(p.name,p.tags||{}))continue;
+      }
+
       if(near.distance<fromD-700 || near.distance>toD+700)continue;
 
       const delta=near.distance-target.distance;
@@ -1930,19 +2135,15 @@
       });
     }
 
-    /* Prima le soste vicine al punto teorico, penalizzando le deviazioni laterali. */
     projected.sort((a,b)=>{
       const sideA=a.delta<=0?0:1, sideB=b.delta<=0?0:1;
       if(sideA!==sideB)return sideA-sideB;
-      const scoreA=Math.abs(a.delta)+a.offRoute*1.8;
-      const scoreB=Math.abs(b.delta)+b.offRoute*1.8;
+      const scoreA=Math.abs(a.delta)+a.offRoute*1.8+(a.detourTime||0)*12;
+      const scoreB=Math.abs(b.delta)+b.offRoute*1.8+(b.detourTime||0)*12;
       return scoreA-scoreB;
     });
 
     const deduped=physicalDedupe(projected);
-
-    /* Lista corta: massimo 6.
-       Con tolleranza attiva riserviamo almeno un posto alla prima soluzione dopo il punto. */
     const before=deduped.filter(p=>p.delta<=0).sort((a,b)=>Math.abs(a.delta)-Math.abs(b.delta));
     const after=deduped.filter(p=>p.delta>0).sort((a,b)=>a.delta-b.delta);
 
@@ -1958,13 +2159,24 @@
     }
 
     selected=selected.slice(0,6);
-    selected=await enrichStopNames(selected);
 
-    /* Un ultimo controllo sul nome risolto. */
+    /* Nominatim serve solo ai candidati OSM con nome ancora generico.
+       I risultati TomTom arrivano già con nome e indirizzo. */
+    const needsOsmName=selected.some(p=>p.source==='OSM' && genericStopName(p.name));
+    if(needsOsmName){
+      selected=await enrichStopNames(selected);
+    }
+
     selected=selected.filter(p=>!suspiciousStopName(p.name,p.tags||{}));
-    state.stopCache.set(cacheKey,{at:Date.now(),rows:selected.map(x=>({...x,tags:{...(x.tags||{})}}))});
+
+    state.stopCache.set(
+      cacheKey,
+      {at:Date.now(),rows:selected.map(x=>({...x,tags:{...(x.tags||{})}}))}
+    );
+
     return selected;
   }
+
 
   function typeLabel(tags,stopLabel){
     return stopLabel || (
@@ -2123,7 +2335,7 @@
       /* Il punto teorico NON dipende dal successo di Overpass. */
       drawTargetAndStops(target,stops,effectiveTargetSec,overSec);
       if(stopError){
-        $('results').innerHTML=`<div class="empty">${esc(stopError.message||String(stopError))}</div>`;
+        $('results').innerHTML=`<div class="stopSearchError">${esc(stopError.message||String(stopError))}</div>`;
       }else{
         renderStops(stops,effectiveTargetSec,overSec);
       }

@@ -1,18 +1,25 @@
-ToraDove v0.4.7 — TRUCK TIME + STOPS
+ToraDove v0.4.8
 
 TEMPO CAMION
-- ORS driving-hgv resta autorità geometrica e legale.
-- ORS richiesto con instructions=true.
-- Timeline costruita dalle duration reali degli step ORS (way_points), non più tempo uniforme per km.
-- Se nello stesso origin è presente la chiave TomTom di ToraNavy (ktn57_tomtom_api_key), viene richiesta una route truck no-traffic con peso/assi/dimensioni reali.
-- Il tempo TomTom viene usato solo se distanza e corridoio sono coerenti con ORS HGV; gli step ORS vengono scalati al totale canonico.
-- Se TomTom non è disponibile, resta ORS HGV ma con timeline step-by-step corretta.
+- ORS driving-hgv resta autorità geometrica/restrizioni.
+- Se la chiave TomTom già salvata da ToraNavy è disponibile:
+  TomTom Truck con traffic=true diventa baseline del tempo.
+- Richiesti anche i tempi traffic/no-traffic TomTom per diagnosi.
+- Timeline locale resta costruita dagli step ORS HGV e scalata al totale camion.
+- "Tempo route" rinominato "Tempo camion".
 
 RICERCA SOSTE
-- eliminata query Overpass a 28 scansioni around;
-- una sola bbox stretta sulla finestra utile della route;
-- tre endpoint in parallelo, timeout 15 s;
-- cache 5 minuti;
-- se Overpass fallisce, punto teorico e mappa restano comunque visibili e validi.
+- TomTom Search Along Route è la fonte primaria.
+- Cerca solo sulla porzione 20/30/40 km della route interessata.
+- Query: area di servizio / parcheggio camion / area di sosta.
+- Overpass è solo integrazione/fallback se TomTom trova meno di 4 candidati.
+- Overpass prova POST e GET.
+- Max 6 risultati, filtri route/falsi positivi invariati.
 
-File principale: index.html
+MAPPA
+- punto teorico ridotto a piccolo rombo giallo;
+- eliminato il grande banner "PUNTO TEORICO";
+- marker soste e nomi restano visibili.
+
+UI
+- errore ricerca soste reso compatto, non più grande riquadro tratteggiato.
