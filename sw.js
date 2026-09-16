@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.93 FULL-ITINERARY-TIME */
-const CACHE='ktn-v01693-full-itinerary-time';
+/* ToraNavy 0.16.94 PLANNER-WEIGHT-SEGMENTS */
+const CACHE='ktn-v01694-planner-weight-segments';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
