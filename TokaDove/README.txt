@@ -1,10 +1,13 @@
-TOKA DOVE v0.3.3
+ToraDove v0.3.4
 
-Fix ORS 2007 / "This response format is not supported":
-- rimosso Accept: application/json dalla richiesta /driving-hgv/geojson;
-- mantenuti Authorization e Content-Type application/json;
-- routing HGV invariato;
-- nessun fallback automatico a OSRM;
-- cache PWA aggiornata.
+Modifiche:
+- nome definitivo app: ToraDove;
+- nomi delle aree/parcheggi mostrati direttamente sulla mappa con etichette permanenti;
+- priorità nome OSM: name:it, name, brand, operator, ref;
+- punto teorico etichettato sulla mappa;
+- Leaflet ridimensionato dopo l'apertura del pannello;
+- inquadratura automatica di punto teorico + soste;
+- routing ORS HGV della v0.3.3 mantenuto invariato;
+- nessun fallback automatico a OSRM.
 
 File principale: index.html

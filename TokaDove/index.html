@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#163b2a">
-  <meta name="description" content="TOKA DOVE - pianifica dove fermarti in base al tempo di guida residuo">
-  <title>TOKA DOVE</title>
+  <meta name="description" content="ToraDove - pianifica dove fermarti in base al tempo di guida residuo">
+  <title>ToraDove</title>
 
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
@@ -157,6 +157,33 @@
     .meta{font-size:11px;color:var(--muted);line-height:1.5}
     .empty{padding:18px;text-align:center;color:#7f9885;font-size:12px;border:1px dashed #2e4a39;border-radius:14px}
     .footer{text-align:center;color:#617768;font-size:10px;padding:12px 5px}
+
+    .map-stop-label{
+      background:rgba(7,20,13,.94)!important;
+      border:1px solid #72c884!important;
+      border-radius:8px!important;
+      color:#f3fff5!important;
+      box-shadow:0 3px 10px rgba(0,0,0,.42)!important;
+      font-size:11px!important;
+      font-weight:800!important;
+      line-height:1.15!important;
+      padding:5px 7px!important;
+      white-space:nowrap!important;
+    }
+    .map-stop-label:before{display:none!important}
+    .map-target-label{
+      background:rgba(39,55,11,.95)!important;
+      border:1px solid #dfff73!important;
+      border-radius:8px!important;
+      color:#f6ffc9!important;
+      box-shadow:0 3px 10px rgba(0,0,0,.42)!important;
+      font-size:10px!important;
+      font-weight:850!important;
+      padding:4px 6px!important;
+      white-space:nowrap!important;
+    }
+    .map-target-label:before{display:none!important}
+
     .hidden{display:none!important}
 
     @media(max-width:720px){
@@ -170,12 +197,12 @@
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand">V</div>
+    <div class="brand">D</div>
     <div>
-      <h1>TOKA DOVE</h1>
+      <h1>ToraDove</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.3.3</div>
+    <div class="version">v0.3.4</div>
   </header>
 
   <section class="card">
@@ -315,7 +342,7 @@
     <div id="results" class="results"></div>
   </section>
 
-  <div class="footer">TOKA DOVE è indipendente da ToraNavy. Dati mappa © OpenStreetMap contributors.</div>
+  <div class="footer">ToraDove è indipendente da ToraNavy. Dati mappa © OpenStreetMap contributors.</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -775,11 +802,17 @@ out center tags;`;
       const lat=x.lat??x.center?.lat,lon=x.lon??x.center?.lon;
       if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
       const tags=x.tags||{};
-      const name=tags.name||tags['name:it']||
+      const name=
+        tags['name:it'] ||
+        tags.name ||
+        tags.brand ||
+        tags.operator ||
+        tags.ref ||
         (tags.highway==='services'?'Area di servizio':
          tags.highway==='rest_area'?'Area di sosta':
-         tags.amenity==='fuel'?'Stazione di servizio':
-         tags.amenity==='parking'?'Parcheggio':'Sosta');
+         tags.amenity==='fuel'?'Stazione di servizio HGV':
+         tags.parking==='layby'?'Piazzola camion':
+         tags.amenity==='parking'?'Parcheggio camion':'Sosta camion');
       return {lat,lon,name,tags,id:`${x.type}/${x.id}`};
     }).filter(Boolean);
 
@@ -878,7 +911,10 @@ out center tags;`;
       html:'<div style="width:22px;height:22px;border-radius:50%;background:#dfff73;border:4px solid #385127;box-shadow:0 0 0 4px rgba(223,255,115,.25)"></div>',
       iconSize:[22,22],iconAnchor:[11,11]
     });
-    const tm=L.marker([target.lat,target.lon],{icon:targetIcon}).addTo(state.map).bindPopup('Punto teorico di fine guida');
+    const tm=L.marker([target.lat,target.lon],{icon:targetIcon})
+      .addTo(state.map)
+      .bindPopup('Punto teorico di fine guida')
+      .bindTooltip('Punto teorico',{permanent:true,direction:'top',offset:[0,-12],className:'map-target-label'});
     state.markers.push(tm);
 
     stops.forEach(p=>{
@@ -889,9 +925,31 @@ out center tags;`;
         html:`<div style="width:16px;height:16px;border-radius:50%;background:${c};border:3px solid #173224;box-shadow:0 0 0 3px rgba(255,255,255,.10)"></div>`,
         iconSize:[16,16],iconAnchor:[8,8]
       });
-      const m=L.marker([p.lat,p.lon],{icon}).addTo(state.map)
-        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(typeLabel(p.tags))}`);
+      const m=L.marker([p.lat,p.lon],{icon})
+        .addTo(state.map)
+        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(typeLabel(p.tags))}`)
+        .bindTooltip(esc(p.name),{
+          permanent:true,
+          direction:'top',
+          offset:[0,-10],
+          className:'map-stop-label',
+          opacity:1
+        });
       state.markers.push(m);
+    });
+
+    /* Il pannello mappa nasce dopo il calcolo: forza Leaflet a rileggere
+       le dimensioni reali del contenitore e inquadra punto teorico + soste. */
+    requestAnimationFrame(()=>{
+      state.map.invalidateSize(true);
+      const all=[[target.lat,target.lon], ...stops.map(p=>[p.lat,p.lon])];
+      if(all.length>1){
+        state.map.fitBounds(L.latLngBounds(all),{padding:[35,35],maxZoom:13});
+      }else{
+        state.map.setView([target.lat,target.lon],12);
+      }
+      setTimeout(()=>state.map.invalidateSize(true),250);
+      setTimeout(()=>state.map.invalidateSize(true),900);
     });
   }
 
@@ -939,7 +997,6 @@ out center tags;`;
 
       renderStops(stops,effectiveTargetSec,overSec);
       drawTargetAndStops(target,stops,effectiveTargetSec,overSec);
-      state.map.setView([target.lat,target.lon],11);
       await addrPromise;
     }catch(e){
       console.error(e);

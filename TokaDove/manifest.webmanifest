@@ -1,12 +1,12 @@
 {
-  "name": "TOKA DOVE",
-  "short_name": "TOKA DOVE",
+  "name": "ToraDove",
+  "short_name": "ToraDove",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#09110d",
   "theme_color": "#163b2a",
-  "description": "TOKA DOVE - ricerca soste camion in base al tempo residuo.",
+  "description": "ToraDove - trova la sosta camion in base al tempo di guida residuo.",
   "icons": [
     {
       "src": "icon.svg",
