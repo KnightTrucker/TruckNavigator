@@ -89,6 +89,10 @@
 
     .placeField{position:relative}
     .placeLine{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:end;margin-top:9px}
+    .startLine{grid-template-columns:34px minmax(0,1fr) auto;align-items:end}
+    .startLine .step{align-self:end;margin-bottom:6px}
+    .gpsInline{height:48px;white-space:nowrap;align-self:end;margin-bottom:0;padding:0 13px}
+    @media(max-width:520px){.gpsInline{padding:0 10px;font-size:0}.gpsInline::after{content:'📍 GPS';font-size:13px}}
     .step{
       width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
       margin-bottom:6px;background:#203b2b;border:1px solid #3d684e;color:#bfe8c7;font-weight:900
@@ -135,8 +139,8 @@
     .muted{color:var(--muted)}
     .small{font-size:11px}
 
-    .mapWrap{overflow:hidden;border-radius:17px;border:1px solid #315641;background:#07100b}
-    #map{height:440px;min-height:340px}
+    .mapWrap{overflow:hidden;border-radius:17px;border:1px solid #315641;background:#050805}
+    #map{height:440px;min-height:340px;width:100%;background:#050805}
     .leaflet-control-attribution{font-size:9px!important}
 
     .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted)}
@@ -202,21 +206,21 @@
       <h1>ToraDove</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.3.4</div>
+    <div class="version">v0.3.6</div>
   </header>
 
   <section class="card">
     <h2>1 · Inserisci il percorso</h2>
     <div class="subtitle">Puoi usare POI, indirizzi oppure coordinate nel formato <b>latitudine, longitudine</b>.</div>
 
-    <div class="placeLine">
+    <div class="placeLine startLine">
       <div class="step">A</div>
       <div class="field placeField">
-        <label>Partenza · facoltativa</label>
-        <input id="startInput" autocomplete="off" placeholder="Vuoto = posizione GPS attuale">
+        <label>Partenza</label>
+        <input id="startInput" autocomplete="off" placeholder="POI, indirizzo o coordinate">
         <div id="startSuggestions" class="suggestions hidden"></div>
-        <div class="fieldHelp">Se il campo resta vuoto, al calcolo verrà usata automaticamente la tua posizione GPS.</div>
       </div>
+      <button class="btn soft gpsInline" id="gpsFillBtn" type="button">📍 Posizione GPS</button>
     </div>
 
     <div id="waypointArea"></div>
@@ -232,7 +236,6 @@
 
     <div class="row" style="margin-top:11px">
       <button class="btn soft mini" id="addWaypointBtn">+ Aggiungi tappa</button>
-      <button class="btn soft mini" id="gpsFillBtn">📍 Inserisci GPS in partenza</button>
     </div>
 
     <details>
@@ -399,7 +402,10 @@
   let geoTimer=null;
   async function geocodeSearch(query){
     const coord=parseCoords(query);
-    if(coord) return [coord];
+    if(coord){
+      const addr=await reverseGeocode(coord);
+      return [{...coord,label:addr||coord.label,resolvedAddress:addr||''}];
+    }
     if(query.trim().length<3) return [];
     const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=1&q='+encodeURIComponent(query);
     const r=await fetch(url,{headers:{'Accept':'application/json','Accept-Language':'it'}});
@@ -442,11 +448,33 @@
 
   async function resolveInput(input,picked,allowEmptyGps=false){
     const text=input.value.trim();
-    if(!text && allowEmptyGps) return await getGps();
-    if(!text) throw new Error('Manca un punto del percorso.');
-    if(picked) return picked;
+
+    if(!text && allowEmptyGps){
+      const gps=await getGps();
+      const addr=await reverseGeocode(gps);
+      const out={...gps,label:addr||coordsText(gps),resolvedAddress:addr||''};
+      input.value=out.label;
+      return out;
+    }
+
+    if(!text){
+      if(input && input.id==='startInput') throw new Error('Inserisci la partenza oppure usa il pulsante GPS.');
+      throw new Error('Manca un punto del percorso.');
+    }
+
+    if(picked){
+      input.value=picked.label||input.value;
+      return picked;
+    }
+
     const coord=parseCoords(text);
-    if(coord) return coord;
+    if(coord){
+      const addr=await reverseGeocode(coord);
+      const out={...coord,label:addr||coord.label,resolvedAddress:addr||''};
+      input.value=out.label;
+      return out;
+    }
+
     const res=await geocodeSearch(text);
     if(!res.length) throw new Error(`Non trovo: ${text}`);
     input.value=res[0].label;
@@ -494,11 +522,14 @@
 
   $('gpsFillBtn').onclick=async()=>{
     try{
-      setStatus('Cerco la posizione GPS…');
+      setStatus('Cerco la posizione GPS e risolvo l’indirizzo…');
       const p=await getGps();
-      state.userGps=p; startPicked=p;
-      $('startInput').value=coordsText(p);
-      setStatus(`GPS acquisito · precisione circa ${Math.round(p.accuracy||0)} m`,'good');
+      const addr=await reverseGeocode(p);
+      const resolved={...p,label:addr||coordsText(p),resolvedAddress:addr||''};
+      state.userGps=resolved;
+      startPicked=resolved;
+      $('startInput').value=resolved.label;
+      setStatus(`GPS acquisito · ${addr?'indirizzo risolto · ':''}precisione circa ${Math.round(p.accuracy||0)} m`,'good');
     }catch(e){setStatus(e.message,'bad')}
   };
 
@@ -533,7 +564,7 @@
   loadSettings();
 
   async function buildPoints(){
-    const start=await resolveInput($('startInput'),startPicked,true);
+    const start=await resolveInput($('startInput'),startPicked,false);
     const mids=[];
     for(const wp of state.waypoints){
       mids.push(await resolveInput(wp.input,wp.picked,false));
@@ -702,11 +733,57 @@
 
   function ensureMap(){
     if(state.map) return;
-    state.map=L.map('map',{zoomControl:true});
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      maxZoom:19,
-      attribution:'&copy; OpenStreetMap contributors'
-    }).addTo(state.map);
+
+    state.map=L.map('map',{
+      zoomControl:true,
+      attributionControl:true,
+      preferCanvas:true
+    });
+
+    /* SATELLITE: stessa base World Imagery usata in ToraNavy. */
+    const satellite=L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {
+        maxZoom:19,
+        keepBuffer:6,
+        updateWhenIdle:false,
+        updateWhenZooming:false,
+        attribution:'Tiles © Esri'
+      }
+    );
+
+    /* Etichette sopra il satellite per strade/località. */
+    const labels=L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png',
+      {
+        subdomains:'abcd',
+        maxZoom:20,
+        keepBuffer:6,
+        updateWhenIdle:false,
+        updateWhenZooming:false,
+        opacity:.92,
+        pane:'overlayPane',
+        attribution:'© OpenStreetMap contributors © CARTO'
+      }
+    );
+
+    satellite.addTo(state.map);
+    labels.addTo(state.map);
+
+    /* Un solo controllo: Satellite + etichette è la vista predefinita. */
+    L.control.layers(
+      {'Satellite + etichette':satellite},
+      {'Etichette':labels},
+      {position:'topright',collapsed:true}
+    ).addTo(state.map);
+
+    /* Se una tile salta, Leaflet continua a richiedere le altre senza
+       lasciare la mappa in uno stato "mezzo disegnato". */
+    const refresh=()=>{
+      requestAnimationFrame(()=>state.map && state.map.invalidateSize(true));
+    };
+    satellite.on('load',refresh);
+    labels.on('load',refresh);
   }
 
   function clearMapLayers(){
@@ -718,7 +795,13 @@
   function drawRoute(){
     ensureMap(); clearMapLayers();
     const pts=state.route.coords.map(p=>[p.lat,p.lon]);
-    state.routeLayer=L.polyline(pts,{weight:6,opacity:.9}).addTo(state.map);
+    state.routeLayer=L.polyline(pts,{
+      weight:7,
+      opacity:.98,
+      color:'#41ff76',
+      lineCap:'round',
+      lineJoin:'round'
+    }).addTo(state.map);
     const s=L.marker([state.start.lat,state.start.lon]).addTo(state.map).bindPopup('Partenza');
     const e=L.marker([state.end.lat,state.end.lon]).addTo(state.map).bindPopup('Destinazione');
     state.markers.push(s,e);
@@ -755,8 +838,14 @@
 
   async function reverseGeocode(p){
     try{
-      const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&lat=${p.lat}&lon=${p.lon}`;
-      const r=await fetch(u,{headers:{'Accept-Language':'it'}});
+      const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=${encodeURIComponent(p.lat)}&lon=${encodeURIComponent(p.lon)}`;
+      const r=await fetch(u,{
+        headers:{
+          'Accept':'application/json',
+          'Accept-Language':'it'
+        },
+        cache:'no-store'
+      });
       if(!r.ok)return null;
       const j=await r.json();
       return j.display_name||null;

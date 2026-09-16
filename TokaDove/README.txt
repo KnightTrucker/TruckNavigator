@@ -1,13 +1,11 @@
-ToraDove v0.3.4
+ToraDove v0.3.6
 
 Modifiche:
-- nome definitivo app: ToraDove;
-- nomi delle aree/parcheggi mostrati direttamente sulla mappa con etichette permanenti;
-- priorità nome OSM: name:it, name, brand, operator, ref;
-- punto teorico etichettato sulla mappa;
-- Leaflet ridimensionato dopo l'apertura del pannello;
-- inquadratura automatica di punto teorico + soste;
-- routing ORS HGV della v0.3.3 mantenuto invariato;
-- nessun fallback automatico a OSRM.
+- lettera A allineata sulla stessa riga del campo Partenza;
+- pulsante GPS spostato a destra del campo Partenza;
+- rimossa la scritta che indicava GPS automatico a campo vuoto;
+- campo Partenza non usa più il GPS automaticamente;
+- se Partenza è vuota, viene chiesto di inserirla o premere il pulsante GPS;
+- satellite, reverse geocoding e routing ORS HGV invariati.
 
 File principale: index.html
