@@ -140,7 +140,7 @@
     .small{font-size:11px}
 
     .mapWrap{overflow:hidden;border-radius:17px;border:1px solid #315641;background:#050805}
-    #map{height:440px;min-height:340px;width:100%;background:#050805}
+    #map{height:460px;width:100%;background:#050805;display:block}
     .leaflet-control-attribution{font-size:9px!important}
 
     .legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:var(--muted)}
@@ -194,7 +194,7 @@
       .grid2{grid-template-columns:1fr}
       .stats{grid-template-columns:1fr 1fr}
       .version{display:none}
-      #map{height:47vh}
+      #map{height:430px}
     }
   </style>
 </head>
@@ -206,7 +206,7 @@
       <h1>ToraDove</h1>
       <p>DOVE E COME · app autonoma</p>
     </div>
-    <div class="version">v0.3.6</div>
+    <div class="version">v0.3.7</div>
   </header>
 
   <section class="card">
@@ -361,6 +361,7 @@
     start:null,end:null,waypoints:[],
     route:null,target:null,places:[],
     map:null,routeLayer:null,markers:[],
+    mapResizeObserver:null,
     userGps:null
   };
 
@@ -734,56 +735,82 @@
   function ensureMap(){
     if(state.map) return;
 
-    state.map=L.map('map',{
+    const el=$('map');
+    state.map=L.map(el,{
       zoomControl:true,
       attributionControl:true,
-      preferCanvas:true
+      preferCanvas:true,
+      zoomAnimation:false,
+      fadeAnimation:false,
+      markerZoomAnimation:false
     });
 
-    /* SATELLITE: stessa base World Imagery usata in ToraNavy. */
-    const satellite=L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    /* Satellite ibrido: stessa sorgente già usata da ToraNavy.
+       Un solo layer raster: satellite + nomi/strade, quindi niente
+       due griglie di tile sovrapposte che possano disallinearsi. */
+    const hybrid=L.tileLayer(
+      'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
       {
-        maxZoom:19,
-        keepBuffer:6,
-        updateWhenIdle:false,
-        updateWhenZooming:false,
-        attribution:'Tiles © Esri'
-      }
-    );
-
-    /* Etichette sopra il satellite per strade/località. */
-    const labels=L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png',
-      {
-        subdomains:'abcd',
         maxZoom:20,
-        keepBuffer:6,
+        subdomains:'0123',
+        keepBuffer:8,
         updateWhenIdle:false,
         updateWhenZooming:false,
-        opacity:.92,
-        pane:'overlayPane',
-        attribution:'© OpenStreetMap contributors © CARTO'
+        attribution:'© Google Maps'
       }
     );
 
-    satellite.addTo(state.map);
-    labels.addTo(state.map);
+    /* Vista provvisoria solo per inizializzare correttamente Leaflet.
+       Viene subito sostituita dal fitBounds della route. */
+    state.map.setView([44.5,11.3],6);
+    hybrid.addTo(state.map);
 
-    /* Un solo controllo: Satellite + etichette è la vista predefinita. */
-    L.control.layers(
-      {'Satellite + etichette':satellite},
-      {'Etichette':labels},
-      {position:'topright',collapsed:true}
-    ).addTo(state.map);
+    /* Correzione strutturale del problema visibile negli screenshot:
+       quando il riquadro cambia misura, Leaflet riceve SEMPRE la misura
+       reale e ridisegna tutta la griglia delle tile. */
+    if('ResizeObserver' in window){
+      state.mapResizeObserver=new ResizeObserver(()=>{
+        if(!state.map)return;
+        requestAnimationFrame(()=>{
+          state.map.invalidateSize({pan:false,animate:false});
+        });
+      });
+      state.mapResizeObserver.observe(el);
+    }
 
-    /* Se una tile salta, Leaflet continua a richiedere le altre senza
-       lasciare la mappa in uno stato "mezzo disegnato". */
-    const refresh=()=>{
-      requestAnimationFrame(()=>state.map && state.map.invalidateSize(true));
+    /* Anche quando una sezione hidden diventa visibile. */
+    const mo=new MutationObserver(()=>{
+      if(!state.map)return;
+      requestAnimationFrame(()=>{
+        state.map.invalidateSize({pan:false,animate:false});
+      });
+    });
+    mo.observe($('mapCard'),{attributes:true,attributeFilter:['class']});
+
+    hybrid.on('load',()=>{
+      if(state.map)state.map.invalidateSize({pan:false,animate:false});
+    });
+  }
+
+  function mapLayoutReady(callback){
+    ensureMap();
+    const el=$('map');
+    let tries=0;
+    const run=()=>{
+      tries++;
+      const r=el.getBoundingClientRect();
+      if(r.width>250 && r.height>250){
+        state.map.invalidateSize({pan:false,animate:false});
+        requestAnimationFrame(()=>{
+          state.map.invalidateSize({pan:false,animate:false});
+          callback();
+        });
+        return;
+      }
+      if(tries<12)requestAnimationFrame(run);
+      else callback();
     };
-    satellite.on('load',refresh);
-    labels.on('load',refresh);
+    requestAnimationFrame(run);
   }
 
   function clearMapLayers(){
@@ -795,6 +822,7 @@
   function drawRoute(){
     ensureMap(); clearMapLayers();
     const pts=state.route.coords.map(p=>[p.lat,p.lon]);
+
     state.routeLayer=L.polyline(pts,{
       weight:7,
       opacity:.98,
@@ -802,11 +830,19 @@
       lineCap:'round',
       lineJoin:'round'
     }).addTo(state.map);
+
     const s=L.marker([state.start.lat,state.start.lon]).addTo(state.map).bindPopup('Partenza');
     const e=L.marker([state.end.lat,state.end.lon]).addTo(state.map).bindPopup('Destinazione');
     state.markers.push(s,e);
-    state.map.fitBounds(state.routeLayer.getBounds(),{padding:[24,24]});
-    setTimeout(()=>state.map.invalidateSize(),100);
+
+    mapLayoutReady(()=>{
+      if(state.routeLayer && state.map){
+        state.map.fitBounds(state.routeLayer.getBounds(),{
+          padding:[30,30],
+          animate:false
+        });
+      }
+    });
   }
 
   $('routeBtn').onclick=async()=>{
@@ -1027,18 +1063,18 @@ out center tags;`;
       state.markers.push(m);
     });
 
-    /* Il pannello mappa nasce dopo il calcolo: forza Leaflet a rileggere
-       le dimensioni reali del contenitore e inquadra punto teorico + soste. */
-    requestAnimationFrame(()=>{
-      state.map.invalidateSize(true);
+    /* Inquadra i dati soltanto quando il contenitore ha la misura reale. */
+    mapLayoutReady(()=>{
       const all=[[target.lat,target.lon], ...stops.map(p=>[p.lat,p.lon])];
       if(all.length>1){
-        state.map.fitBounds(L.latLngBounds(all),{padding:[35,35],maxZoom:13});
+        state.map.fitBounds(L.latLngBounds(all),{
+          padding:[45,45],
+          maxZoom:13,
+          animate:false
+        });
       }else{
-        state.map.setView([target.lat,target.lon],12);
+        state.map.setView([target.lat,target.lon],12,{animate:false});
       }
-      setTimeout(()=>state.map.invalidateSize(true),250);
-      setTimeout(()=>state.map.invalidateSize(true),900);
     });
   }
 
