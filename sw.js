@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.08 TIME + LANDSCAPE + OVERTAKE + MANEUVER-STABILITY */
-const CACHE='ktn-v01708-time-landscape-overtake-stability';
+/* ToraNavy 0.17.09 HUD + VOICE + SERVICE CORRECTION */
+const CACHE='ktn-v01709c-hud-voice-service-timefreeflow';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
