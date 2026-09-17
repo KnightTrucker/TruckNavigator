@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.10 SECOND MANEUVER + AREAS LAYOUT */
-const CACHE='ktn-v01710a-second-areas-layout';
+/* ToraNavy 0.17.11 SECOND MANEUVER + AREAS LAYOUT */
+const CACHE='ktn-v01711-second-areas-layout';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
