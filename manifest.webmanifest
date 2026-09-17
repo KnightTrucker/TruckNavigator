@@ -3,7 +3,7 @@
   "short_name": "KT Navy",
   "description": "Navigatore HGV KnightTruckerNavy",
   "start_url": "./index.html",
-  "scope": "./index.html",
+  "scope": "./",
   "display": "fullscreen",
   "display_override": [
     "fullscreen",
@@ -26,6 +26,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "id": "./index.html"
+  ]
 }

@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.96 GUIDANCE-MODEL · ROOT PWA SCOPE FIX */
-const CACHE='ktn-v01696-guidance-model-pwa-scopefix1';
+/* ToraNavy 0.16.96 GUIDANCE-MODEL */
+const CACHE='ktn-v01696-guidance-model';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
@@ -18,11 +18,8 @@ self.addEventListener('install',event=>{
 
 self.addEventListener('activate',event=>{
   event.waitUntil(
-    caches.keys().then(keys=>Promise.all(
-      keys
-        .filter(k=>k.startsWith('ktn-') && k!==CACHE)
-        .map(k=>caches.delete(k))
-    )).then(()=>self.clients.claim())
+    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+      .then(()=>self.clients.claim())
   );
 });
 
@@ -31,11 +28,6 @@ self.addEventListener('fetch',event=>{
   if(req.method!=='GET')return;
   const url=new URL(req.url);
   if(url.origin!==self.location.origin)return;
-
-  /* ToraDove è una PWA separata in sottocartella.
-     Il service worker root di ToraNavy NON deve intercettarla. */
-  const path=url.pathname.toLowerCase();
-  if(path.startsWith('/toradove/'))return;
 
   if(req.mode==='navigate' || url.pathname.endsWith('/index.html')){
     event.respondWith(
