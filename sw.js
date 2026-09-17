@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.11 SECOND MANEUVER + AREAS LAYOUT */
-const CACHE='ktn-v01711-second-areas-layout';
+/* ToraNavy 0.17.13 LIVE TIME + HUD REPAIR */
+const CACHE='ktn-v01713-live-time-hud-repair';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
