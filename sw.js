@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.02 OVERTAKE-RETIRED-COMPACT-SERVICES */
-const CACHE='ktn-v01702-overtake-retired-compact-services';
+/* ToraNavy 0.16.96 GUIDANCE-MODEL · ROOT PWA SCOPE FIX */
+const CACHE='ktn-v01696-guidance-model-pwa-scopefix1';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
@@ -10,25 +10,6 @@ const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./ic
   './toranavy_autovelox_poliziotto.webp',
   './toranavy_arrivo_navigatore.webp',
   './toranavy_sosta_tappa.webp',
-  './toranavy_maneuver_exit.webp',
-  './toranavy_maneuver_exit_left.webp',
-  './toranavy_maneuver_exit_right.webp',
-  './toranavy_maneuver_fork_left.webp',
-  './toranavy_maneuver_fork_right.webp',
-  './toranavy_maneuver_keep_left.webp',
-  './toranavy_maneuver_keep_right.webp',
-  './toranavy_maneuver_merge_left.webp',
-  './toranavy_maneuver_merge_right.webp',
-  './toranavy_maneuver_next_exit.webp',
-  './toranavy_maneuver_sharp_left.webp',
-  './toranavy_maneuver_sharp_right.webp',
-  './toranavy_maneuver_slight_left.webp',
-  './toranavy_maneuver_slight_right.webp',
-  './toranavy_maneuver_straight.webp',
-  './toranavy_maneuver_turn_left.webp',
-  './toranavy_maneuver_turn_right.webp',
-  './toranavy_maneuver_uturn_left.webp',
-  './toranavy_maneuver_uturn_right.webp',
   './rallenta.webp'];
 
 self.addEventListener('install',event=>{
@@ -37,8 +18,11 @@ self.addEventListener('install',event=>{
 
 self.addEventListener('activate',event=>{
   event.waitUntil(
-    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
-      .then(()=>self.clients.claim())
+    caches.keys().then(keys=>Promise.all(
+      keys
+        .filter(k=>k.startsWith('ktn-') && k!==CACHE)
+        .map(k=>caches.delete(k))
+    )).then(()=>self.clients.claim())
   );
 });
 
@@ -47,6 +31,11 @@ self.addEventListener('fetch',event=>{
   if(req.method!=='GET')return;
   const url=new URL(req.url);
   if(url.origin!==self.location.origin)return;
+
+  /* ToraDove è una PWA separata in sottocartella.
+     Il service worker root di ToraNavy NON deve intercettarla. */
+  const path=url.pathname.toLowerCase();
+  if(path.startsWith('/toradove/'))return;
 
   if(req.mode==='navigate' || url.pathname.endsWith('/index.html')){
     event.respondWith(

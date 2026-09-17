@@ -1,9 +1,9 @@
 {
-  "name": "KnightTruckerNavy v47.4",
-  "short_name": "KnightTruckerNavy",
-  "description": "KnightTruckerNavy HGV con TomTom Traffic e Smart Search",
+  "name": "KnightTruckerNavy",
+  "short_name": "KT Navy",
+  "description": "Navigatore HGV KnightTruckerNavy",
   "start_url": "./index.html",
-  "scope": "./",
+  "scope": "./index.html",
   "display": "fullscreen",
   "display_override": [
     "fullscreen",
@@ -26,5 +26,6 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "./index.html"
 }
