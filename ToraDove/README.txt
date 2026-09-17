@@ -1,25 +1,27 @@
-ToraDove v0.4.8
+ToraDove v0.4.9 - PWA IDENTITY FIX
 
-TEMPO CAMION
-- ORS driving-hgv resta autorità geometrica/restrizioni.
-- Se la chiave TomTom già salvata da ToraNavy è disponibile:
-  TomTom Truck con traffic=true diventa baseline del tempo.
-- Richiesti anche i tempi traffic/no-traffic TomTom per diagnosi.
-- Timeline locale resta costruita dagli step ORS HGV e scalata al totale camion.
-- "Tempo route" rinominato "Tempo camion".
+Correzioni PWA:
+- manifest dedicato: toradove.webmanifest
+- ID PWA esplicito e unico: ./toradove-pwa
+- start_url dedicato: ./index.html?app=toradove-pwa
+- scope esplicito: ./
+- registrazione SW con scope esplicito e updateViaCache:none
+- cambio controller: un solo reload per passare da eventuale SW padre a ToraDove
+- cache namespace esclusivo toradove-*
+- il service worker NON cancella più cache di ToraNavy o altre app sullo stesso dominio
 
-RICERCA SOSTE
-- TomTom Search Along Route è la fonte primaria.
-- Cerca solo sulla porzione 20/30/40 km della route interessata.
-- Query: area di servizio / parcheggio camion / area di sosta.
-- Overpass è solo integrazione/fallback se TomTom trova meno di 4 candidati.
-- Overpass prova POST e GET.
-- Max 6 risultati, filtri route/falsi positivi invariati.
+IMPORTANTE:
+ToraDove e ToraNavy devono avere URL/cartelle GitHub Pages distinti.
+Esempio:
+  .../ToraNavy/
+  .../ToraDove/
+Non devono condividere la stessa identica cartella/root se vuoi installarle entrambe come app indipendenti.
 
-MAPPA
-- punto teorico ridotto a piccolo rombo giallo;
-- eliminato il grande banner "PUNTO TEORICO";
-- marker soste e nomi restano visibili.
-
-UI
-- errore ricerca soste reso compatto, non più grande riquadro tratteggiato.
+File da caricare:
+- index.html
+- toradove.webmanifest
+- sw.js
+- icon-192.png
+- icon-512.png
+- tora_crest.png
+- powered_by_az.png
