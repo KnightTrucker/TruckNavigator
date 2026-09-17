@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.13 LIVE TIME + HUD REPAIR */
-const CACHE='ktn-v01713-live-time-hud-repair';
+/* ToraNavy 0.17.14 LIVE TIME + HUD REPAIR */
+const CACHE='ktn-v01714-planner-time-guidance-final';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
