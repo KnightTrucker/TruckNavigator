@@ -1,5 +1,5 @@
-/* ToraNavy 0.16.96 GUIDANCE-MODEL */
-const CACHE='ktn-v01696-guidance-model';
+/* ToraNavy 0.17.03 GUIDANCE-SIMPLIFIED */
+const CACHE='ktn-v01703-guidance-simplified';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
@@ -10,6 +10,25 @@ const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./ic
   './toranavy_autovelox_poliziotto.webp',
   './toranavy_arrivo_navigatore.webp',
   './toranavy_sosta_tappa.webp',
+  './toranavy_maneuver_exit.webp',
+  './toranavy_maneuver_exit_left.webp',
+  './toranavy_maneuver_exit_right.webp',
+  './toranavy_maneuver_fork_left.webp',
+  './toranavy_maneuver_fork_right.webp',
+  './toranavy_maneuver_keep_left.webp',
+  './toranavy_maneuver_keep_right.webp',
+  './toranavy_maneuver_merge_left.webp',
+  './toranavy_maneuver_merge_right.webp',
+  './toranavy_maneuver_next_exit.webp',
+  './toranavy_maneuver_sharp_left.webp',
+  './toranavy_maneuver_sharp_right.webp',
+  './toranavy_maneuver_slight_left.webp',
+  './toranavy_maneuver_slight_right.webp',
+  './toranavy_maneuver_straight.webp',
+  './toranavy_maneuver_turn_left.webp',
+  './toranavy_maneuver_turn_right.webp',
+  './toranavy_maneuver_uturn_left.webp',
+  './toranavy_maneuver_uturn_right.webp',
   './rallenta.webp'];
 
 self.addEventListener('install',event=>{
