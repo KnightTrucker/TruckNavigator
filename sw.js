@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.16 LIVE TIME + HUD REPAIR */
-const CACHE='ktn-v01716-event-attention-round-real';
+/* ToraNavy 0.17.17 TIME + SECOND MANEUVER + ROUNDABOUT REPAIR */
+const CACHE='ktn-v01717-time-second-roundabout-repair';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
