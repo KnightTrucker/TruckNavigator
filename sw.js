@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.04 TIME-ROUND-SECOND-FIX */
-const CACHE='ktn-v01704-time-round-second-fix';
+/* ToraNavy 0.17.06 LANE-IMAGE-PANEL */
+const CACHE='ktn-v01706-lane-image-panel';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
