@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.03 GUIDANCE-SIMPLIFIED */
-const CACHE='ktn-v01703-guidance-simplified';
+/* ToraNavy 0.17.04 TIME-ROUND-SECOND-FIX */
+const CACHE='ktn-v01704-time-round-second-fix';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
