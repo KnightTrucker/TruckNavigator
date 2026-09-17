@@ -1,57 +1,58 @@
-const APP_PREFIX='toradove-';
-const CACHE='toradove-pwa-v0.4.9';
-const SHELL=[
-  './',
-  './index.html',
-  './toradove.webmanifest',
-  './tora_crest.png',
-  './powered_by_az.png',
-  './icon-192.png',
-  './icon-512.png'
-];
+/* ToraNavy 0.16.96 GUIDANCE-MODEL · ROOT PWA SCOPE FIX */
+const CACHE='ktn-v01696-guidance-model-pwa-scopefix1';
+const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
+  './toranavy_startup.webp',
+  './toranavy_logo.webp',
+  './toranavy_stemma_sfondo.webp',
+  './toranavy_arrivo_shell.webp',
+  './toranavy_stemma_versione.webp',
+  './toranavy_mascotte.webp',
+  './toranavy_autovelox_poliziotto.webp',
+  './toranavy_arrivo_navigatore.webp',
+  './toranavy_sosta_tappa.webp',
+  './rallenta.webp'];
 
-self.addEventListener('install',e=>{
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(c=>c.addAll(SHELL))
-      .then(()=>self.skipWaiting())
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(c=>c.addAll(LOCAL)).then(()=>self.skipWaiting()));
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys().then(keys=>Promise.all(
+      keys
+        .filter(k=>k.startsWith('ktn-') && k!==CACHE)
+        .map(k=>caches.delete(k))
+    )).then(()=>self.clients.claim())
   );
 });
 
-self.addEventListener('activate',e=>{
-  e.waitUntil(
-    caches.keys()
-      .then(keys=>Promise.all(
-        keys
-          .filter(k=>k.startsWith(APP_PREFIX) && k!==CACHE)
-          .map(k=>caches.delete(k))
-      ))
-      .then(()=>self.clients.claim())
-  );
-});
+self.addEventListener('fetch',event=>{
+  const req=event.request;
+  if(req.method!=='GET')return;
+  const url=new URL(req.url);
+  if(url.origin!==self.location.origin)return;
 
-self.addEventListener('fetch',e=>{
-  const r=e.request;
-  if(r.method!=='GET')return;
+  /* ToraDove è una PWA separata in sottocartella.
+     Il service worker root di ToraNavy NON deve intercettarla. */
+  const path=url.pathname.toLowerCase();
+  if(path.startsWith('/toradove/'))return;
 
-  const u=new URL(r.url);
-
-  /* Non toccare richieste di altre origini. */
-  if(u.origin!==self.location.origin)return;
-
-  /* Navigazioni: network-first, fallback SOLO sull'index ToraDove. */
-  if(r.mode==='navigate'){
-    e.respondWith(
-      fetch(r).then(resp=>{
+  if(req.mode==='navigate' || url.pathname.endsWith('/index.html')){
+    event.respondWith(
+      fetch(req).then(resp=>{
         const copy=resp.clone();
-        caches.open(CACHE).then(c=>c.put('./index.html',copy)).catch(()=>{});
+        caches.open(CACHE).then(c=>c.put('./index.html',copy));
         return resp;
       }).catch(()=>caches.match('./index.html'))
     );
     return;
   }
 
-  e.respondWith(
-    caches.match(r).then(hit=>hit||fetch(r))
+  event.respondWith(
+    caches.match(req).then(hit=>hit || fetch(req).then(resp=>{
+      const copy=resp.clone();
+      caches.open(CACHE).then(c=>c.put(req,copy));
+      return resp;
+    }))
   );
 });
