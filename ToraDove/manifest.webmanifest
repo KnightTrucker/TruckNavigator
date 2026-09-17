@@ -1,31 +1,24 @@
 {
-  "name": "KnightTruckerNavy",
-  "short_name": "KT Navy",
-  "description": "Navigatore HGV KnightTruckerNavy",
+  "name": "ToraDove",
+  "short_name": "ToraDove",
   "start_url": "./index.html",
-  "scope": "./index.html",
-  "display": "fullscreen",
-  "display_override": [
-    "fullscreen",
-    "standalone",
-    "minimal-ui"
-  ],
-  "background_color": "#081018",
-  "theme_color": "#081018",
-  "orientation": "any",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06101f",
+  "theme_color": "#0b4dff",
+  "description": "ToraDove - trova poche soste camion verificate vicino al punto teorico di fine guida.",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "id": "./index.html"
+  ]
 }
