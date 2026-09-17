@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.09 HUD + VOICE + SERVICE CORRECTION */
-const CACHE='ktn-v01709c-hud-voice-service-timefreeflow';
+/* ToraNavy 0.17.10 SECOND MANEUVER + AREAS LAYOUT */
+const CACHE='ktn-v01710a-second-areas-layout';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
