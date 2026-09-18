@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.21 NAVIGATION LAUNCH REPAIR
-const CACHE='ktn-v01721-navigation-launch-repair';
+/* ToraNavy 0.17.22 NAVIGATION IFRAME LAUNCH REPAIR */
+const CACHE='ktn-v01722-navigation-iframe-launch-repair';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
