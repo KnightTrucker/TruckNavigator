@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.25 NAVIGATION IFRAME SCAFFOLD REPAIR */
-const CACHE='ktn-v01725a-navigation-iframe-scaffold-repair';
+/* ToraNavy 0.17.26 LANDSCAPE GUIDANCE OWNER CLEANUP */
+const CACHE='ktn-v01726-landscape-guidance-owner-cleanup';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
