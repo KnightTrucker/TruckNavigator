@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.23 LANDSCAPE + IPCARD REPAIR */
-const CACHE='ktn-v01723a-landscape-ipcard-repair';
+/* ToraNavy 0.17.24 MANEUVER + LANDSCAPE REPAIR */
+const CACHE='ktn-v01724-maneuver-landscape-repair';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
