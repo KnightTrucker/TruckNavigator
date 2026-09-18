@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.29 RESUME VIEWPORT REPAIR */
-const CACHE='ktn-v01729-resume-viewport-repair';
+/* ToraNavy 0.17.30 PLANNER ROUNDABOUT GUIDANCE REPAIR */
+const CACHE='ktn-v01730-planner-roundabout-guidance-repair';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
