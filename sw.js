@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.19 ROUTE-MAP ROUNDABOUT + STRUCTURAL SECOND */
-const CACHE='ktn-v01719a-route-map-round-second';
+/* ToraNavy 0.17.20 TIME + LANDSCAPE REPAIR */
+const CACHE='ktn-v01720a-time-landscape-repair';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
