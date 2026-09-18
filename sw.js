@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.32 MOTORWAY TRAFFIC GUIDANCE REPAIR */
-const CACHE='ktn-v01732-motorway-traffic-guidance-repair';
+/* ToraNavy 0.17.34 CANONICAL GUIDANCE STABILITY */
+const CACHE='ktn-v01734-canonical-guidance-stability';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
