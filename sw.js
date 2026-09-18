@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.26 LANDSCAPE GUIDANCE OWNER CLEANUP */
-const CACHE='ktn-v01726-landscape-guidance-owner-cleanup';
+/* ToraNavy 0.17.27 LANDSCAPE ALIGNMENT */
+const CACHE='ktn-v01727-landscape-alignment';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
