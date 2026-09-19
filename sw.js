@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.40 GUIDANCE EVENT STABILITY */
-const CACHE='ktn-v01740-guidance-event-stability';
+/* ToraNavy 0.17.41 ROUTE CHOICE VOICE LIMIT CAMERA STABILITY */
+const CACHE='ktn-v01741-route-choice-voice-limit-camera';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
