@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.35 ROAD RUNTIME STABILITY */
-const CACHE='ktn-v01735-road-runtime-stability';
+/* ToraNavy 0.17.36 ROUNDABOUT HUD SCALE */
+const CACHE='ktn-v01736-roundabout-hud-scale';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
