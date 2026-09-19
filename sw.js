@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.38 ROUNDABOUT REAL TOPOLOGY + RESUME STOPS */
-const CACHE='ktn-v01738-roundabout-real-topology-resume-stops';
+/* ToraNavy 0.17.39 RUNTIME GUIDANCE STABILITY */
+const CACHE='ktn-v01739-runtime-guidance-stability';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
