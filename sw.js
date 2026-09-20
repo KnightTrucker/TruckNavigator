@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.42 RUNTIME PERFORMANCE SERVICE HUD STABILITY */
-const CACHE='ktn-v01742-runtime-performance-service-hud';
+/* ToraNavy 0.17.43 MICROSCOPIO STRUCTURAL CLEANUP */
+const CACHE='ktn-v01743-microscopio-structural-cleanup';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
