@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.46 MICROSCOPIO SAFETY ROLLBACK */
-const CACHE='ktn-v01746-microscope-safety-rollback';
+/* ToraNavy 0.17.47 RUNTIME PERFORMANCE SERVICE HUD STABILITY */
+const CACHE='ktn-v01747-runtime-performance-service-hud';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
