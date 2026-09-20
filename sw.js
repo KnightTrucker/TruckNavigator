@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.47 RUNTIME PERFORMANCE SERVICE HUD STABILITY */
-const CACHE='ktn-v01747-runtime-performance-service-hud';
+/* ToraNavy 0.17.49 MICROSCOPIO SAFE FINAL */
+const CACHE='ktn-v01749-microscopio-safe-final';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
