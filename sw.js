@@ -1,5 +1,5 @@
-/* ToraNavy 0.17.43 MICROSCOPIO STRUCTURAL CLEANUP */
-const CACHE='ktn-v01743-microscopio-structural-cleanup';
+/* ToraNavy 0.17.44 MICROSCOPIO STRUCTURAL CLEANUP */
+const CACHE='ktn-v01744-microscopio-structural-cleanup';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
