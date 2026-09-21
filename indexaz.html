@@ -94,7 +94,6 @@
         .toast.error { border-left-color: var(--danger); }
         .toast.success { border-left-color: var(--success); }
         
-        /* GPS marker pulsante */
         @keyframes gpsPulse {
             0% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(66, 133, 244, 0); }
@@ -246,7 +245,6 @@
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(state.map);
             state.markersLayer = L.layerGroup().addTo(state.map);
             
-            // UI Events
             document.getElementById('menuBtn').onclick = () => {
                 document.getElementById('sidebar').classList.toggle('open');
             };
@@ -254,7 +252,6 @@
                 document.getElementById('sidebar').classList.remove('open');
             };
             
-            // Ricerca
             const setupSearch = (inputId, type) => {
                 const input = document.getElementById(inputId);
                 let timeout;
@@ -284,7 +281,6 @@
                 if (type === 'from') { 
                     state.fromCoords = coords; 
                     document.getElementById('fromInput').value = item.querySelector('small').textContent;
-                    // Rimuovi marker GPS se l'utente imposta manualmente la partenza
                     if (state.gpsMarker) { state.map.removeLayer(state.gpsMarker); state.gpsMarker = null; }
                 }
                 else { state.toCoords = coords; document.getElementById('toInput').value = item.querySelector('small').textContent; }
@@ -293,7 +289,6 @@
                 state.map.setView([lat, lon], 13);
             });
             
-            // Pulsanti
             document.getElementById('calcRouteBtn').onclick = calculateRoute;
             document.getElementById('startNavBtn').onclick = startNav;
             document.getElementById('stopNavBtn').onclick = stopNav;
@@ -301,7 +296,6 @@
             document.getElementById('exportGpxBtn').onclick = exportGPX;
             document.getElementById('gpsBtn').onclick = getMyLocation;
             
-            // API Key
             document.getElementById('apiKey').value = state.apiKey;
             document.getElementById('saveApiKey').onclick = () => {
                 state.apiKey = document.getElementById('apiKey').value.trim();
@@ -309,7 +303,6 @@
                 showToast('API key salvata!', 'success');
             };
             
-            // Click su mappa
             state.map.on('click', async (e) => {
                 if (!state.fromCoords) {
                     state.fromCoords = [e.latlng.lng, e.latlng.lat];
@@ -328,12 +321,9 @@
             });
             
             if (!state.apiKey) setTimeout(() => showToast('Inserisci API key ORS nel menu', 'info'), 1000);
-            
-            // 🎯 AVVIO GPS AUTOMATICO
             getMyLocation(true);
         }
         
-        // 📍 FUNZIONE GPS
         function getMyLocation(silent = false) {
             if (!('geolocation' in navigator)) {
                 if (!silent) showToast('GPS non disponibile su questo dispositivo', 'error');
@@ -349,7 +339,6 @@
                     
                     state.fromCoords = [lon, lat];
                     
-                    // Crea marker GPS pulsante
                     const gpsIcon = L.divIcon({
                         className: 'gps-icon',
                         html: '<div class="gps-marker"></div>',
@@ -362,7 +351,6 @@
                     
                     updateMarkers();
                     
-                    // Reverse geocoding per mostrare l'indirizzo
                     try {
                         const res = await fetch(`${NOMINATIM}/reverse?format=json&lat=${lat}&lon=${lon}`);
                         const data = await res.json();
@@ -412,19 +400,18 @@
             showToast('Calcolo percorso...', 'info');
             const avoids = Array.from(document.querySelectorAll('.avoid:checked')).map(c => c.value);
             
-            // ✅ STRUTTURA CORRETTA ORS v2
             const body = {
                 coordinates: [state.fromCoords, state.toCoords],
                 preference: document.getElementById('routePreference').value,
                 options: {},
-                extra_info: ['tollways', 'road_access_restrictions']
+                // ✅ CORRETTO: roadaccessrestrictions (senza underscore)
+                extra_info: ['tollways', 'roadaccessrestrictions']
             };
             
             const weight = parseFloat(document.getElementById('weight').value);
             const height = parseFloat(document.getElementById('height').value);
             const width = parseFloat(document.getElementById('width').value);
             
-            // ✅ Struttura corretta: options.profile_params.restrictions
             const restrictions = {};
             if (weight && weight >= 3.5) restrictions.weight = weight;
             if (height && height >= 1 && height <= 5) restrictions.height = height;
@@ -489,12 +476,16 @@
             const warningsEl = document.getElementById('warnings');
             warningsEl.innerHTML = '';
             const extra = feature.properties.extras;
+            
+            // ✅ CORRETTO: tollways
             if (extra?.tollways) {
                 const tollKm = (extra.tollways.reduce((s, x) => s + x.value, 0) / 1000).toFixed(1);
                 if (tollKm > 0) warningsEl.innerHTML += `<div class="warning-item">⚠️ ${tollKm} km a pedaggio</div>`;
             }
-            if (extra?.road_access_restrictions) {
-                const restricted = extra.road_access_restrictions.filter(s => s.value !== 0);
+            
+            // ✅ CORRETTO: roadaccessrestrictions (senza underscore)
+            if (extra?.roadaccessrestrictions) {
+                const restricted = extra.roadaccessrestrictions.filter(s => s.value !== 0);
                 if (restricted.length > 0) warningsEl.innerHTML += `<div class="warning-item danger">🚫 ${restricted.length} tratti con restrizioni</div>`;
             }
             
