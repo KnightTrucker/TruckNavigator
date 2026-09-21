@@ -1,5 +1,5 @@
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01770-ktn716-exit-entry-diagnostics';
+const CACHE='ktn-v01771-recovery-field-safe';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
