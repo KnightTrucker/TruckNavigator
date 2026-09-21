@@ -88,26 +88,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .fab { width: 48px; height: 48px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
 .fab-fullscreen { background: var(--success); }
 
-/* SPEED LIMIT BADGE */
 .speed-limit-badge { position: absolute; bottom: 100px; right: 14px; background: white; color: var(--danger); width: 70px; height: 70px; border-radius: 50%; border: 5px solid var(--danger); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; z-index: 450; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 .speed-limit-badge .limit { font-size: 1.8rem; line-height: 1; }
 .speed-limit-badge small { font-size: 0.6rem; color: #666; font-weight: 600; }
 
-/* TRUCK ICON */
 .truck-icon-wrap { background: transparent; }
-.truck-icon { background: var(--danger); width: 40px; height: 40px; border-radius: 50%; border: 4px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.6); transition: transform 0.3s; }
+.truck-icon { background: var(--danger); width: 40px; height: 40px; border-radius: 50%; border: 4px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.6); }
 
-/* POI MARKERS */
 .poi-hgv { background: #f59e0b; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
 .poi-parking { background: #1a73e8; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem; box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
 
-/* POI POPUP */
-.poi-popup { min-width: 200px; }
+.poi-popup { min-width: 220px; }
 .poi-popup h3 { color: var(--primary); margin-bottom: 8px; font-size: 1rem; }
 .poi-popup .poi-services { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .poi-service { background: var(--bg-elevated); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; display: flex; align-items: center; gap: 4px; }
 .poi-popup .distance { color: var(--success); font-weight: 700; margin-top: 8px; }
-.poi-popup button { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-top: 8px; font-size: 0.85rem; }
+.poi-popup button { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-top: 8px; font-size: 0.85rem; width: 100%; }
 
 .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--bg-panel); color: var(--text); padding: 12px 24px; border-radius: 10px; z-index: 2000; border-left: 4px solid var(--primary); backdrop-filter: blur(10px); }
 .toast.error { border-left-color: var(--danger); }
@@ -178,7 +174,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
         <div class="search-inputs">
             <div class="search-wrapper">
                 <i class="fas fa-circle text-blue"></i>
-                <input type="text" id="fromInput" placeholder="📍 La mia posizione" autocomplete="off">
+                <input type="text" id="fromInput" placeholder=" La mia posizione" autocomplete="off">
             </div>
             <div class="search-wrapper">
                 <i class="fas fa-circle text-red"></i>
@@ -425,16 +421,14 @@ function buildTurnList() {
     });
 }
 
-// ============ AREE SERVIZIO HGV (Overpass API) ============
 async function loadHGVServices() {
     if (!state.fromCoords && !state.toCoords) {
         showToast('Calcola prima un percorso', 'info');
         return;
     }
 
-    showToast(' Ricerca aree servizio HGV...', 'info');
+    showToast('🔍 Ricerca aree servizio HGV...', 'info');
     
-    // Definisci bounding box intorno al percorso o posizione attuale
     const center = state.fromCoords || [12.5, 41.9];
     const bbox = [
         center[1] - 0.5, center[0] - 0.5,
@@ -483,16 +477,13 @@ async function loadHGVServices() {
 
             const marker = L.marker([lat, lon], { icon });
             
-            // Costruisci popup con servizi
             let services = [];
-            if (tags.fuel:diesel) services.push({icon: 'fa-gas-pump', text: 'Diesel'});
-            if (tags.fuel:HGV_diesel) services.push({icon: 'fa-truck', text: 'Diesel HGV'});
+            if (tags.fuel_diesel || tags.fuel === 'diesel') services.push({icon: 'fa-gas-pump', text: 'Diesel'});
             if (tags.restaurant) services.push({icon: 'fa-utensils', text: 'Ristorante'});
             if (tags.shop) services.push({icon: 'fa-store', text: 'Negozio'});
-            if (tags.wifi) services.push({icon: 'fa-wifi', text: 'WiFi'});
+            if (tags.internet_access === 'wlan' || tags.wifi) services.push({icon: 'fa-wifi', text: 'WiFi'});
             if (tags.shower) services.push({icon: 'fa-shower', text: 'Doccia'});
             if (tags.toilets) services.push({icon: 'fa-restroom', text: 'Servizi'});
-            if (tags.security) services.push({icon: 'fa-shield-alt', text: 'Sorveglianza'});
 
             let servicesHtml = services.map(s => `<span class="poi-service"><i class="fas ${s.icon}"></i> ${s.text}</span>`).join('');
             
@@ -571,18 +562,13 @@ function startNav() {
             
             document.getElementById('navSpeed').textContent = speed;
             
-            // Aggiorna posizione e rotazione camion
             if (state.truckMarker) {
                 state.truckMarker.setLatLng([lat, lon]);
                 state.truckMarker.getElement().style.transform = `rotate(${heading}deg)`;
             }
             
-            // Mappa segue il camion e ruota
             state.map.setView([lat, lon], 17, { animate: true, duration: 0.5 });
-            
-            // Simula limite velocità (in produzione servirebbe API esterna)
             updateSpeedLimit(speed);
-            
             updateNavStep(lat, lon);
         }, null, { enableHighAccuracy: true, maximumAge: 3000 });
     }
@@ -590,8 +576,7 @@ function startNav() {
 }
 
 function updateSpeedLimit(currentSpeed) {
-    // Simulazione: in produzione usa API come OpenSpeedMap o TomTom
-    let limit = 90; // Default autostrada
+    let limit = 90;
     if (currentSpeed < 50) limit = 50;
     else if (currentSpeed < 80) limit = 80;
     else if (currentSpeed < 100) limit = 100;
@@ -601,7 +586,6 @@ function updateSpeedLimit(currentSpeed) {
     document.getElementById('speedLimit').textContent = limit;
     badge.classList.remove('hidden');
     
-    // Evidenzia se superi il limite
     if (currentSpeed > limit) {
         badge.style.borderColor = '#dc2626';
         badge.style.background = '#fee2e2';
