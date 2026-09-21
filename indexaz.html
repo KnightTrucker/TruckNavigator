@@ -2,7 +2,11 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
 <title>🚛 TruckNavigator Pro</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -14,16 +18,16 @@
     --danger: #dc2626;
     --warning: #f59e0b;
     --bg: #0f172a;
-    --bg-panel: rgba(30, 41, 59, 0.95);
-    --bg-elevated: #334155;
+    --bg-panel: rgba(15, 23, 42, 0.95);
+    --bg-elevated: #1e293b;
     --text: #f1f5f9;
     --text-muted: #94a3b8;
     --border: #334155;
-    --shadow: 0 10px 40px rgba(0,0,0,0.5);
-    --radius: 14px;
+    --shadow: 0 10px 40px rgba(0,0,0,0.6);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+html, body { width: 100%; height: 100%; overflow: hidden; position: fixed; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
 
 /* SIDEBAR */
 .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 360px; background: #1e293b; border-right: 1px solid var(--border); overflow-y: auto; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: var(--shadow); }
@@ -47,12 +51,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .btn-icon { background: var(--bg-elevated); border: none; color: var(--text); cursor: pointer; width: 42px; height: 42px; border-radius: 10px; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .btn-icon:hover { background: #475569; }
 
-/* MAPPA - SEMPRE VISIBILE */
-#mapContainer { position: relative; height: 100vh; margin-left: 360px; transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1); }
-#mapContainer.expanded { margin-left: 0; }
+/* MAPPA - FULL SCREEN */
+#mapContainer { position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100vh; width: 100vw; transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1); }
 #map { width: 100%; height: 100%; background: #0a1020; }
 
-/* SEARCH BAR - IN ALTO */
+/* SEARCH BAR */
 .search-bar { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: center; background: var(--bg-panel); padding: 10px; border-radius: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); backdrop-filter: blur(10px); }
 .search-inputs { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .search-wrapper { display: flex; align-items: center; background: var(--bg-elevated); border-radius: 10px; padding: 0 12px; }
@@ -69,19 +72,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .suggestion-item small { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 2px; }
 .hidden { display: none !important; }
 
-/* NAV OVERLAY - IN ALTO (stile Waze/Google Maps) */
-.nav-overlay { position: absolute; top: 14px; left: 14px; right: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 16px 20px; border-radius: 16px; box-shadow: var(--shadow); z-index: 700; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px); }
-.nav-overlay .nav-icon { font-size: 2.5rem; width: 50px; text-align: center; flex-shrink: 0; }
-.nav-overlay .nav-info { flex: 1; }
-.nav-overlay .nav-distance { font-size: 1.8rem; font-weight: 800; line-height: 1; }
-.nav-overlay .nav-text { font-size: 0.95rem; opacity: 0.95; margin-top: 4px; font-weight: 500; }
-.nav-overlay .nav-stats { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
-.nav-overlay .speed { font-size: 1.3rem; font-weight: 800; }
-.nav-overlay .speed small { font-size: 0.7rem; font-weight: 500; opacity: 0.8; }
-.nav-overlay .eta { font-weight: 700; font-size: 1.1rem; }
-.nav-overlay .stop-btn { background: var(--danger); border: none; color: white; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+/* NAV OVERLAY - COMPATTO IN ALTO */
+.nav-overlay { position: absolute; top: 14px; left: 14px; right: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 14px 18px; border-radius: 16px; box-shadow: var(--shadow); z-index: 700; backdrop-filter: blur(10px); }
+.nav-top-row { display: flex; align-items: center; gap: 14px; }
+.nav-icon-wrap { font-size: 2.2rem; width: 44px; text-align: center; flex-shrink: 0; }
+.nav-main-info { flex: 1; min-width: 0; }
+.nav-distance { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.nav-text { font-size: 0.9rem; opacity: 0.95; margin-top: 3px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-stop-btn { background: var(--danger); border: none; color: white; padding: 10px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+.nav-stats-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); }
+.nav-speed { font-size: 1.3rem; font-weight: 800; }
+.nav-speed small { font-size: 0.7rem; font-weight: 500; opacity: 0.8; }
+.nav-eta { font-weight: 700; font-size: 1.1rem; }
+.nav-recalc { background: var(--warning); color: #000; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer; margin-left: 8px; }
 
-/* ROUTE INFO - IN BASSO */
+/* ROUTE INFO */
 .route-info { position: absolute; bottom: 14px; left: 14px; right: 14px; background: var(--bg-panel); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); backdrop-filter: blur(10px); }
 .route-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
 .stat { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-elevated); border-radius: 10px; }
@@ -93,29 +98,31 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .warning-item.danger { background: rgba(220, 38, 38, 0.12); border-left-color: var(--danger); }
 .route-actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
 
-/* TURN LIST - IN BASSO (scorrevole) */
-.turn-list-container { position: absolute; bottom: 14px; left: 14px; right: 14px; max-height: 40vh; background: var(--bg-panel); border-radius: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; backdrop-filter: blur(10px); }
-.turn-header { padding: 14px 16px; background: var(--bg-elevated); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.turn-header h3 { font-size: 0.95rem; font-weight: 700; }
+/* TURN LIST */
+.turn-list-container { position: absolute; bottom: 14px; left: 14px; right: 14px; max-height: 35vh; background: var(--bg-panel); border-radius: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; backdrop-filter: blur(10px); }
+.turn-header { padding: 12px 16px; background: var(--bg-elevated); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.turn-header h3 { font-size: 0.9rem; font-weight: 700; }
 .turn-list { overflow-y: auto; flex: 1; }
 .turn-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
 .turn-item:hover { background: var(--bg-elevated); }
-.turn-item.active { background: rgba(26, 115, 232, 0.15); border-left: 3px solid var(--primary); }
+.turn-item.active { background: rgba(26, 115, 232, 0.2); border-left: 3px solid var(--primary); }
 .turn-icon { width: 36px; height: 36px; background: var(--bg-elevated); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--primary); flex-shrink: 0; }
 .turn-info { flex: 1; min-width: 0; }
-.turn-instruction { font-size: 0.88rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.turn-distance { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.turn-instruction { font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.turn-distance { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
 
 /* FAB */
 .fab-container { position: absolute; right: 14px; top: 100px; display: flex; flex-direction: column; gap: 10px; z-index: 450; }
 .fab { width: 48px; height: 48px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: var(--shadow); transition: all 0.2s; backdrop-filter: blur(10px); }
-.fab:hover { background: var(--bg-elevated); transform: scale(1.05); }
+.fab:hover { background: var(--bg-elevated); }
 .fab:active { transform: scale(0.95); }
+.fab-fullscreen { background: var(--success); }
 
 /* TOAST */
 .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--bg-panel); color: var(--text); padding: 12px 24px; border-radius: 10px; box-shadow: var(--shadow); z-index: 2000; border-left: 4px solid var(--primary); font-size: 0.9rem; max-width: 90%; backdrop-filter: blur(10px); }
 .toast.error { border-left-color: var(--danger); }
 .toast.success { border-left-color: var(--success); }
+.toast.warning { border-left-color: var(--warning); }
 
 /* GPS marker */
 @keyframes gpsPulse {
@@ -123,31 +130,43 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
     70% { box-shadow: 0 0 0 18px rgba(66, 133, 244, 0); }
     100% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
 }
-.gps-marker { background: #4285f4; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; animation: gpsPulse 2s infinite; }
+.gps-marker { background: #4285f4; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; animation: gpsPulse 2s infinite; }
 
 /* Truck icon */
-.truck-icon { background: var(--danger); width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5); }
+.truck-icon-wrap { background: transparent; }
+.truck-icon { background: var(--danger); width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.6); transition: transform 0.3s; }
 
-/* Speed badge */
-.speed-badge { position: absolute; bottom: 100px; right: 14px; background: white; color: #dc2626; width: 60px; height: 60px; border-radius: 50%; border: 4px solid #dc2626; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; z-index: 450; box-shadow: var(--shadow); }
-.speed-badge .limit { font-size: 1.3rem; line-height: 1; }
-.speed-badge small { font-size: 0.55rem; color: #666; font-weight: 600; }
+/* Off-route indicator */
+.off-route-banner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--warning); color: #000; padding: 16px 24px; border-radius: 12px; font-weight: 700; font-size: 1rem; z-index: 800; box-shadow: var(--shadow); text-align: center; }
 
-.credits { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); background: rgba(15, 23, 36, 0.7); padding: 3px 10px; border-radius: 10px; z-index: 400; }
-.credits a { color: var(--primary); text-decoration: none; }
+.credits { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); background: rgba(15, 23, 36, 0.7); padding: 3px 10px; border-radius: 10px; z-index: 400; pointer-events: none; }
 
+/* LANDSCAPE */
+@media (orientation: landscape) and (max-height: 500px) {
+    .sidebar { width: 300px; }
+    .search-bar { top: 8px; left: 8px; right: 8px; padding: 6px; }
+    .search-wrapper input { padding: 8px 6px; font-size: 0.85rem; }
+    .nav-overlay { top: 8px; left: 8px; right: 8px; padding: 10px 14px; }
+    .nav-distance { font-size: 1.3rem; }
+    .nav-icon-wrap { font-size: 1.8rem; width: 36px; }
+    .turn-list-container { max-height: 50vh; left: 8px; right: 8px; bottom: 8px; }
+    .fab-container { right: 8px; top: 80px; }
+    .fab { width: 42px; height: 42px; }
+    .route-info { left: 8px; right: 8px; bottom: 8px; padding: 10px; }
+    .route-summary { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .stat { padding: 6px; }
+}
+
+/* MOBILE */
 @media (max-width: 768px) {
     .sidebar { width: 100%; transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
-    #mapContainer { margin-left: 0; }
     .search-bar { top: 8px; left: 8px; right: 8px; padding: 8px; }
     .route-summary { grid-template-columns: repeat(2, 1fr); }
     .route-actions { grid-template-columns: 1fr; }
-    .nav-overlay { left: 8px; right: 8px; padding: 12px; }
-    .nav-overlay .nav-distance { font-size: 1.5rem; }
+    .nav-overlay { left: 8px; right: 8px; }
     .turn-list-container { left: 8px; right: 8px; bottom: 8px; }
     .fab-container { right: 8px; top: 90px; }
-    .speed-badge { right: 8px; bottom: 90px; width: 50px; height: 50px; }
 }
 </style>
 </head>
@@ -218,12 +237,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 <main id="mapContainer">
     <div id="map"></div>
 
-    <div class="search-bar">
+    <div class="search-bar" id="searchBar">
         <button id="menuBtn" class="btn-icon"><i class="fas fa-bars"></i></button>
         <div class="search-inputs">
             <div class="search-wrapper">
                 <i class="fas fa-circle text-blue"></i>
-                <input type="text" id="fromInput" placeholder="📍 La mia posizione (GPS)" autocomplete="off">
+                <input type="text" id="fromInput" placeholder=" La mia posizione (GPS)" autocomplete="off">
             </div>
             <div class="search-wrapper">
                 <i class="fas fa-circle text-red"></i>
@@ -236,21 +255,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 
     <div id="suggestions" class="suggestions hidden"></div>
 
-    <!-- NAV OVERLAY - IN ALTO (visibile solo durante navigazione) -->
+    <!-- NAV OVERLAY -->
     <div id="navOverlay" class="nav-overlay hidden">
-        <i id="navIcon" class="fas fa-arrow-up nav-icon"></i>
-        <div class="nav-info">
-            <div id="navDistance" class="nav-distance">--</div>
-            <div id="navText" class="nav-text">--</div>
-            <div class="nav-stats">
-                <div class="speed"><span id="navSpeed">0</span> <small>km/h</small></div>
-                <div id="navEta" class="eta">ETA --</div>
+        <div class="nav-top-row">
+            <i id="navIcon" class="fas fa-arrow-up nav-icon-wrap"></i>
+            <div class="nav-main-info">
+                <div id="navDistance" class="nav-distance">--</div>
+                <div id="navText" class="nav-text">--</div>
+            </div>
+            <button id="stopNavBtn" class="nav-stop-btn"><i class="fas fa-stop"></i> Termina</button>
+        </div>
+        <div class="nav-stats-row">
+            <div><span class="nav-speed"><span id="navSpeed">0</span> <small>km/h</small></span></div>
+            <div style="display:flex;align-items:center;">
+                <span id="navEta" class="nav-eta">ETA --</span>
+                <button id="recalcBtn" class="nav-recalc hidden"><i class="fas fa-redo"></i> Ricalcola</button>
             </div>
         </div>
-        <button id="stopNavBtn" class="stop-btn"><i class="fas fa-stop"></i> Termina</button>
     </div>
 
-    <!-- ROUTE INFO - IN BASSO (prima della navigazione) -->
+    <!-- ROUTE INFO -->
     <div id="routeInfo" class="route-info hidden">
         <div class="route-summary">
             <div class="stat"><i class="fas fa-road"></i><div><span class="value" id="distance">--</span><span class="label">Distanza</span></div></div>
@@ -266,7 +290,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
         </div>
     </div>
 
-    <!-- TURN LIST - IN BASSO (durante navigazione, scorrevole) -->
+    <!-- TURN LIST -->
     <div id="turnListContainer" class="turn-list-container hidden">
         <div class="turn-header">
             <h3><i class="fas fa-list-ol"></i> Prossime svolte</h3>
@@ -276,6 +300,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
     </div>
 
     <div class="fab-container">
+        <button class="fab fab-fullscreen" id="fullscreenBtn" title="Schermo intero"><i class="fas fa-expand"></i></button>
         <button class="fab" id="themeBtn" title="Cambia tema"><i class="fas fa-moon"></i></button>
         <button class="fab" id="layersBtn" title="Livelli mappa"><i class="fas fa-layer-group"></i></button>
         <button class="fab" id="poiBtn" title="Punti interesse camion"><i class="fas fa-gas-pump"></i></button>
@@ -293,21 +318,16 @@ const NOMINATIM = 'https://nominatim.openstreetmap.org';
 
 const state = {
     map: null, routeLayer: null, markersLayer: null, gpsMarker: null, truckMarker: null,
-    fromCoords: null, toCoords: null, currentRoute: null,
+    fromCoords: null, toCoords: null, currentRoute: null, routeCoords: [],
     apiKey: localStorage.getItem('ors_key') || '', watchId: null,
     currentStep: 0, theme: localStorage.getItem('theme') || 'dark',
-    poiLayer: null, isNavigating: false
+    poiLayer: null, isNavigating: false, lastGpsPos: null,
+    offRouteTimer: null, recalcNeeded: false
 };
 
 const themeLayers = {
-    dark: {
-        tile: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
-        icon: 'fa-moon'
-    },
-    light: {
-        tile: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }),
-        icon: 'fa-sun'
-    }
+    dark: { tile: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }), icon: 'fa-moon' },
+    light: { tile: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }), icon: 'fa-sun' }
 };
 let currentTileLayer = null;
 
@@ -320,8 +340,20 @@ function setTheme(theme) {
     document.getElementById('themeSelect').value = theme;
 }
 
+// ============ FULLSCREEN ============
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => {
+            showToast('Impossibile attivare schermo intero', 'error');
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+// ============ INIT ============
 function init() {
-    state.map = L.map('map', { zoomControl: false }).setView([41.9, 12.5], 6);
+    state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([41.9, 12.5], 6);
     L.control.zoom({ position: 'bottomright' }).addTo(state.map);
     setTheme(state.theme);
     state.markersLayer = L.layerGroup().addTo(state.map);
@@ -334,6 +366,8 @@ function init() {
     document.getElementById('layersBtn').onclick = () => showToast('Livelli: satellitare/stradale dal menu', 'info');
     document.getElementById('poiBtn').onclick = togglePOI;
     document.getElementById('closeTurnList').onclick = () => document.getElementById('turnListContainer').classList.add('hidden');
+    document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
+    document.getElementById('recalcBtn').onclick = recalculateRoute;
 
     setupSearch('fromInput', 'from');
     setupSearch('toInput', 'to');
@@ -389,6 +423,26 @@ function init() {
         }
     });
 
+    // ============ LANDSCAPE HANDLER ============
+    function handleOrientation() {
+        const isLandscape = window.innerWidth > window.innerHeight;
+        if (isLandscape) {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
+        setTimeout(() => state.map.invalidateSize(), 350);
+    }
+    window.addEventListener('orientationchange', handleOrientation);
+    window.addEventListener('resize', handleOrientation);
+    handleOrientation();
+
+    // Fullscreen change
+    document.addEventListener('fullscreenchange', () => {
+        const icon = document.fullscreenElement ? 'fa-compress' : 'fa-expand';
+        document.getElementById('fullscreenBtn').innerHTML = `<i class="fas ${icon}"></i>`;
+        setTimeout(() => state.map.invalidateSize(), 300);
+    });
+
     if (!state.apiKey) setTimeout(() => showToast('Inserisci API key ORS nel menu', 'info'), 1000);
     getMyLocation(true);
 }
@@ -423,7 +477,7 @@ function getMyLocation(silent = false) {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             state.fromCoords = [lon, lat];
-            const gpsIcon = L.divIcon({ className: 'gps-icon', html: '<div class="gps-marker"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+            const gpsIcon = L.divIcon({ className: 'gps-icon', html: '<div class="gps-marker"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
             if (state.gpsMarker) state.map.removeLayer(state.gpsMarker);
             state.gpsMarker = L.marker([lat, lon], { icon: gpsIcon }).addTo(state.map);
             updateMarkers();
@@ -439,7 +493,7 @@ function getMyLocation(silent = false) {
         (err) => {
             console.error('GPS error:', err);
             if (!silent) {
-                if (err.code === 1) showToast(' Permesso GPS negato', 'error');
+                if (err.code === 1) showToast('❌ Permesso GPS negato', 'error');
                 else showToast('❌ Errore GPS', 'error');
             }
         },
@@ -485,9 +539,7 @@ async function calculateRoute() {
     if (height && height >= 1 && height <= 5) restrictions.height = height;
     if (width && width >= 1 && width <= 3) restrictions.width = width;
 
-    if (Object.keys(restrictions).length > 0) {
-        body.options.profile_params = { restrictions: restrictions };
-    }
+    if (Object.keys(restrictions).length > 0) body.options.profile_params = { restrictions: restrictions };
     if (avoids.length > 0) body.options.avoid_features = avoids;
 
     try {
@@ -522,6 +574,7 @@ function displayRoute(data) {
     if (!feature) { showToast('Nessun percorso trovato', 'error'); return; }
 
     const coords = feature.geometry.coordinates.map(c => [c[1], c[0]]);
+    state.routeCoords = coords;
     state.routeLayer = L.polyline(coords, { color: '#0d9488', weight: 7, opacity: 0.9, lineJoin: 'round' }).addTo(state.map);
     state.map.fitBounds(state.routeLayer.getBounds(), { padding: [80, 80] });
     state.currentRoute = { data, feature };
@@ -580,7 +633,7 @@ function buildTurnList() {
     if (!segments || !Array.isArray(segments)) return;
 
     let globalStepIdx = 0;
-    segments.forEach((seg, segIdx) => {
+    segments.forEach((seg) => {
         const steps = seg.steps || [];
         steps.forEach((step) => {
             const item = document.createElement('div');
@@ -615,47 +668,170 @@ function buildTurnList() {
     });
 }
 
+// ============ SNAP TO ROUTE ============
+function snapToRoute(lat, lon) {
+    if (!state.routeCoords || state.routeCoords.length === 0) return { lat, lon, distance: 999 };
+    
+    let minDistance = Infinity;
+    let snappedPoint = null;
+    
+    for (let i = 0; i < state.routeCoords.length - 1; i++) {
+        const p1 = state.routeCoords[i];
+        const p2 = state.routeCoords[i + 1];
+        const snapped = pointToSegmentDistance(lat, lon, p1[0], p1[1], p2[0], p2[1]);
+        
+        if (snapped.distance < minDistance) {
+            minDistance = snapped.distance;
+            snappedPoint = snapped.point;
+        }
+    }
+    
+    return snappedPoint ? { lat: snappedPoint[0], lon: snappedPoint[1], distance: minDistance } : { lat, lon, distance: 999 };
+}
+
+function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    
+    if (lenSq !== 0) param = dot / lenSq;
+    
+    let xx, yy;
+    
+    if (param < 0) {
+        xx = x1; yy = y1;
+    } else if (param > 1) {
+        xx = x2; yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+    
+    const dx = px - xx;
+    const dy = py - yy;
+    
+    return {
+        point: [xx, yy],
+        distance: Math.sqrt(dx * dx + dy * dy)
+    };
+}
+
+// ============ RECALCULATE ROUTE ============
+async function recalculateRoute() {
+    if (!state.lastGpsPos || !state.toCoords) {
+        showToast('Impossibile ricalcolare', 'error');
+        return;
+    }
+    
+    showToast('🔄 Ricalcolo percorso...', 'info');
+    document.getElementById('recalcBtn').classList.add('hidden');
+    state.recalcNeeded = false;
+    
+    const newFromCoords = [state.lastGpsPos.lon, state.lastGpsPos.lat];
+    state.fromCoords = newFromCoords;
+    
+    const avoids = Array.from(document.querySelectorAll('.avoid:checked')).map(c => c.value);
+    
+    const body = {
+        coordinates: [newFromCoords, [state.toCoords[0], state.toCoords[1]]],
+        preference: document.getElementById('routePreference').value,
+        language: 'it',
+        options: {},
+        extra_info: ['tollways', 'roadaccessrestrictions', 'steepness']
+    };
+    
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
+    const width = parseFloat(document.getElementById('width').value);
+    
+    const restrictions = {};
+    if (weight && weight >= 3.5) restrictions.weight = weight;
+    if (height && height >= 1 && height <= 5) restrictions.height = height;
+    if (width && width >= 1 && width <= 3) restrictions.width = width;
+    
+    if (Object.keys(restrictions).length > 0) body.options.profile_params = { restrictions: restrictions };
+    if (avoids.length > 0) body.options.avoid_features = avoids;
+    
+    try {
+        const res = await fetch(`${ORS_API}/v2/directions/driving-hgv/geojson`, {
+            method: 'POST',
+            headers: { 'Authorization': state.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        
+        if (!res.ok) throw new Error('Errore ricalcolo');
+        
+        const data = await res.json();
+        displayRoute(data);
+        
+        if (state.isNavigating) {
+            document.getElementById('routeInfo').classList.add('hidden');
+            document.getElementById('navOverlay').classList.remove('hidden');
+            document.getElementById('turnListContainer').classList.remove('hidden');
+            buildTurnList();
+            showToast('✅ Percorso ricalcolato!', 'success');
+        } else {
+            showToast('✅ Percorso ricalcolato!', 'success');
+        }
+    } catch (e) {
+        console.error('Recalc error:', e);
+        showToast('❌ Errore ricalcolo: ' + e.message, 'error');
+    }
+}
+
 function startNav() {
     if (!state.currentRoute) return;
     state.isNavigating = true;
+    state.recalcNeeded = false;
     
-    // Nascondi route info, mostra nav overlay e turn list
     document.getElementById('routeInfo').classList.add('hidden');
     document.getElementById('navOverlay').classList.remove('hidden');
     document.getElementById('turnListContainer').classList.remove('hidden');
     state.currentStep = 0;
-
-    // Crea marker camion
+    
     const truckIcon = L.divIcon({
-        className: 'truck-icon-wrapper',
+        className: 'truck-icon-wrap',
         html: '<div class="truck-icon"><i class="fas fa-truck"></i></div>',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
     });
     
     if (state.truckMarker) state.map.removeLayer(state.truckMarker);
     if (state.fromCoords) {
         state.truckMarker = L.marker([state.fromCoords[1], state.fromCoords[0]], { icon: truckIcon, zIndexOffset: 1000 }).addTo(state.map);
     }
-
+    
     if ('geolocation' in navigator) {
         state.watchId = navigator.geolocation.watchPosition((pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             const speed = Math.round(pos.coords.speed ? pos.coords.speed * 3.6 : 0);
             
+            state.lastGpsPos = { lat, lon, speed };
             document.getElementById('navSpeed').textContent = speed;
             
-            // Aggiorna posizione camion
             if (state.truckMarker) {
-                state.truckMarker.setLatLng([lat, lon]);
+                const snapped = snapToRoute(lat, lon);
+                state.truckMarker.setLatLng([snapped.lat, snapped.lon]);
+                
+                if (snapped.distance > 50 && !state.recalcNeeded) {
+                    state.recalcNeeded = true;
+                    document.getElementById('recalcBtn').classList.remove('hidden');
+                    showToast('⚠️ Fuori percorso! Clicca Ricalcola', 'warning');
+                }
             }
             
-            // Auto-pan: la mappa segue il camion
             state.map.setView([lat, lon], 17);
-            
             updateNavStep(lat, lon);
-        }, null, { enableHighAccuracy: true, maximumAge: 5000 });
+        }, (err) => {
+            console.error('GPS error during nav:', err);
+            showToast('📡 Segnale GPS perso', 'warning');
+        }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
     }
     updateNavStep();
     speakNextInstruction();
@@ -664,17 +840,17 @@ function startNav() {
 function updateNavStep(lat, lon) {
     const segments = state.currentRoute.feature.properties.segments;
     if (!segments || !Array.isArray(segments)) return;
-
+    
     let allSteps = [];
     segments.forEach(seg => {
         if (seg.steps && Array.isArray(seg.steps)) {
             allSteps = allSteps.concat(seg.steps);
         }
     });
-
+    
     if (allSteps.length === 0) return;
     if (state.currentStep >= allSteps.length) state.currentStep = allSteps.length - 1;
-
+    
     const next = allSteps[state.currentStep];
     const iconMap = {
         0: 'fa-arrow-up', 1: 'fa-arrow-up', 2: 'fa-turn-up fa-rotate-90',
@@ -682,21 +858,19 @@ function updateNavStep(lat, lon) {
         10: 'fa-flag-checkered'
     };
     const icon = iconMap[next.type] || 'fa-arrow-up';
-    document.getElementById('navIcon').className = 'fas ' + icon + ' nav-icon';
+    document.getElementById('navIcon').className = 'fas ' + icon + ' nav-icon-wrap';
     document.getElementById('navText').textContent = next.instruction || 'Prosegui';
     document.getElementById('navDistance').textContent = next.distance >= 1000 ? `${(next.distance/1000).toFixed(1)} km` : `${Math.round(next.distance)} m`;
-
+    
     const eta = new Date(Date.now() + state.currentRoute.feature.properties.summary.duration * 1000);
     document.getElementById('navEta').textContent = 'ETA ' + eta.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
-
-    // Evidenzia step attivo nella lista
+    
     document.querySelectorAll('.turn-item').forEach((el, idx) => {
         el.classList.toggle('active', idx === state.currentStep);
     });
     const activeEl = document.querySelector(`.turn-item[data-idx="${state.currentStep}"]`);
     if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Aggiorna step se vicino alla svolta
+    
     if (lat && lon && next.distance < 100) {
         state.currentStep = Math.min(state.currentStep + 1, allSteps.length - 1);
         speakNextInstruction();
@@ -724,22 +898,31 @@ function speakNextInstruction() {
 function stopNav() {
     if (state.watchId) navigator.geolocation.clearWatch(state.watchId);
     if (state.truckMarker) { state.map.removeLayer(state.truckMarker); state.truckMarker = null; }
+    if (state.offRouteTimer) clearTimeout(state.offRouteTimer);
     document.getElementById('navOverlay').classList.add('hidden');
     document.getElementById('turnListContainer').classList.add('hidden');
     document.getElementById('routeInfo').classList.remove('hidden');
+    document.getElementById('recalcBtn').classList.add('hidden');
     state.isNavigating = false;
+    state.recalcNeeded = false;
+    state.lastGpsPos = null;
     try { speechSynthesis.cancel(); } catch (e) {}
 }
 
 function clearRoute() {
     if (state.routeLayer) state.map.removeLayer(state.routeLayer);
     if (state.truckMarker) { state.map.removeLayer(state.truckMarker); state.truckMarker = null; }
+    if (state.offRouteTimer) clearTimeout(state.offRouteTimer);
     document.getElementById('routeInfo').classList.add('hidden');
     document.getElementById('navOverlay').classList.add('hidden');
     document.getElementById('turnListContainer').classList.add('hidden');
+    document.getElementById('recalcBtn').classList.add('hidden');
     state.currentRoute = null;
+    state.routeCoords = [];
     state.currentStep = 0;
     state.isNavigating = false;
+    state.recalcNeeded = false;
+    state.lastGpsPos = null;
 }
 
 function exportGPX() {
@@ -764,13 +947,13 @@ function togglePOI() {
     }
     if (!state.fromCoords && !state.toCoords) { showToast('Calcola prima un percorso', 'info'); return; }
     showToast('Caricamento punti interesse...', 'info');
-
+    
     const pois = [
         { name: 'Autogrill A1', lat: 41.5, lon: 12.8, type: 'gas' },
         { name: 'Area Parcheggio HGV', lat: 42.0, lon: 12.5, type: 'parking' },
         { name: 'Stazione di servizio', lat: 42.5, lon: 12.3, type: 'gas' }
     ];
-
+    
     state.poiLayer.clearLayers();
     pois.forEach(p => {
         const icon = p.type === 'gas' ? 'fa-gas-pump' : 'fa-parking';
