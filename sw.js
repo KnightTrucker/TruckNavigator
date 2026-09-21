@@ -1,6 +1,6 @@
-/* ToraNavy 0.17.74 REAL ROUNDABOUT TOPOLOGY + ORDINAL VOICE */
+/* ToraNavy 0.17.77 TUNNEL ROAD-NAME HANDOFF */
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01774-real-roundabout-ordinal-voice';
+const CACHE='ktn-v01777-tunnel-roadname-handoff';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
