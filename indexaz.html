@@ -367,7 +367,7 @@
                     console.error('GPS error:', err);
                     if (!silent) {
                         if (err.code === 1) showToast('❌ Permesso GPS negato. Abilitalo nelle impostazioni', 'error');
-                        else if (err.code === 2) showToast('❌ Posizione non disponibile', 'error');
+                        else if (err.code === 2) showToast(' Posizione non disponibile', 'error');
                         else showToast('❌ Errore GPS', 'error');
                     }
                 },
@@ -404,8 +404,7 @@
                 coordinates: [state.fromCoords, state.toCoords],
                 preference: document.getElementById('routePreference').value,
                 options: {},
-                // ✅ CORRETTO: roadaccessrestrictions (senza underscore)
-                extra_info: ['tollways', 'roadaccessrestrictions']
+                extra_info: ['tollways']
             };
             
             const weight = parseFloat(document.getElementById('weight').value);
@@ -473,20 +472,19 @@
             document.getElementById('fuel').textContent = (dist * 0.33).toFixed(1) + ' L';
             document.getElementById('tolls').textContent = '€' + (dist * 0.15).toFixed(2);
             
+            // ✅ Gestione SICURA degli extra_info
             const warningsEl = document.getElementById('warnings');
             warningsEl.innerHTML = '';
             const extra = feature.properties.extras;
             
-            // ✅ CORRETTO: tollways
-            if (extra?.tollways) {
-                const tollKm = (extra.tollways.reduce((s, x) => s + x.value, 0) / 1000).toFixed(1);
-                if (tollKm > 0) warningsEl.innerHTML += `<div class="warning-item">⚠️ ${tollKm} km a pedaggio</div>`;
-            }
-            
-            // ✅ CORRETTO: roadaccessrestrictions (senza underscore)
-            if (extra?.roadaccessrestrictions) {
-                const restricted = extra.roadaccessrestrictions.filter(s => s.value !== 0);
-                if (restricted.length > 0) warningsEl.innerHTML += `<div class="warning-item danger">🚫 ${restricted.length} tratti con restrizioni</div>`;
+            if (extra && extra.tollways && Array.isArray(extra.tollways.values)) {
+                const tollSegments = extra.tollways.values.filter(v => v.value !== 0);
+                if (tollSegments.length > 0) {
+                    const tollKm = (tollSegments.reduce((sum, seg) => sum + (extra.tollways.summary[seg.value] || 0), 0) / 1000).toFixed(1);
+                    if (parseFloat(tollKm) > 0) {
+                        warningsEl.innerHTML += `<div class="warning-item">️ ${tollKm} km a pedaggio</div>`;
+                    }
+                }
             }
             
             document.getElementById('routeInfo').classList.remove('hidden');
