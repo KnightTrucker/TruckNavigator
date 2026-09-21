@@ -14,31 +14,19 @@
     --danger: #dc2626;
     --warning: #f59e0b;
     --bg: #0f172a;
-    --bg-panel: #1e293b;
+    --bg-panel: rgba(30, 41, 59, 0.95);
     --bg-elevated: #334155;
-    --bg-card: #273548;
     --text: #f1f5f9;
     --text-muted: #94a3b8;
     --border: #334155;
     --shadow: 0 10px 40px rgba(0,0,0,0.5);
     --radius: 14px;
-    --gps-blue: #4285f4;
-}
-[data-theme="light"] {
-    --bg: #f1f5f9;
-    --bg-panel: #ffffff;
-    --bg-elevated: #f8fafc;
-    --bg-card: #ffffff;
-    --text: #0f172a;
-    --text-muted: #64748b;
-    --border: #e2e8f0;
-    --shadow: 0 10px 40px rgba(0,0,0,0.12);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; transition: background 0.3s; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
 
 /* SIDEBAR */
-.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 360px; background: var(--bg-panel); border-right: 1px solid var(--border); overflow-y: auto; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: var(--shadow); }
+.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 360px; background: #1e293b; border-right: 1px solid var(--border); overflow-y: auto; z-index: 1000; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: var(--shadow); }
 .sidebar.collapsed { transform: translateX(-100%); }
 .sidebar-header { padding: 18px 20px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
 .sidebar-header h1 { font-size: 1.15rem; font-weight: 700; color: white; }
@@ -47,47 +35,54 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .panel h2 i { margin-right: 8px; color: var(--primary); }
 .form-group { margin-bottom: 12px; }
 .form-group label { display: block; font-size: 0.82rem; margin-bottom: 5px; color: var(--text-muted); font-weight: 500; }
-.form-group input[type="number"], .form-group input[type="text"], .form-group input[type="password"], .form-group select { width: 100%; padding: 10px 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.9rem; transition: border 0.2s; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+.form-group input[type="number"], .form-group input[type="text"], .form-group input[type="password"], .form-group select { width: 100%; padding: 10px 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.9rem; }
 .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .checkbox-group { display: flex; flex-direction: column; gap: 6px; }
 .checkbox-group label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text); cursor: pointer; padding: 6px 8px; background: var(--bg-elevated); border-radius: 6px; }
-.checkbox-group label:hover { background: var(--bg-card); }
 .btn { padding: 11px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; background: var(--bg-elevated); color: var(--text); transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 6px; }
 .btn:active { transform: scale(0.97); }
 .btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-dark); }
 .btn-success { background: var(--success); color: white; }
 .btn-danger { background: var(--danger); color: white; }
 .btn-icon { background: var(--bg-elevated); border: none; color: var(--text); cursor: pointer; width: 42px; height: 42px; border-radius: 10px; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-.btn-icon:hover { background: var(--bg-card); }
-.btn-icon:active { transform: scale(0.95); }
+.btn-icon:hover { background: #475569; }
 
-/* MAPPA */
+/* MAPPA - SEMPRE VISIBILE */
 #mapContainer { position: relative; height: 100vh; margin-left: 360px; transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1); }
 #mapContainer.expanded { margin-left: 0; }
 #map { width: 100%; height: 100%; background: #0a1020; }
 
-/* SEARCH BAR */
-.search-bar { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: center; background: var(--bg-panel); padding: 10px; border-radius: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); }
+/* SEARCH BAR - IN ALTO */
+.search-bar { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: center; background: var(--bg-panel); padding: 10px; border-radius: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); backdrop-filter: blur(10px); }
 .search-inputs { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.search-wrapper { display: flex; align-items: center; background: var(--bg-elevated); border-radius: 10px; padding: 0 12px; transition: background 0.2s; }
-.search-wrapper:focus-within { background: var(--bg-card); }
+.search-wrapper { display: flex; align-items: center; background: var(--bg-elevated); border-radius: 10px; padding: 0 12px; }
 .search-wrapper i:first-child { color: var(--text-muted); font-size: 0.85rem; }
 .search-wrapper input { flex: 1; background: transparent; border: none; padding: 11px 8px; color: var(--text); font-size: 0.9rem; outline: none; }
 .text-green { color: var(--success) !important; }
 .text-red { color: var(--danger) !important; }
-.text-blue { color: var(--gps-blue) !important; }
+.text-blue { color: #4285f4 !important; }
 
 /* SUGGESTIONS */
-.suggestions { position: absolute; top: 130px; left: 14px; right: 14px; max-height: 280px; overflow-y: auto; background: var(--bg-panel); border-radius: 12px; box-shadow: var(--shadow); z-index: 600; border: 1px solid var(--border); }
+.suggestions { position: absolute; top: 130px; left: 14px; right: 14px; max-height: 280px; overflow-y: auto; background: var(--bg-panel); border-radius: 12px; box-shadow: var(--shadow); z-index: 600; border: 1px solid var(--border); backdrop-filter: blur(10px); }
 .suggestion-item { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.88rem; transition: background 0.15s; }
 .suggestion-item:hover { background: var(--bg-elevated); }
 .suggestion-item small { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 2px; }
 .hidden { display: none !important; }
 
-/* ROUTE INFO */
-.route-info { position: absolute; bottom: 14px; left: 14px; right: 14px; background: var(--bg-panel); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); }
+/* NAV OVERLAY - IN ALTO (stile Waze/Google Maps) */
+.nav-overlay { position: absolute; top: 14px; left: 14px; right: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 16px 20px; border-radius: 16px; box-shadow: var(--shadow); z-index: 700; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(10px); }
+.nav-overlay .nav-icon { font-size: 2.5rem; width: 50px; text-align: center; flex-shrink: 0; }
+.nav-overlay .nav-info { flex: 1; }
+.nav-overlay .nav-distance { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+.nav-overlay .nav-text { font-size: 0.95rem; opacity: 0.95; margin-top: 4px; font-weight: 500; }
+.nav-overlay .nav-stats { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
+.nav-overlay .speed { font-size: 1.3rem; font-weight: 800; }
+.nav-overlay .speed small { font-size: 0.7rem; font-weight: 500; opacity: 0.8; }
+.nav-overlay .eta { font-weight: 700; font-size: 1.1rem; }
+.nav-overlay .stop-btn { background: var(--danger); border: none; color: white; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+
+/* ROUTE INFO - IN BASSO */
+.route-info { position: absolute; bottom: 14px; left: 14px; right: 14px; background: var(--bg-panel); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); backdrop-filter: blur(10px); }
 .route-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
 .stat { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-elevated); border-radius: 10px; }
 .stat i { font-size: 1.2rem; color: var(--primary); width: 24px; text-align: center; }
@@ -96,53 +91,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .warnings { margin-bottom: 12px; }
 .warning-item { padding: 8px 12px; background: rgba(245, 158, 11, 0.12); border-left: 3px solid var(--warning); border-radius: 6px; margin-bottom: 6px; font-size: 0.82rem; }
 .warning-item.danger { background: rgba(220, 38, 38, 0.12); border-left-color: var(--danger); }
-.warning-item.info { background: rgba(26, 115, 232, 0.12); border-left-color: var(--primary); }
 .route-actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
 
-/* NAV PANEL */
-.nav-panel { position: absolute; top: 14px; left: 14px; right: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 18px; border-radius: 16px; box-shadow: var(--shadow); z-index: 700; display: flex; flex-direction: column; gap: 12px; }
-.nav-instruction { display: flex; align-items: center; gap: 16px; }
-.nav-instruction > i { font-size: 2.5rem; width: 50px; text-align: center; }
-.nav-distance { font-size: 1.6rem; font-weight: 800; line-height: 1; }
-.nav-text { font-size: 0.95rem; opacity: 0.95; margin-top: 4px; font-weight: 500; }
-.nav-current { font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); }
-.nav-current .speed { font-size: 1.5rem; font-weight: 800; }
-.nav-current .speed small { font-size: 0.7rem; font-weight: 500; opacity: 0.8; }
-
-/* LEGEND */
-.legend { position: absolute; bottom: 14px; right: 14px; background: var(--bg-panel); padding: 10px 14px; border-radius: 10px; font-size: 0.78rem; z-index: 400; border: 1px solid var(--border); box-shadow: var(--shadow); }
-.legend div { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-.dot { width: 10px; height: 10px; border-radius: 50%; }
-.dot-green { background: var(--success); }
-.dot-orange { background: var(--warning); }
-.dot-red { background: var(--danger); }
-.dot-blue { background: var(--gps-blue); }
-.credits { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); background: rgba(15, 23, 36, 0.7); padding: 3px 10px; border-radius: 10px; z-index: 400; }
-[data-theme="light"] .credits { background: rgba(255,255,255,0.8); }
-.credits a { color: var(--primary); text-decoration: none; }
-
-/* TOAST */
-.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--bg-panel); color: var(--text); padding: 12px 24px; border-radius: 10px; box-shadow: var(--shadow); z-index: 2000; border-left: 4px solid var(--primary); font-size: 0.9rem; max-width: 90%; animation: slideUp 0.3s ease; }
-.toast.error { border-left-color: var(--danger); }
-.toast.success { border-left-color: var(--success); }
-@keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-
-/* GPS marker */
-@keyframes gpsPulse {
-    0% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7); }
-    70% { box-shadow: 0 0 0 18px rgba(66, 133, 244, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
-}
-.gps-marker { background: var(--gps-blue); width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; animation: gpsPulse 2s infinite; }
-
-/* FAB */
-.fab-container { position: absolute; right: 14px; top: 14px; display: flex; flex-direction: column; gap: 10px; z-index: 450; }
-.fab { width: 48px; height: 48px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: var(--shadow); transition: all 0.2s; }
-.fab:hover { background: var(--bg-card); transform: scale(1.05); }
-.fab:active { transform: scale(0.95); }
-
-/* Turn panel */
-.turn-panel { position: absolute; left: 14px; top: 100px; bottom: 14px; width: 340px; background: var(--bg-panel); border-radius: 16px; box-shadow: var(--shadow); z-index: 450; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
+/* TURN LIST - IN BASSO (scorrevole) */
+.turn-list-container { position: absolute; bottom: 14px; left: 14px; right: 14px; max-height: 40vh; background: var(--bg-panel); border-radius: 16px; box-shadow: var(--shadow); z-index: 500; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; backdrop-filter: blur(10px); }
 .turn-header { padding: 14px 16px; background: var(--bg-elevated); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .turn-header h3 { font-size: 0.95rem; font-weight: 700; }
 .turn-list { overflow-y: auto; flex: 1; }
@@ -154,14 +106,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 .turn-instruction { font-size: 0.88rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .turn-distance { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 
-/* Speed limit badge */
+/* FAB */
+.fab-container { position: absolute; right: 14px; top: 100px; display: flex; flex-direction: column; gap: 10px; z-index: 450; }
+.fab { width: 48px; height: 48px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: var(--shadow); transition: all 0.2s; backdrop-filter: blur(10px); }
+.fab:hover { background: var(--bg-elevated); transform: scale(1.05); }
+.fab:active { transform: scale(0.95); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--bg-panel); color: var(--text); padding: 12px 24px; border-radius: 10px; box-shadow: var(--shadow); z-index: 2000; border-left: 4px solid var(--primary); font-size: 0.9rem; max-width: 90%; backdrop-filter: blur(10px); }
+.toast.error { border-left-color: var(--danger); }
+.toast.success { border-left-color: var(--success); }
+
+/* GPS marker */
+@keyframes gpsPulse {
+    0% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7); }
+    70% { box-shadow: 0 0 0 18px rgba(66, 133, 244, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
+}
+.gps-marker { background: #4285f4; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; animation: gpsPulse 2s infinite; }
+
+/* Truck icon */
+.truck-icon { background: var(--danger); width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5); }
+
+/* Speed badge */
 .speed-badge { position: absolute; bottom: 100px; right: 14px; background: white; color: #dc2626; width: 60px; height: 60px; border-radius: 50%; border: 4px solid #dc2626; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; z-index: 450; box-shadow: var(--shadow); }
 .speed-badge .limit { font-size: 1.3rem; line-height: 1; }
 .speed-badge small { font-size: 0.55rem; color: #666; font-weight: 600; }
 
-/* POI markers */
-.poi-popup { font-size: 0.82rem; padding: 4px; }
-.poi-popup b { display: block; margin-bottom: 3px; color: var(--primary); }
+.credits { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); background: rgba(15, 23, 36, 0.7); padding: 3px 10px; border-radius: 10px; z-index: 400; }
+.credits a { color: var(--primary); text-decoration: none; }
 
 @media (max-width: 768px) {
     .sidebar { width: 100%; transform: translateX(-100%); }
@@ -170,11 +143,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
     .search-bar { top: 8px; left: 8px; right: 8px; padding: 8px; }
     .route-summary { grid-template-columns: repeat(2, 1fr); }
     .route-actions { grid-template-columns: 1fr; }
-    .nav-panel { left: 8px; right: 8px; }
-    .turn-panel { width: calc(100% - 16px); left: 8px; top: 90px; }
-    .fab-container { right: 8px; top: 8px; }
+    .nav-overlay { left: 8px; right: 8px; padding: 12px; }
+    .nav-overlay .nav-distance { font-size: 1.5rem; }
+    .turn-list-container { left: 8px; right: 8px; bottom: 8px; }
+    .fab-container { right: 8px; top: 90px; }
     .speed-badge { right: 8px; bottom: 90px; width: 50px; height: 50px; }
-    .speed-badge .limit { font-size: 1.1rem; }
 }
 </style>
 </head>
@@ -210,7 +183,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
             <select id="routePreference">
                 <option value="fastest">Più veloce</option>
                 <option value="shortest">Più corto</option>
-                <option value="recommended">Raccomandato (consigliato)</option>
+                <option value="recommended">Raccomandato</option>
             </select>
         </div>
         <div class="checkbox-group">
@@ -263,20 +236,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 
     <div id="suggestions" class="suggestions hidden"></div>
 
-    <div class="fab-container">
-        <button class="fab" id="themeBtn" title="Cambia tema"><i class="fas fa-moon"></i></button>
-        <button class="fab" id="layersBtn" title="Livelli mappa"><i class="fas fa-layer-group"></i></button>
-        <button class="fab" id="poiBtn" title="Punti interesse camion"><i class="fas fa-gas-pump"></i></button>
-    </div>
-
-    <div id="turnPanel" class="turn-panel hidden">
-        <div class="turn-header">
-            <h3><i class="fas fa-list-ol"></i> Istruzioni</h3>
-            <button id="closeTurnPanel" class="btn-icon" style="width:32px;height:32px;"><i class="fas fa-times"></i></button>
+    <!-- NAV OVERLAY - IN ALTO (visibile solo durante navigazione) -->
+    <div id="navOverlay" class="nav-overlay hidden">
+        <i id="navIcon" class="fas fa-arrow-up nav-icon"></i>
+        <div class="nav-info">
+            <div id="navDistance" class="nav-distance">--</div>
+            <div id="navText" class="nav-text">--</div>
+            <div class="nav-stats">
+                <div class="speed"><span id="navSpeed">0</span> <small>km/h</small></div>
+                <div id="navEta" class="eta">ETA --</div>
+            </div>
         </div>
-        <div id="turnList" class="turn-list"></div>
+        <button id="stopNavBtn" class="stop-btn"><i class="fas fa-stop"></i> Termina</button>
     </div>
 
+    <!-- ROUTE INFO - IN BASSO (prima della navigazione) -->
     <div id="routeInfo" class="route-info hidden">
         <div class="route-summary">
             <div class="stat"><i class="fas fa-road"></i><div><span class="value" id="distance">--</span><span class="label">Distanza</span></div></div>
@@ -292,31 +266,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
         </div>
     </div>
 
-    <div id="navPanel" class="nav-panel hidden">
-        <div class="nav-instruction">
-            <i id="navIcon" class="fas fa-arrow-up"></i>
-            <div>
-                <div id="navDistance" class="nav-distance">--</div>
-                <div id="navText" class="nav-text">--</div>
-            </div>
+    <!-- TURN LIST - IN BASSO (durante navigazione, scorrevole) -->
+    <div id="turnListContainer" class="turn-list-container hidden">
+        <div class="turn-header">
+            <h3><i class="fas fa-list-ol"></i> Prossime svolte</h3>
+            <button id="closeTurnList" class="btn-icon" style="width:32px;height:32px;"><i class="fas fa-times"></i></button>
         </div>
-        <div class="nav-current">
-            <div class="speed"><span id="navSpeed">0</span> <small>km/h</small></div>
-            <div id="navEta" style="font-weight:700;font-size:1.1rem;">ETA --</div>
-        </div>
-        <button id="stopNavBtn" class="btn btn-danger"><i class="fas fa-stop"></i> Termina</button>
+        <div id="turnList" class="turn-list"></div>
     </div>
 
-    <div id="speedBadge" class="speed-badge hidden">
-        <span class="limit" id="speedLimit">--</span>
-        <small>LIMIT</small>
+    <div class="fab-container">
+        <button class="fab" id="themeBtn" title="Cambia tema"><i class="fas fa-moon"></i></button>
+        <button class="fab" id="layersBtn" title="Livelli mappa"><i class="fas fa-layer-group"></i></button>
+        <button class="fab" id="poiBtn" title="Punti interesse camion"><i class="fas fa-gas-pump"></i></button>
     </div>
 
-    <div class="legend">
-        <div><span class="dot dot-blue"></span> Posizione GPS</div>
-        <div><span class="dot dot-green"></span> Percorso</div>
-        <div><span class="dot dot-orange"></span> Restrizioni</div>
-    </div>
     <div class="credits">© OpenStreetMap · ORS · Esri</div>
 </main>
 
@@ -328,11 +292,11 @@ const ORS_API = 'https://api.openrouteservice.org';
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
 
 const state = {
-    map: null, routeLayer: null, markersLayer: null, gpsMarker: null,
+    map: null, routeLayer: null, markersLayer: null, gpsMarker: null, truckMarker: null,
     fromCoords: null, toCoords: null, currentRoute: null,
     apiKey: localStorage.getItem('ors_key') || '', watchId: null,
     currentStep: 0, theme: localStorage.getItem('theme') || 'dark',
-    poiLayer: null
+    poiLayer: null, isNavigating: false
 };
 
 const themeLayers = {
@@ -350,7 +314,6 @@ let currentTileLayer = null;
 function setTheme(theme) {
     state.theme = theme;
     localStorage.setItem('theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
     if (currentTileLayer) state.map.removeLayer(currentTileLayer);
     currentTileLayer = themeLayers[theme].tile.addTo(state.map);
     document.getElementById('themeBtn').innerHTML = `<i class="fas ${themeLayers[theme].icon}"></i>`;
@@ -370,7 +333,7 @@ function init() {
     document.getElementById('themeSelect').onchange = (e) => setTheme(e.target.value);
     document.getElementById('layersBtn').onclick = () => showToast('Livelli: satellitare/stradale dal menu', 'info');
     document.getElementById('poiBtn').onclick = togglePOI;
-    document.getElementById('closeTurnPanel').onclick = () => document.getElementById('turnPanel').classList.add('hidden');
+    document.getElementById('closeTurnList').onclick = () => document.getElementById('turnListContainer').classList.add('hidden');
 
     setupSearch('fromInput', 'from');
     setupSearch('toInput', 'to');
@@ -510,7 +473,7 @@ async function calculateRoute() {
         preference: document.getElementById('routePreference').value,
         language: 'it',
         options: {},
-        extra_info: ['tollways', 'roadaccessrestrictions', 'steepness', 'waycategory']
+        extra_info: ['tollways', 'roadaccessrestrictions', 'steepness']
     };
 
     const weight = parseFloat(document.getElementById('weight').value);
@@ -572,7 +535,6 @@ function displayRoute(data) {
     document.getElementById('fuel').textContent = (dist * 0.33).toFixed(1) + ' L';
     document.getElementById('tolls').textContent = '€' + (dist * 0.15).toFixed(2);
 
-    // Warnings sicuri
     const warningsEl = document.getElementById('warnings');
     warningsEl.innerHTML = '';
     const extra = feature.properties.extras || {};
@@ -643,7 +605,6 @@ function buildTurnList() {
                 document.querySelectorAll('.turn-item').forEach(el => el.classList.remove('active'));
                 item.classList.add('active');
                 state.currentStep = globalStepIdx;
-                const coords = state.currentRoute.feature.geometry.coordinates;
                 if (step.maneuver && step.maneuver.location) {
                     state.map.setView([step.maneuver.location[1], step.maneuver.location[0]], 16);
                 }
@@ -656,18 +617,45 @@ function buildTurnList() {
 
 function startNav() {
     if (!state.currentRoute) return;
-    document.getElementById('navPanel').classList.remove('hidden');
+    state.isNavigating = true;
+    
+    // Nascondi route info, mostra nav overlay e turn list
     document.getElementById('routeInfo').classList.add('hidden');
-    document.getElementById('turnPanel').classList.remove('hidden');
+    document.getElementById('navOverlay').classList.remove('hidden');
+    document.getElementById('turnListContainer').classList.remove('hidden');
     state.currentStep = 0;
+
+    // Crea marker camion
+    const truckIcon = L.divIcon({
+        className: 'truck-icon-wrapper',
+        html: '<div class="truck-icon"><i class="fas fa-truck"></i></div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+    });
+    
+    if (state.truckMarker) state.map.removeLayer(state.truckMarker);
+    if (state.fromCoords) {
+        state.truckMarker = L.marker([state.fromCoords[1], state.fromCoords[0]], { icon: truckIcon, zIndexOffset: 1000 }).addTo(state.map);
+    }
 
     if ('geolocation' in navigator) {
         state.watchId = navigator.geolocation.watchPosition((pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
             const speed = Math.round(pos.coords.speed ? pos.coords.speed * 3.6 : 0);
+            
             document.getElementById('navSpeed').textContent = speed;
-            updateNavStep(pos.coords.latitude, pos.coords.longitude);
-            state.map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-        }, null, { enableHighAccuracy: true });
+            
+            // Aggiorna posizione camion
+            if (state.truckMarker) {
+                state.truckMarker.setLatLng([lat, lon]);
+            }
+            
+            // Auto-pan: la mappa segue il camion
+            state.map.setView([lat, lon], 17);
+            
+            updateNavStep(lat, lon);
+        }, null, { enableHighAccuracy: true, maximumAge: 5000 });
     }
     updateNavStep();
     speakNextInstruction();
@@ -694,7 +682,7 @@ function updateNavStep(lat, lon) {
         10: 'fa-flag-checkered'
     };
     const icon = iconMap[next.type] || 'fa-arrow-up';
-    document.getElementById('navIcon').className = 'fas ' + icon;
+    document.getElementById('navIcon').className = 'fas ' + icon + ' nav-icon';
     document.getElementById('navText').textContent = next.instruction || 'Prosegui';
     document.getElementById('navDistance').textContent = next.distance >= 1000 ? `${(next.distance/1000).toFixed(1)} km` : `${Math.round(next.distance)} m`;
 
@@ -708,7 +696,7 @@ function updateNavStep(lat, lon) {
     const activeEl = document.querySelector(`.turn-item[data-idx="${state.currentStep}"]`);
     if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Aggiorna step se vicino
+    // Aggiorna step se vicino alla svolta
     if (lat && lon && next.distance < 100) {
         state.currentStep = Math.min(state.currentStep + 1, allSteps.length - 1);
         speakNextInstruction();
@@ -735,18 +723,23 @@ function speakNextInstruction() {
 
 function stopNav() {
     if (state.watchId) navigator.geolocation.clearWatch(state.watchId);
-    document.getElementById('navPanel').classList.add('hidden');
-    document.getElementById('turnPanel').classList.add('hidden');
+    if (state.truckMarker) { state.map.removeLayer(state.truckMarker); state.truckMarker = null; }
+    document.getElementById('navOverlay').classList.add('hidden');
+    document.getElementById('turnListContainer').classList.add('hidden');
     document.getElementById('routeInfo').classList.remove('hidden');
+    state.isNavigating = false;
     try { speechSynthesis.cancel(); } catch (e) {}
 }
 
 function clearRoute() {
     if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+    if (state.truckMarker) { state.map.removeLayer(state.truckMarker); state.truckMarker = null; }
     document.getElementById('routeInfo').classList.add('hidden');
-    document.getElementById('turnPanel').classList.add('hidden');
+    document.getElementById('navOverlay').classList.add('hidden');
+    document.getElementById('turnListContainer').classList.add('hidden');
     state.currentRoute = null;
     state.currentStep = 0;
+    state.isNavigating = false;
 }
 
 function exportGPX() {
