@@ -1,6 +1,6 @@
-/* ToraNavy 0.17.79 LANDSCAPE UI OPTIMIZATION */
+/* ToraNavy 0.17.80 LANDSCAPE PANORAMICA + MANEUVER BAR FIX */
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01779-landscape-ui';
+const CACHE='ktn-v01780-landscape-panorama-bar';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
