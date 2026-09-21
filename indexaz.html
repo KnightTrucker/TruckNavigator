@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title> TruckNavigator Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        :root {
+            --primary: #1e88e5;
+            --success: #43a047;
+            --danger: #e53935;
+            --warning: #fb8c00;
+            --bg: #0f1724;
+            --bg-panel: #1a2332;
+            --bg-elevated: #243044;
+            --text: #e8eef7;
+            --text-muted: #8b9bb4;
+            --border: #2d3a52;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+        
+        /* SIDEBAR */
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 320px; background: var(--bg-panel); border-right: 1px solid var(--border); overflow-y: auto; z-index: 1000; transition: transform 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+        .sidebar.collapsed { transform: translateX(-100%); }
+        .sidebar-header { padding: 16px; background: linear-gradient(135deg, var(--primary), #1565c0); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+        .sidebar-header h1 { font-size: 1.1rem; font-weight: 600; }
+        .panel { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .panel h2 { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 0.5px; }
+        .panel h2 i { margin-right: 6px; color: var(--primary); }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-muted); }
+        .form-group input[type="number"], .form-group input[type="text"], .form-group input[type="password"], .form-group select { width: 100%; padding: 8px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
+        .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .checkbox-group { display: flex; flex-direction: column; gap: 4px; }
+        .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text); cursor: pointer; }
+        .btn { padding: 10px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; background: var(--bg-elevated); color: var(--text); transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; width: 100%; justify-content: center; margin-top: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-icon { background: transparent; border: none; color: var(--text); cursor: pointer; padding: 8px; border-radius: 6px; font-size: 1rem; }
+        
+        /* MAPPA */
+        #mapContainer { position: relative; height: 100vh; margin-left: 320px; transition: margin-left 0.3s ease; }
+        #mapContainer.expanded { margin-left: 0; }
+        #map { width: 100%; height: 100%; background: #0a1020; }
+        
+        /* SEARCH BAR */
+        .search-bar { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 8px; align-items: center; background: var(--bg-panel); padding: 8px; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 500; border: 1px solid var(--border); }
+        .search-inputs { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .search-wrapper { display: flex; align-items: center; background: var(--bg-elevated); border-radius: 6px; padding: 0 8px; }
+        .search-wrapper i:first-child { color: var(--text-muted); font-size: 0.8rem; }
+        .search-wrapper input { flex: 1; background: transparent; border: none; padding: 6px; color: var(--text); font-size: 0.85rem; outline: none; }
+        .text-green { color: var(--success) !important; }
+        .text-red { color: var(--danger) !important; }
+        
+        /* SUGGESTIONS */
+        .suggestions { position: absolute; top: 110px; left: 10px; right: 10px; max-height: 250px; overflow-y: auto; background: var(--bg-panel); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 600; border: 1px solid var(--border); }
+        .suggestion-item { padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+        .suggestion-item:hover { background: var(--bg-elevated); }
+        .suggestion-item small { display: block; color: var(--text-muted); font-size: 0.75rem; }
+        .hidden { display: none !important; }
+        
+        /* ROUTE INFO */
+        .route-info { position: absolute; bottom: 10px; left: 10px; right: 10px; background: var(--bg-panel); border-radius: 10px; padding: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 500; border: 1px solid var(--border); }
+        .route-summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+        .stat { display: flex; align-items: center; gap: 8px; padding: 6px; background: var(--bg-elevated); border-radius: 6px; }
+        .stat i { font-size: 1.1rem; color: var(--primary); }
+        .stat .value { display: block; font-size: 0.95rem; font-weight: 600; }
+        .stat .label { font-size: 0.7rem; color: var(--text-muted); }
+        .warnings { margin-bottom: 10px; }
+        .warning-item { padding: 6px 10px; background: rgba(251, 140, 0, 0.15); border-left: 3px solid var(--warning); border-radius: 4px; margin-bottom: 4px; font-size: 0.8rem; }
+        .warning-item.danger { background: rgba(229, 57, 53, 0.15); border-left-color: var(--danger); }
+        .route-actions { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px; }
+        
+        /* NAV PANEL */
+        .nav-panel { position: absolute; top: 10px; left: 10px; right: 10px; background: linear-gradient(135deg, var(--primary), #1565c0); color: white; padding: 14px; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 700; display: flex; flex-direction: column; gap: 10px; }
+        .nav-instruction { display: flex; align-items: center; gap: 12px; }
+        .nav-instruction > i { font-size: 2rem; }
+        .nav-distance { font-size: 1.3rem; font-weight: 700; }
+        .nav-text { font-size: 0.9rem; opacity: 0.9; }
+        .nav-current { font-size: 0.85rem; display: flex; justify-content: space-between; }
+        .nav-current span:first-child { font-size: 1.2rem; font-weight: 700; }
+        
+        /* LEGEND & CREDITS */
+        .legend { position: absolute; bottom: 10px; right: 10px; background: var(--bg-panel); padding: 8px; border-radius: 6px; font-size: 0.75rem; z-index: 400; border: 1px solid var(--border); }
+        .legend div { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot-green { background: var(--success); }
+        .dot-orange { background: var(--warning); }
+        .dot-red { background: var(--danger); }
+        .credits { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); background: rgba(15, 23, 36, 0.7); padding: 2px 8px; border-radius: 8px; z-index: 400; }
+        .credits a { color: var(--primary); text-decoration: none; }
+        
+        /* TOAST */
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg-elevated); color: var(--text); padding: 10px 20px; border-radius: 6px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 2000; border-left: 4px solid var(--primary); font-size: 0.9rem; }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.success { border-left-color: var(--success); }
+        
+        /* MOBILE */
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            #mapContainer { margin-left: 0; }
+            .search-bar { top: 5px; left: 5px; right: 5px; padding: 6px; }
+            .route-summary { grid-template-columns: repeat(2, 1fr); }
+            .route-actions { grid-template-columns: 1fr; }
+            .nav-panel { left: 5px; right: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h1><i class="fas fa-truck"></i> TruckNavigator</h1>
+            <button id="toggleSidebar" class="btn-icon"><i class="fas fa-times"></i></button>
+        </div>
+        <section class="panel">
+            <h2><i class="fas fa-truck-moving"></i> Veicolo</h2>
+            <div class="form-group">
+                <label>Profilo</label>
+                <select id="vehicleProfile">
+                    <option value="hgv">Autocarro pesante (HGV)</option>
+                    <option value="bus">Autobus</option>
+                    <option value="delivery">Furgone</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Peso (t)</label><input type="number" id="weight" value="40" min="3.5" max="60" step="0.5"></div>
+                <div class="form-group"><label>Altezza (m)</label><input type="number" id="height" value="4" min="1" max="5" step="0.1"></div>
+                <div class="form-group"><label>Larghezza (m)</label><input type="number" id="width" value="2.55" min="1" max="3" step="0.05"></div>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="hazmat"> Merci pericolose (ADR)</label>
+            </div>
+        </section>
+        <section class="panel">
+            <h2><i class="fas fa-route"></i> Percorso</h2>
+            <div class="form-group">
+                <label>Tipo</label>
+                <select id="routePreference">
+                    <option value="fastest">Più veloce</option>
+                    <option value="shortest">Più corto</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" class="avoid" value="highways"> Evita autostrade</label>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" class="avoid" value="tollways"> Evita pedaggi</label>
+            </div>
+        </section>
+        <section class="panel">
+            <h2><i class="fas fa-key"></i> API Key ORS</h2>
+            <div class="form-group">
+                <input type="password" id="apiKey" placeholder="Incolla la tua API key">
+                <small style="color: var(--text-muted); font-size: 0.7rem;">Ottienila su openrouteservice.org</small>
+            </div>
+            <button id="saveApiKey" class="btn btn-primary">Salva API Key</button>
+        </section>
+    </aside>
+
+    <!-- MAPPA -->
+    <main id="mapContainer">
+        <div id="map"></div>
+        
+        <!-- SEARCH -->
+        <div class="search-bar">
+            <button id="menuBtn" class="btn-icon"><i class="fas fa-bars"></i></button>
+            <div class="search-inputs">
+                <div class="search-wrapper">
+                    <i class="fas fa-circle text-green"></i>
+                    <input type="text" id="fromInput" placeholder="Partenza" autocomplete="off">
+                </div>
+                <div class="search-wrapper">
+                    <i class="fas fa-circle text-red"></i>
+                    <input type="text" id="toInput" placeholder="Destinazione" autocomplete="off">
+                </div>
+            </div>
+            <button id="calcRouteBtn" class="btn btn-primary" style="width: auto;"><i class="fas fa-route"></i></button>
+        </div>
+        
+        <!-- SUGGESTIONS -->
+        <div id="suggestions" class="suggestions hidden"></div>
+        
+        <!-- ROUTE INFO -->
+        <div id="routeInfo" class="route-info hidden">
+            <div class="route-summary">
+                <div class="stat"><i class="fas fa-road"></i><div><span class="value" id="distance">--</span><span class="label">Distanza</span></div></div>
+                <div class="stat"><i class="fas fa-clock"></i><div><span class="value" id="duration">--</span><span class="label">Tempo</span></div></div>
+                <div class="stat"><i class="fas fa-gas-pump"></i><div><span class="value" id="fuel">--</span><span class="label">Carburante</span></div></div>
+                <div class="stat"><i class="fas fa-euro-sign"></i><div><span class="value" id="tolls">--</span><span class="label">Pedaggi</span></div></div>
+            </div>
+            <div id="warnings" class="warnings"></div>
+            <div class="route-actions">
+                <button id="startNavBtn" class="btn btn-success"><i class="fas fa-play"></i> Avvia</button>
+                <button id="exportGpxBtn" class="btn"><i class="fas fa-download"></i> GPX</button>
+                <button id="clearRouteBtn" class="btn"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        
+        <!-- NAV PANEL -->
+        <div id="navPanel" class="nav-panel hidden">
+            <div class="nav-instruction">
+                <i id="navIcon" class="fas fa-arrow-up"></i>
+                <div><div id="navDistance" class="nav-distance">--</div><div id="navText" class="nav-text">--</div></div>
+            </div>
+            <div class="nav-current">
+                <span><span id="navSpeed">0</span> km/h</span>
+                <span id="navEta">--</span>
+            </div>
+            <button id="stopNavBtn" class="btn btn-danger"><i class="fas fa-stop"></i> Termina</button>
+        </div>
+        
+        <div class="legend">
+            <div><span class="dot dot-green"></span> OK</div>
+            <div><span class="dot dot-orange"></span> Restrizioni</div>
+        </div>
+        <div class="credits">© OpenStreetMap · ORS · Esri</div>
+    </main>
+    
+    <div id="toast" class="toast hidden"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // APP CODE
+        const ORS_API = 'https://api.openrouteservice.org';
+        const NOMINATIM = 'https://nominatim.openstreetmap.org';
+        
+        const state = {
+            map: null, routeLayer: null, markersLayer: null,
+            fromCoords: null, toCoords: null, currentRoute: null,
+            apiKey: localStorage.getItem('ors_key') || '', watchId: null
+        };
+        
+        function init() {
+            state.map = L.map('map', { zoomControl: false }).setView([41.9, 12.5], 6);
+            L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(state.map);
+            state.markersLayer = L.layerGroup().addTo(state.map);
+            
+            // UI Events
+            document.getElementById('menuBtn').onclick = () => {
+                document.getElementById('sidebar').classList.toggle('open');
+            };
+            document.getElementById('toggleSidebar').onclick = () => {
+                document.getElementById('sidebar').classList.remove('open');
+            };
+            
+            // Search
+            const setupSearch = (inputId, type) => {
+                const input = document.getElementById(inputId);
+                let timeout;
+                input.addEventListener('input', async (e) => {
+                    clearTimeout(timeout);
+                    if (e.target.value.length < 3) { document.getElementById('suggestions').classList.add('hidden'); return; }
+                    timeout = setTimeout(async () => {
+                        const res = await fetch(`${NOMINATIM}/search?format=json&q=${encodeURIComponent(e.target.value)}&limit=5`);
+                        const data = await res.json();
+                        if (data.length === 0) { document.getElementById('suggestions').classList.add('hidden'); return; }
+                        const sug = document.getElementById('suggestions');
+                        sug.innerHTML = data.map(r => `<div class="suggestion-item" data-lat="${r.lat}" data-lon="${r.lon}" data-type="${type}"><strong>${r.display_name.split(',')[0]}</strong><small>${r.display_name}</small></div>`).join('');
+                        sug.classList.remove('hidden');
+                    }, 400);
+                });
+            };
+            setupSearch('fromInput', 'from');
+            setupSearch('toInput', 'to');
+            
+            document.getElementById('suggestions').addEventListener('click', (e) => {
+                const item = e.target.closest('.suggestion-item');
+                if (!item) return;
+                const lat = parseFloat(item.dataset.lat);
+                const lon = parseFloat(item.dataset.lon);
+                const type = item.dataset.type;
+                const coords = [lon, lat];
+                if (type === 'from') { state.fromCoords = coords; document.getElementById('fromInput').value = item.querySelector('small').textContent; }
+                else { state.toCoords = coords; document.getElementById('toInput').value = item.querySelector('small').textContent; }
+                updateMarkers();
+                document.getElementById('suggestions').classList.add('hidden');
+                state.map.setView([lat, lon], 13);
+            });
+            
+            // Route
+            document.getElementById('calcRouteBtn').onclick = calculateRoute;
+            document.getElementById('startNavBtn').onclick = startNav;
+            document.getElementById('stopNavBtn').onclick = stopNav;
+            document.getElementById('clearRouteBtn').onclick = clearRoute;
+            document.getElementById('exportGpxBtn').onclick = exportGPX;
+            
+            // API Key
+            document.getElementById('apiKey').value = state.apiKey;
+            document.getElementById('saveApiKey').onclick = () => {
+                state.apiKey = document.getElementById('apiKey').value.trim();
+                localStorage.setItem('ors_key', state.apiKey);
+                showToast('API key salvata!', 'success');
+            };
+            
+            // Map click
+            state.map.on('click', async (e) => {
+                if (!state.fromCoords) {
+                    state.fromCoords = [e.latlng.lng, e.latlng.lat];
+                    const res = await fetch(`${NOMINATIM}/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`);
+                    const data = await res.json();
+                    document.getElementById('fromInput').value = data.display_name || `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+                    updateMarkers();
+                } else if (!state.toCoords) {
+                    state.toCoords = [e.latlng.lng, e.latlng.lat];
+                    const res = await fetch(`${NOMINATIM}/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`);
+                    const data = await res.json();
+                    document.getElementById('toInput').value = data.display_name || `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+                    updateMarkers();
+                }
+            });
+            
+            if (!state.apiKey) setTimeout(() => showToast('Inserisci API key ORS nel menu', 'info'), 1000);
+        }
+        
+        function updateMarkers() {
+            state.markersLayer.clearLayers();
+            if (state.fromCoords) L.marker([state.fromCoords[1], state.fromCoords[0]], {
+                icon: L.divIcon({ className: 'custom', html: '<div style="background:#43a047;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>', iconSize: [20, 20] })
+            }).addTo(state.markersLayer);
+            if (state.toCoords) L.marker([state.toCoords[1], state.toCoords[0]], {
+                icon: L.divIcon({ className: 'custom', html: '<div style="background:#e53935;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>', iconSize: [20, 20] })
+            }).addTo(state.markersLayer);
+        }
+        
+        async function calculateRoute() {
+            if (!state.fromCoords || !state.toCoords) { showToast('Imposta partenza e destinazione', 'error'); return; }
+            if (!state.apiKey) { showToast('Inserisci API key nel menu', 'error'); return; }
+            
+            showToast('Calcolo percorso...', 'info');
+            const avoids = Array.from(document.querySelectorAll('.avoid:checked')).map(c => c.value);
+            const body = {
+                coordinates: [state.fromCoords, state.toCoords],
+                profile: 'driving-hgv',
+                preference: document.getElementById('routePreference').value,
+                options: {
+                    vehicle_type: document.getElementById('vehicleProfile').value,
+                    hgv_weight: parseFloat(document.getElementById('weight').value),
+                    hgv_height: parseFloat(document.getElementById('height').value),
+                    hgv_width: parseFloat(document.getElementById('width').value),
+                    avoid_features: avoids
+                },
+                extra_info: ['tollways', 'road_access_restrictions']
+            };
+            
+            try {
+                const res = await fetch(`${ORS_API}/v2/directions/driving-hgv/geojson`, {
+                    method: 'POST',
+                    headers: { 'Authorization': state.apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) throw new Error('Errore routing');
+                const data = await res.json();
+                displayRoute(data);
+            } catch (e) { showToast('Errore: ' + e.message, 'error'); }
+        }
+        
+        function displayRoute(data) {
+            if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+            const feature = data.features[0];
+            const coords = feature.geometry.coordinates.map(c => [c[1], c[0]]);
+            state.routeLayer = L.polyline(coords, { color: '#43a047', weight: 5, opacity: 0.9 }).addTo(state.map);
+            state.map.fitBounds(state.routeLayer.getBounds(), { padding: [50, 50] });
+            state.currentRoute = { data, feature };
+            
+            const summary = feature.properties.summary;
+            const dist = (summary.distance / 1000).toFixed(1);
+            const dur = Math.round(summary.duration / 60);
+            document.getElementById('distance').textContent = dist + ' km';
+            document.getElementById('duration').textContent = (dur > 60 ? `${Math.floor(dur/60)}h ${dur%60}m` : `${dur} min`);
+            document.getElementById('fuel').textContent = (dist * 0.33).toFixed(1) + ' L';
+            document.getElementById('tolls').textContent = '€' + (dist * 0.15).toFixed(2);
+            
+            // Warnings
+            const warningsEl = document.getElementById('warnings');
+            warningsEl.innerHTML = '';
+            const extra = feature.properties.extras;
+            if (extra?.tollways) {
+                const tollKm = (extra.tollways.reduce((s, x) => s + x.value, 0) / 1000).toFixed(1);
+                if (tollKm > 0) warningsEl.innerHTML += `<div class="warning-item">⚠️ ${tollKm} km a pedaggio</div>`;
+            }
+            if (extra?.road_access_restrictions) {
+                const restricted = extra.road_access_restrictions.filter(s => s.value !== 0);
+                if (restricted.length > 0) warningsEl.innerHTML += `<div class="warning-item danger">🚫 ${restricted.length} tratti con restrizioni</div>`;
+            }
+            
+            document.getElementById('routeInfo').classList.remove('hidden');
+        }
+        
+        function startNav() {
+            if (!state.currentRoute) return;
+            document.getElementById('navPanel').classList.remove('hidden');
+            document.getElementById('routeInfo').classList.add('hidden');
+            if ('geolocation' in navigator) {
+                state.watchId = navigator.geolocation.watchPosition((pos) => {
+                    const speed = Math.round(pos.coords.speed ? pos.coords.speed * 3.6 : 0);
+                    document.getElementById('navSpeed').textContent = speed;
+                    updateNavStep();
+                }, null, { enableHighAccuracy: true });
+            }
+            updateNavStep();
+        }
+        
+        function updateNavStep() {
+            const steps = state.currentRoute.feature.properties.segments[0]?.steps || [];
+            if (steps.length === 0) return;
+            const next = steps[0];
+            document.getElementById('navText').textContent = next.instruction || 'Prosegui';
+            document.getElementById('navDistance').textContent = Math.round(next.distance) + ' m';
+            const eta = new Date(Date.now() + state.currentRoute.feature.properties.summary.duration * 1000);
+            document.getElementById('navEta').textContent = 'ETA ' + eta.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+        }
+        
+        function stopNav() {
+            if (state.watchId) navigator.geolocation.clearWatch(state.watchId);
+            document.getElementById('navPanel').classList.add('hidden');
+            document.getElementById('routeInfo').classList.remove('hidden');
+        }
+        
+        function clearRoute() {
+            if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+            document.getElementById('routeInfo').classList.add('hidden');
+            state.currentRoute = null;
+        }
+        
+        function exportGPX() {
+            if (!state.currentRoute) return;
+            const coords = state.currentRoute.feature.geometry.coordinates;
+            let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="TruckNavigator">\n<trk><name>Percorso</name><trkseg>\n`;
+            coords.forEach(c => gpx += `<trkpt lat="${c[1]}" lon="${c[0]}"></trkpt>\n`);
+            gpx += '</trkseg></trk></gpx>';
+            const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'percorso.gpx'; a.click();
+            URL.revokeObjectURL(url);
+            showToast('GPX scaricato!', 'success');
+        }
+        
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast ' + type;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
