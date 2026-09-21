@@ -12,6 +12,7 @@
             --success: #43a047;
             --danger: #e53935;
             --warning: #fb8c00;
+            --gps-blue: #4285f4;
             --bg: #0f1724;
             --bg-panel: #1a2332;
             --bg-elevated: #243044;
@@ -52,6 +53,7 @@
         .search-wrapper input { flex: 1; background: transparent; border: none; padding: 6px; color: var(--text); font-size: 0.85rem; outline: none; }
         .text-green { color: var(--success) !important; }
         .text-red { color: var(--danger) !important; }
+        .text-blue { color: var(--gps-blue) !important; }
         
         .suggestions { position: absolute; top: 110px; left: 10px; right: 10px; max-height: 250px; overflow-y: auto; background: var(--bg-panel); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 600; border: 1px solid var(--border); }
         .suggestion-item { padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
@@ -84,12 +86,27 @@
         .dot-green { background: var(--success); }
         .dot-orange { background: var(--warning); }
         .dot-red { background: var(--danger); }
+        .dot-blue { background: var(--gps-blue); }
         .credits { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-muted); background: rgba(15, 23, 36, 0.7); padding: 2px 8px; border-radius: 8px; z-index: 400; }
         .credits a { color: var(--primary); text-decoration: none; }
         
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg-elevated); color: var(--text); padding: 10px 20px; border-radius: 6px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 2000; border-left: 4px solid var(--primary); font-size: 0.9rem; max-width: 90%; }
         .toast.error { border-left-color: var(--danger); }
         .toast.success { border-left-color: var(--success); }
+        
+        /* GPS marker pulsante */
+        @keyframes gpsPulse {
+            0% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(66, 133, 244, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
+        }
+        .gps-marker {
+            background: var(--gps-blue);
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            border: 3px solid white;
+            animation: gpsPulse 2s infinite;
+        }
         
         @media (max-width: 768px) {
             .sidebar { width: 100%; transform: translateX(-100%); }
@@ -160,14 +177,15 @@
             <button id="menuBtn" class="btn-icon"><i class="fas fa-bars"></i></button>
             <div class="search-inputs">
                 <div class="search-wrapper">
-                    <i class="fas fa-circle text-green"></i>
-                    <input type="text" id="fromInput" placeholder="Partenza" autocomplete="off">
+                    <i class="fas fa-circle text-blue"></i>
+                    <input type="text" id="fromInput" placeholder="📍 La mia posizione (GPS)" autocomplete="off">
                 </div>
                 <div class="search-wrapper">
                     <i class="fas fa-circle text-red"></i>
                     <input type="text" id="toInput" placeholder="Destinazione" autocomplete="off">
                 </div>
             </div>
+            <button id="gpsBtn" class="btn-icon" title="La mia posizione"><i class="fas fa-crosshairs"></i></button>
             <button id="calcRouteBtn" class="btn btn-primary" style="width: auto;"><i class="fas fa-route"></i></button>
         </div>
         
@@ -201,7 +219,8 @@
         </div>
         
         <div class="legend">
-            <div><span class="dot dot-green"></span> OK</div>
+            <div><span class="dot dot-blue"></span> Tu sei qui</div>
+            <div><span class="dot dot-green"></span> Percorso OK</div>
             <div><span class="dot dot-orange"></span> Restrizioni</div>
         </div>
         <div class="credits">© OpenStreetMap · ORS · Esri</div>
@@ -215,9 +234,10 @@
         const NOMINATIM = 'https://nominatim.openstreetmap.org';
         
         const state = {
-            map: null, routeLayer: null, markersLayer: null,
+            map: null, routeLayer: null, markersLayer: null, gpsMarker: null,
             fromCoords: null, toCoords: null, currentRoute: null,
-            apiKey: localStorage.getItem('ors_key') || '', watchId: null
+            apiKey: localStorage.getItem('ors_key') || '', watchId: null,
+            gpsWatchId: null
         };
         
         function init() {
@@ -226,6 +246,7 @@
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(state.map);
             state.markersLayer = L.layerGroup().addTo(state.map);
             
+            // UI Events
             document.getElementById('menuBtn').onclick = () => {
                 document.getElementById('sidebar').classList.toggle('open');
             };
@@ -233,6 +254,7 @@
                 document.getElementById('sidebar').classList.remove('open');
             };
             
+            // Ricerca
             const setupSearch = (inputId, type) => {
                 const input = document.getElementById(inputId);
                 let timeout;
@@ -259,19 +281,27 @@
                 const lon = parseFloat(item.dataset.lon);
                 const type = item.dataset.type;
                 const coords = [lon, lat];
-                if (type === 'from') { state.fromCoords = coords; document.getElementById('fromInput').value = item.querySelector('small').textContent; }
+                if (type === 'from') { 
+                    state.fromCoords = coords; 
+                    document.getElementById('fromInput').value = item.querySelector('small').textContent;
+                    // Rimuovi marker GPS se l'utente imposta manualmente la partenza
+                    if (state.gpsMarker) { state.map.removeLayer(state.gpsMarker); state.gpsMarker = null; }
+                }
                 else { state.toCoords = coords; document.getElementById('toInput').value = item.querySelector('small').textContent; }
                 updateMarkers();
                 document.getElementById('suggestions').classList.add('hidden');
                 state.map.setView([lat, lon], 13);
             });
             
+            // Pulsanti
             document.getElementById('calcRouteBtn').onclick = calculateRoute;
             document.getElementById('startNavBtn').onclick = startNav;
             document.getElementById('stopNavBtn').onclick = stopNav;
             document.getElementById('clearRouteBtn').onclick = clearRoute;
             document.getElementById('exportGpxBtn').onclick = exportGPX;
+            document.getElementById('gpsBtn').onclick = getMyLocation;
             
+            // API Key
             document.getElementById('apiKey').value = state.apiKey;
             document.getElementById('saveApiKey').onclick = () => {
                 state.apiKey = document.getElementById('apiKey').value.trim();
@@ -279,9 +309,11 @@
                 showToast('API key salvata!', 'success');
             };
             
+            // Click su mappa
             state.map.on('click', async (e) => {
                 if (!state.fromCoords) {
                     state.fromCoords = [e.latlng.lng, e.latlng.lat];
+                    if (state.gpsMarker) { state.map.removeLayer(state.gpsMarker); state.gpsMarker = null; }
                     const res = await fetch(`${NOMINATIM}/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`);
                     const data = await res.json();
                     document.getElementById('fromInput').value = data.display_name || `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
@@ -296,13 +328,72 @@
             });
             
             if (!state.apiKey) setTimeout(() => showToast('Inserisci API key ORS nel menu', 'info'), 1000);
+            
+            // 🎯 AVVIO GPS AUTOMATICO
+            getMyLocation(true);
+        }
+        
+        // 📍 FUNZIONE GPS
+        function getMyLocation(silent = false) {
+            if (!('geolocation' in navigator)) {
+                if (!silent) showToast('GPS non disponibile su questo dispositivo', 'error');
+                return;
+            }
+            
+            if (!silent) showToast('📍 Ricerca posizione...', 'info');
+            
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    
+                    state.fromCoords = [lon, lat];
+                    
+                    // Crea marker GPS pulsante
+                    const gpsIcon = L.divIcon({
+                        className: 'gps-icon',
+                        html: '<div class="gps-marker"></div>',
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    });
+                    
+                    if (state.gpsMarker) state.map.removeLayer(state.gpsMarker);
+                    state.gpsMarker = L.marker([lat, lon], { icon: gpsIcon }).addTo(state.map);
+                    
+                    updateMarkers();
+                    
+                    // Reverse geocoding per mostrare l'indirizzo
+                    try {
+                        const res = await fetch(`${NOMINATIM}/reverse?format=json&lat=${lat}&lon=${lon}`);
+                        const data = await res.json();
+                        const address = data.display_name || 'La mia posizione';
+                        document.getElementById('fromInput').value = '📍 ' + address.split(',').slice(0, 3).join(',');
+                    } catch (e) {
+                        document.getElementById('fromInput').value = '📍 La mia posizione';
+                    }
+                    
+                    state.map.setView([lat, lon], 14);
+                    if (!silent) showToast('✅ Posizione trovata!', 'success');
+                },
+                (err) => {
+                    console.error('GPS error:', err);
+                    if (!silent) {
+                        if (err.code === 1) showToast('❌ Permesso GPS negato. Abilitalo nelle impostazioni', 'error');
+                        else if (err.code === 2) showToast('❌ Posizione non disponibile', 'error');
+                        else showToast('❌ Errore GPS', 'error');
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
         }
         
         function updateMarkers() {
             state.markersLayer.clearLayers();
-            if (state.fromCoords) L.marker([state.fromCoords[1], state.fromCoords[0]], {
-                icon: L.divIcon({ className: 'custom', html: '<div style="background:#43a047;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>', iconSize: [20, 20] })
-            }).addTo(state.markersLayer);
+            if (state.fromCoords && !state.gpsMarker) {
+                L.marker([state.fromCoords[1], state.fromCoords[0]], {
+                    icon: L.divIcon({ className: 'custom', html: '<div style="background:#43a047;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>', iconSize: [20, 20] })
+                }).addTo(state.markersLayer);
+            }
             if (state.toCoords) L.marker([state.toCoords[1], state.toCoords[0]], {
                 icon: L.divIcon({ className: 'custom', html: '<div style="background:#e53935;width:20px;height:20px;border-radius:50%;border:3px solid white;"></div>', iconSize: [20, 20] })
             }).addTo(state.markersLayer);
@@ -318,35 +409,10 @@
                 return; 
             }
             
-            showToast('Verifico API key...', 'info');
-            try {
-                const testRes = await fetch(`${ORS_API}/v2/directions/driving-car/geojson`, {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': state.apiKey, 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({
-                        coordinates: [[12.4964, 41.9028], [9.1900, 45.4654]]
-                    })
-                });
-                
-                if (testRes.status === 403 || testRes.status === 401) {
-                    showToast('❌ API key NON valida! Revocala e creane una nuova', 'error');
-                    return;
-                }
-                if (testRes.status === 429) {
-                    showToast('⏰ Quota giornaliera esaurita. Riprova domani', 'error');
-                    return;
-                }
-            } catch (e) {
-                showToast('❌ Impossibile contattare ORS. Controlla connessione', 'error');
-                return;
-            }
-            
             showToast('Calcolo percorso...', 'info');
             const avoids = Array.from(document.querySelectorAll('.avoid:checked')).map(c => c.value);
             
+            // ✅ STRUTTURA CORRETTA ORS v2
             const body = {
                 coordinates: [state.fromCoords, state.toCoords],
                 preference: document.getElementById('routePreference').value,
@@ -358,9 +424,16 @@
             const height = parseFloat(document.getElementById('height').value);
             const width = parseFloat(document.getElementById('width').value);
             
-            if (weight && weight >= 3.5) body.options.hgv_weight = weight;
-            if (height && height >= 1 && height <= 5) body.options.hgv_height = height;
-            if (width && width >= 1 && width <= 3) body.options.hgv_width = width;
+            // ✅ Struttura corretta: options.profile_params.restrictions
+            const restrictions = {};
+            if (weight && weight >= 3.5) restrictions.weight = weight;
+            if (height && height >= 1 && height <= 5) restrictions.height = height;
+            if (width && width >= 1 && width <= 3) restrictions.width = width;
+            
+            if (Object.keys(restrictions).length > 0) {
+                body.options.profile_params = { restrictions: restrictions };
+            }
+            
             if (avoids.length > 0) body.options.avoid_features = avoids;
             
             try {
