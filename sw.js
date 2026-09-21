@@ -1,5 +1,5 @@
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01760-stay-node-diag';
+const CACHE='ktn-v01761-report-weight-geocode';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
