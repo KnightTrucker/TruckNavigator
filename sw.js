@@ -1,5 +1,6 @@
+/* ToraNavy 0.17.72 NAVIGA/TAPPA0/LOG/HGV/STRAIGHT FIX */
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01771-recovery-field-safe';
+const CACHE='ktn-v01772-nav-tappa0-log-hgv-straight';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
