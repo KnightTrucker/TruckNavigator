@@ -1,5 +1,5 @@
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01763-branch-truth-diagnostics';
+const CACHE='ktn-v01764-ktn716-exit-entry-diagnostics';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
