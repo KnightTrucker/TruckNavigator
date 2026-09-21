@@ -1,6 +1,6 @@
-/* ToraNavy 0.17.78 MOTORWAY BIFURCATION / LANE SPLIT */
+/* ToraNavy 0.17.79 LANDSCAPE UI OPTIMIZATION */
 /* ToraNavy 0.17.50 MICROSCOPIO SAFE FINAL */
-const CACHE='ktn-v01778-motorway-bifurcation-lanes';
+const CACHE='ktn-v01779-landscape-ui';
 const LOCAL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   './toranavy_startup.webp',
   './toranavy_logo.webp',
