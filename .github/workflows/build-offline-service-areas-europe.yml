@@ -1,64 +1,153 @@
 name: Build offline Europe service areas
+
 on:
   workflow_dispatch:
   schedule:
     - cron: "17 3 * * 2"
+
 permissions:
   contents: write
+
 concurrency:
   group: offline-europe-service-areas
   cancel-in-progress: false
+
 jobs:
-  build:
+  country:
+    name: Build ${{ matrix.cc }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 7
+      matrix:
+        include:
+          - {cc: IT, slug: italy}
+          - {cc: FR, slug: france}
+          - {cc: DE, slug: germany}
+          - {cc: CH, slug: switzerland}
+          - {cc: AT, slug: austria}
+          - {cc: BE, slug: belgium}
+          - {cc: LU, slug: luxembourg}
+
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 0}
+
       - name: Install osmium
         shell: bash
         run: |
           set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y osmium-tool
           python3 -m venv .venv
           .venv/bin/python -m pip install --upgrade pip osmium
-      - name: Build seven countries
+
+      - name: Download, prefilter and build ${{ matrix.cc }}
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf offline/service_areas.new .osm-services
-          mkdir -p offline/service_areas.new .osm-services
-          build_country(){
-            CC="$1"; SLUG="$2"; P=".osm-services/${CC}.osm.pbf"; J="offline/service_areas.new/${CC}.json"
-            curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$P" "https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
-            test -s "$P"
-            .venv/bin/python tools/offline_services/build_service_areas_europe.py "$CC" "$P" "$J"
-            .venv/bin/python - "$J" "$CC" <<'PY'
+          curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 \
+            -o country.osm.pbf "https://download.geofabrik.de/europe/${{ matrix.slug }}-latest.osm.pbf"
+          test -s country.osm.pbf
+
+          # Keep only actual service/rest areas, plus referenced nodes needed
+          # to preserve way geometry for the existing Python builder.
+          osmium tags-filter country.osm.pbf \
+            nwr/highway=services nwr/highway=rest_area \
+            -o services.osm.pbf --overwrite
+          test -s services.osm.pbf
+          rm -f country.osm.pbf
+
+          mkdir -p out
+          .venv/bin/python tools/offline_services/build_service_areas_europe.py \
+            "${{ matrix.cc }}" services.osm.pbf "out/${{ matrix.cc }}.json"
+
+          .venv/bin/python - "out/${{ matrix.cc }}.json" "${{ matrix.cc }}" <<'PY'
           import json,sys
-          d=json.load(open(sys.argv[1],encoding='utf-8'));cc=sys.argv[2];a=d.get('areas')
-          if d.get('country')!=cc or not isinstance(a,list) or not a or d.get('count')!=len(a):raise SystemExit(f'invalid {cc}')
-          print(cc,len(a))
+          p,cc=sys.argv[1:]
+          d=json.load(open(p,encoding='utf-8'))
+          a=d.get('areas')
+          if d.get('country')!=cc or not isinstance(a,list) or not a or d.get('count')!=len(a):
+              raise SystemExit(f'invalid {cc}')
+          if any(x.get('type') not in ('services','rest_area') for x in a):
+              raise SystemExit(f'unexpected type in {cc}')
+          print(cc,'areas=',len(a))
           PY
-            rm -f "$P"
-          }
-          build_country IT italy
-          build_country FR france
-          build_country DE germany
-          build_country CH switzerland
-          build_country AT austria
-          build_country BE belgium
-          build_country LU luxembourg
-      - name: Build single manifest and publish atomically
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service-areas-${{ matrix.cc }}
+          path: out/${{ matrix.cc }}.json
+          retention-days: 1
+
+  publish:
+    name: Validate and publish
+    needs: country
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: service-areas-*
+          path: downloaded
+
+      - name: Assemble seven-country database
         shell: bash
         run: |
           set -euo pipefail
-          .venv/bin/python tools/offline_services/build_europe_manifest.py offline/service_areas.new
+          rm -rf offline/service_areas.new
+          mkdir -p offline/service_areas.new
+
+          for CC in IT FR DE CH AT BE LU; do
+            SRC="$(find downloaded -type f -name "${CC}.json" -print -quit)"
+            test -n "$SRC"
+            cp "$SRC" "offline/service_areas.new/${CC}.json"
+          done
+
+          python3 tools/offline_services/build_europe_manifest.py offline/service_areas.new
           test -s offline/service_areas.new/manifest.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=Path('offline/service_areas.new')
+          m=json.loads((r/'manifest.json').read_text(encoding='utf-8'))
+          expected={'IT','FR','DE','CH','AT','BE','LU'}
+          if set(m.get('countries',{})) != expected:
+              raise SystemExit('wrong country set')
+          total=0
+          for cc in sorted(expected):
+              d=json.loads((r/f'{cc}.json').read_text(encoding='utf-8'))
+              if d.get('country')!=cc or d.get('count')!=len(d.get('areas',[])) or not d.get('areas'):
+                  raise SystemExit('invalid '+cc)
+              total += d['count']
+          if m.get('totalAreas') != total:
+              raise SystemExit('manifest total mismatch')
+          print('validated totalAreas=',total)
+          PY
+
+      - name: Publish atomically
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -rf offline/service_areas
           mv offline/service_areas.new offline/service_areas
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A offline/service_areas
-          if git diff --cached --quiet; then exit 0; fi
+          if git diff --cached --quiet; then
+            echo "No service-area changes"
+            exit 0
+          fi
           git commit -m "Update seven-country offline service areas"
-          for A in 1 2 3; do git push origin HEAD:main && exit 0; git pull --rebase origin main; sleep 10; done
+          for A in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 10
+          done
           exit 1
