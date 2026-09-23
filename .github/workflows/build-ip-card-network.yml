@@ -1,0 +1,62 @@
+name: Build IP Card network
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 6 * * 2"
+permissions:
+  contents: write
+concurrency:
+  group: offline-ip-card
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with: {fetch-depth: 0}
+      - name: Build IP network
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip osmium
+          curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 -o italy.osm.pbf https://download.geofabrik.de/europe/italy-latest.osm.pbf
+          cat > .ip.py <<'PY'
+          import json,re
+          from datetime import datetime,timezone
+          from pathlib import Path
+          import osmium
+          def c(x):return re.sub(r'\s+',' ',str(x or '')).strip()
+          def isip(t):
+            s=' | '.join(c(t.get(k)) for k in ('brand','operator','network','name','fuel:brand')).lower()
+            return bool(re.search(r'(^|[^a-z])(ip|italiana petroli|gruppo api|api)([^a-z]|$)',s))
+          class H(osmium.SimpleHandler):
+            def __init__(self):super().__init__();self.r=[]
+            def node(self,n):
+              if n.tags.get('amenity')!='fuel' or not isip(n.tags) or not n.location.valid():return
+              t=n.tags;h=str(t.get('hgv') or '').lower() in ('yes','designated') or str(t.get('fuel:hgv_diesel') or '').lower()=='yes'
+              self.r.append({'id':f'ip-{int(n.id)}','lat':float(n.location.lat),'lng':float(n.location.lon),'name':c(t.get('name')) or 'IP','brand':c(t.get('brand')) or 'IP','operator':c(t.get('operator')),'address':c(' '.join(filter(None,[t.get('addr:street'),t.get('addr:housenumber'),t.get('addr:city')]))),'hgv':h,'cards':['ipcard'],'source':'OpenStreetMap/Geofabrik - IP network candidate','osmId':f'node/{int(n.id)}'})
+          h=H();h.apply_file('italy.osm.pbf',locations=True);u={(round(x['lat'],6),round(x['lng'],6)):x for x in h.r};r=sorted(u.values(),key=lambda x:(x['lat'],x['lng']))
+          if len(r)<100:raise SystemExit(f'Only {len(r)} IP candidates')
+          now=datetime.now(timezone.utc).isoformat();cov='IP/Italiana Petroli/Api stations identified from OSM; card acceptance is not inferred beyond mapped network identity'
+          out={'schemaVersion':1,'network':'IP CARD','generatedAt':now,'coverage':cov,'count':len(r),'stations':r};p=Path('offline/fuel_cards');p.mkdir(parents=True,exist_ok=True);(p/'ipcard.json').write_text(json.dumps(out,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+          mf=p/'manifest.json'
+          try:m=json.loads(mf.read_text())
+          except:m={'schemaVersion':1,'networks':{}}
+          m['generatedAt']=now;m.setdefault('networks',{})['ipcard']={'count':len(r),'source':'OpenStreetMap/Geofabrik IP network candidates','coverage':cov};mf.write_text(json.dumps(m,ensure_ascii=False,indent=2))
+          print('IP candidates',len(r),'HGV',sum(1 for x in r if x['hgv']))
+          PY
+          .venv/bin/python -m py_compile .ip.py
+          .venv/bin/python .ip.py
+      - name: Publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offline/fuel_cards/ipcard.json offline/fuel_cards/manifest.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update IP Card network"
+          for A in 1 2 3; do git push origin HEAD:main && exit 0; git pull --rebase origin main; sleep 10; done
+          exit 1
