@@ -29,34 +29,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install
+        shell: bash
         run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y osmium-tool
           python3 -m venv .venv
           .venv/bin/pip install --upgrade pip osmium
-      - name: Build country
+      - name: Prefilter and build country
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 \
             -o country.osm.pbf "https://download.geofabrik.de/europe/${{ matrix.slug }}-latest.osm.pbf"
+          osmium tags-filter country.osm.pbf \
+            nwr/highway=speed_camera nwr/enforcement=maxspeed \
+            nwr/overtaking:hgv nwr/overtaking:hgv:forward nwr/overtaking:hgv:backward nwr/overtaking:hgv:conditional \
+            nwr/hgv:overtaking nwr/hgv:overtaking:conditional nwr/hgv nwr/hgv:conditional \
+            nwr/maxheight nwr/maxheight:conditional nwr/maxweight nwr/maxweight:conditional \
+            nwr/maxwidth nwr/maxwidth:conditional nwr/maxlength nwr/maxlength:conditional \
+            nwr/maxaxleload nwr/maxaxleload:conditional nwr/barrier=toll_booth nwr/highway=toll_gantry \
+            nwr/toll nwr/toll:hgv nwr/tunnel nwr/hazmat nwr/hazmat:conditional nwr/hazmat:water \
+            nwr/hazmat:tunnel nwr/adr nwr/maxspeed nwr/maxspeed:hgv nwr/traffic_sign \
+            -o safety.osm.pbf --overwrite
+          rm -f country.osm.pbf
+          ls -lh safety.osm.pbf
           cat > build.py <<'PY'
           import json,math,sys,hashlib
           from pathlib import Path
           from collections import defaultdict
           from datetime import datetime,timezone
           import osmium
-          cc,pbf,out=sys.argv[1:]; out=Path(out)/cc; out.mkdir(parents=True,exist_ok=True)
+          cc,pbf,out=sys.argv[1:];out=Path(out)/cc;out.mkdir(parents=True,exist_ok=True)
           keep=('highway','enforcement','maxspeed','maxspeed:hgv','direction','ref','name','hgv','hgv:conditional','access','access:conditional','maxheight','maxheight:conditional','maxweight','maxweight:conditional','maxwidth','maxwidth:conditional','maxlength','maxlength:conditional','maxaxleload','maxaxleload:conditional','overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional','traffic_sign','barrier','toll','toll:hgv','tunnel','hazmat','hazmat:conditional','hazmat:water','hazmat:tunnel','adr','oneway')
           def fs(t):
-            s=[]; ts=str(t.get('traffic_sign') or '').lower()
-            if t.get('highway')=='speed_camera' or t.get('enforcement')=='maxspeed':s+=['cameras']
-            if any(t.get(k) for k in ('overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional')) or any(x in ts for x in ('277','b3a','overtak')):s+=['overtaking']
-            if any(t.get(k) for k in ('hgv','hgv:conditional','maxheight','maxheight:conditional','maxweight','maxweight:conditional','maxwidth','maxwidth:conditional','maxlength','maxlength:conditional','maxaxleload','maxaxleload:conditional')):s+=['restrictions']
-            if t.get('barrier')=='toll_booth' or t.get('highway')=='toll_gantry' or t.get('toll') not in (None,'','no') or t.get('toll:hgv') not in (None,'','no'):s+=['tolls']
-            if t.get('tunnel') not in (None,'','no'):s+=['tunnels']
-            if any(t.get(k) for k in ('hazmat','hazmat:conditional','hazmat:water','hazmat:tunnel','adr')):s+=['hazmat']
-            if t.get('maxspeed') or t.get('maxspeed:hgv'):s+=['speedlimits']
+            s=[];ts=str(t.get('traffic_sign') or '').lower()
+            if t.get('highway')=='speed_camera' or t.get('enforcement')=='maxspeed':s.append('cameras')
+            if any(t.get(k) for k in ('overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional')) or any(x in ts for x in ('277','b3a','overtak')):s.append('overtaking')
+            if any(t.get(k) for k in ('hgv','hgv:conditional','maxheight','maxheight:conditional','maxweight','maxweight:conditional','maxwidth','maxwidth:conditional','maxlength','maxlength:conditional','maxaxleload','maxaxleload:conditional')):s.append('restrictions')
+            if t.get('barrier')=='toll_booth' or t.get('highway')=='toll_gantry' or t.get('toll') not in (None,'','no') or t.get('toll:hgv') not in (None,'','no'):s.append('tolls')
+            if t.get('tunnel') not in (None,'','no'):s.append('tunnels')
+            if any(t.get(k) for k in ('hazmat','hazmat:conditional','hazmat:water','hazmat:tunnel','adr')):s.append('hazmat')
+            if t.get('maxspeed') or t.get('maxspeed:hgv'):s.append('speedlimits')
             return s
-          tiles=defaultdict(list); counts=defaultdict(int)
+          tiles=defaultdict(list);counts=defaultdict(int)
           def add(typ,oid,t,g,lat,lon):
             f=fs(t)
             if not f:return
@@ -73,16 +89,18 @@ jobs:
               except:return
               if g:
                 m=g[len(g)//2];add('way',w.id,w.tags,g,m[0],m[1])
-          H().apply_file(pbf,locations=True); mt={}; total=0
+          H().apply_file(pbf,locations=True);mt={};total=0
           for k,v in tiles.items():
-            v=list({x['id']:x for x in v}.values());total+=len(v);raw=json.dumps({'schemaVersion':10,'country':cc,'tile':k,'count':len(v),'items':v},separators=(',',':')).encode();(out/f'{k}.json').write_bytes(raw);mt[k]={'file':f'{cc}/{k}.json','count':len(v),'sha256':hashlib.sha256(raw).hexdigest()}
+            v=list({x['id']:x for x in v}.values());total+=len(v)
+            raw=json.dumps({'schemaVersion':10,'country':cc,'tile':k,'count':len(v),'items':v},separators=(',',':')).encode()
+            (out/f'{k}.json').write_bytes(raw);mt[k]={'file':f'{cc}/{k}.json','count':len(v),'sha256':hashlib.sha256(raw).hexdigest()}
           (out/'manifest.json').write_text(json.dumps({'schemaVersion':10,'country':cc,'generatedAt':datetime.now(timezone.utc).isoformat(),'records':total,'counts':dict(counts),'tiles':mt},indent=2))
-          print(cc,total,dict(counts))
+          print(cc,total,dict(counts),len(mt))
           if total<10:raise SystemExit('too few records')
           PY
           .venv/bin/python -m py_compile build.py
           mkdir -p out
-          .venv/bin/python build.py "${{ matrix.cc }}" country.osm.pbf out
+          .venv/bin/python build.py "${{ matrix.cc }}" safety.osm.pbf out
       - uses: actions/upload-artifact@v4
         with:
           name: rs10-${{ matrix.cc }}
@@ -107,7 +125,7 @@ jobs:
           rm -rf offline/road_safety_v10.new
           mkdir -p offline/road_safety_v10.new
           for CC in IT FR DE CH AT BE LU; do
-            M="$(find dl -path "*/${CC}/manifest.json" -print -quit)"; test -n "$M"
+            M="$(find dl -path "*/${CC}/manifest.json" -print -quit)";test -n "$M"
             cp -a "$(dirname "$M")" "offline/road_safety_v10.new/$CC"
           done
           python3 - <<'PY'
@@ -116,10 +134,12 @@ jobs:
           from datetime import datetime,timezone
           r=Path('offline/road_safety_v10.new');cs={};tot=0;c={}
           for cc in ('IT','FR','DE','CH','AT','BE','LU'):
-            d=json.loads((r/cc/'manifest.json').read_text()); assert d['country']==cc and d['records']>=10 and d['tiles'];tot+=d['records']
+            d=json.loads((r/cc/'manifest.json').read_text())
+            if d['country']!=cc or d['records']<10 or not d['tiles']:raise SystemExit('invalid '+cc)
+            tot+=d['records']
             for k,v in d['counts'].items():c[k]=c.get(k,0)+v
             cs[cc]={'manifest':f'{cc}/manifest.json','records':d['records'],'counts':d['counts'],'tiles':len(d['tiles'])}
-          (r/'manifest.json').write_text(json.dumps({'schemaVersion':10,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':cs,'totalRecords':tot,'counts':c,'tileDegrees':0.5,'source':'Geofabrik OpenStreetMap PBF','scope':'IT,FR,DE,CH,AT,BE,LU'},indent=2))
+          (r/'manifest.json').write_text(json.dumps({'schemaVersion':10,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':cs,'totalRecords':tot,'counts':c,'tileDegrees':0.5,'source':'Geofabrik OSM PBF + osmium prefilter','scope':'IT,FR,DE,CH,AT,BE,LU'},indent=2))
           PY
           rm -rf offline/road_safety_v10
           mv offline/road_safety_v10.new offline/road_safety_v10
@@ -128,5 +148,5 @@ jobs:
           git add -A offline/road_safety_v10
           git diff --cached --quiet && exit 0
           git commit -m "Update offline Road Safety v10 PBF"
-          for A in 1 2 3; do git push origin HEAD:main && exit 0; git pull --rebase origin main; sleep 10; done
+          for A in 1 2 3;do git push origin HEAD:main && exit 0;git pull --rebase origin main;sleep 10;done
           exit 1
