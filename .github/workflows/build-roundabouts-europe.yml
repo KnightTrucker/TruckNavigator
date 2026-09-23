@@ -20,12 +20,112 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install pyosmium
+      - name: Install pyosmium and create embedded builder
+        shell: bash
         run: |
           set -euo pipefail
           python3 -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
           .venv/bin/python -m pip install osmium
+          cat > .roundabout_builder.py <<'PY'
+          #!/usr/bin/env python3
+          import argparse, hashlib, json, math
+          from collections import defaultdict
+          from datetime import datetime, timezone
+          from pathlib import Path
+          import osmium
+          
+          KEEP_TAGS=('highway','junction','name','ref','destination','destination:ref','lanes','turn:lanes','oneway','maxspeed')
+          
+          def tags_dict(tags):
+              d={}
+              for k in KEEP_TAGS:
+                  v=tags.get(k)
+                  if v is not None: d[k]=v
+              return d
+          
+          def pt(n): return [round(float(n.lat),7),round(float(n.lon),7)]
+          
+          def hav(a,b):
+              R=6371000.0
+              p1=math.radians(a[0]); p2=math.radians(b[0])
+              dp=math.radians(b[0]-a[0]); dl=math.radians(b[1]-a[1])
+              x=math.sin(dp/2)**2+math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
+              return 2*R*math.atan2(math.sqrt(x),math.sqrt(max(0,1-x)))
+          
+          def tile_key(lat,lon): return f'{math.floor(lat*2)}_{math.floor(lon*2)}'
+          
+          def tile_bbox(key):
+              a,b=map(int,key.split('_')); return [a/2,b/2,(a+1)/2,(b+1)/2]
+          
+          class RoundPass(osmium.SimpleHandler):
+              def __init__(self):
+                  super().__init__(); self.rounds={}; self.node_to_rounds=defaultdict(set)
+              def way(self,w):
+                  if w.tags.get('junction') not in ('roundabout','circular') or not w.tags.get('highway'): return
+                  try: geom=[pt(n) for n in w.nodes if n.location.valid()]
+                  except Exception: return
+                  if len(geom)<3: return
+                  nodes=[int(n.ref) for n in w.nodes]
+                  if len(nodes)<3: return
+                  center=[sum(x[0] for x in geom)/len(geom),sum(x[1] for x in geom)/len(geom)]
+                  rec={'id':int(w.id),'nodes':nodes,'ring':geom,'center':[round(center[0],7),round(center[1],7)],'tags':tags_dict(w.tags)}
+                  self.rounds[int(w.id)]=rec
+                  for nid in nodes: self.node_to_rounds[nid].add(int(w.id))
+          
+          class BranchPass(osmium.SimpleHandler):
+              def __init__(self,node_to_rounds):
+                  super().__init__(); self.node_to_rounds=node_to_rounds; self.branches=defaultdict(list)
+              def way(self,w):
+                  if not w.tags.get('highway'): return
+                  if w.tags.get('junction') in ('roundabout','circular'): return
+                  hits=[]
+                  for i,n in enumerate(w.nodes):
+                      rs=self.node_to_rounds.get(int(n.ref))
+                      if rs: hits.append((i,int(n.ref),rs))
+                  if not hits:return
+                  try: geom=[pt(n) for n in w.nodes if n.location.valid()]
+                  except Exception:return
+                  if len(geom)<2:return
+                  for idx,nid,rs in hits:
+                      # Compact geometry around the attachment node (~180 m each direction).
+                      lo=max(0,idx); hi=min(len(geom)-1,idx)
+                      d=0.0; i=idx
+                      while i>0 and d<180: d+=hav(geom[i],geom[i-1]); i-=1
+                      lo=i; d=0.0; i=idx
+                      while i<len(geom)-1 and d<180: d+=hav(geom[i],geom[i+1]); i+=1
+                      hi=i
+                      seg=geom[lo:hi+1]
+                      for rid in rs:
+                          self.branches[rid].append({'wayId':int(w.id),'attachNode':nid,'attachIndex':idx-lo,'geom':seg,'tags':tags_dict(w.tags)})
+          
+          def main():
+              ap=argparse.ArgumentParser(); ap.add_argument('country'); ap.add_argument('pbf'); ap.add_argument('outdir'); args=ap.parse_args()
+              cc=args.country.upper(); out=Path(args.outdir); country_dir=out/cc; country_dir.mkdir(parents=True,exist_ok=True)
+              rp=RoundPass(); rp.apply_file(args.pbf,locations=True)
+              bp=BranchPass(rp.node_to_rounds); bp.apply_file(args.pbf,locations=True)
+              tiles=defaultdict(list); ready=0
+              for rid,r in rp.rounds.items():
+                  branches=bp.branches.get(rid,[])
+                  # Ready means the offline DB has ring + at least two non-ring connected ways.
+                  topology_ready=len(branches)>=2
+                  if topology_ready: ready+=1
+                  item={'osmId':f'way/{rid}','center':r['center'],'ring':r['ring'],'tags':r['tags'],'branches':branches,'topologyReady':topology_ready}
+                  tiles[tile_key(*r['center'])].append(item)
+              manifest_tiles={}
+              for key,items in sorted(tiles.items()):
+                  items.sort(key=lambda x:x['osmId']); payload={'schemaVersion':1,'country':cc,'tile':key,'bbox':tile_bbox(key),'count':len(items),'roundabouts':items}
+                  raw=json.dumps(payload,ensure_ascii=False,separators=(',',':')).encode()
+                  p=country_dir/f'{key}.json'; p.write_bytes(raw)
+                  manifest_tiles[key]={'file':f'{cc}/{key}.json','count':len(items),'sha256':hashlib.sha256(raw).hexdigest(),'bbox':tile_bbox(key)}
+              country_manifest={'schemaVersion':1,'country':cc,'generatedAt':datetime.now(timezone.utc).isoformat(),'roundabouts':len(rp.rounds),'topologyReady':ready,'tileDegrees':0.5,'tiles':manifest_tiles}
+              (country_dir/'manifest.json').write_text(json.dumps(country_manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'{cc}: roundabouts={len(rp.rounds)} ready={ready} tiles={len(tiles)}')
+              if len(rp.rounds)<10: raise SystemExit(f'{cc}: too few roundabouts, refusing publication')
+          
+          if __name__=='__main__': main()
+          PY
+          .venv/bin/python -m py_compile .roundabout_builder.py
       - name: Build seven-country roundabout database
         shell: bash
         run: |
@@ -37,7 +137,7 @@ jobs:
             URL="https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
             curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "$URL"
             test -s "$PBF"
-            .venv/bin/python tools/offline_roundabouts/build_roundabouts.py "$CC" "$PBF" offline/roundabouts.new
+            .venv/bin/python .roundabout_builder.py "$CC" "$PBF" offline/roundabouts.new
             rm -f "$PBF"
           }
           build_country IT italy
@@ -75,7 +175,7 @@ jobs:
           mv offline/roundabouts.new offline/roundabouts
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A offline/roundabouts tools/offline_roundabouts/build_roundabouts.py
+          git add -A offline/roundabouts
           if git diff --cached --quiet; then echo "No roundabout changes"; exit 0; fi
           git commit -m "Update offline Europe roundabout topology"
           for ATTEMPT in 1 2 3; do
