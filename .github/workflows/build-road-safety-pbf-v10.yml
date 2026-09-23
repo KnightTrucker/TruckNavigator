@@ -125,8 +125,10 @@ jobs:
           rm -rf offline/road_safety_v10.new
           mkdir -p offline/road_safety_v10.new
           for CC in IT FR DE CH AT BE LU; do
-            M="$(find dl -path "*/${CC}/manifest.json" -print -quit)";test -n "$M"
-            cp -a "$(dirname "$M")" "offline/road_safety_v10.new/$CC"
+            SRC="dl/rs10-${CC}"
+            test -s "${SRC}/manifest.json"
+            mkdir -p "offline/road_safety_v10.new/${CC}"
+            cp -a "${SRC}/." "offline/road_safety_v10.new/${CC}/"
           done
           python3 - <<'PY'
           import json
