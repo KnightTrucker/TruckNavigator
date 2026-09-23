@@ -1,0 +1,86 @@
+name: Build offline Europe roundabouts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "47 3 * * 3"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: offline-europe-roundabouts
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pyosmium
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install osmium
+      - name: Build seven-country roundabout database
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf offline/roundabouts.new .osm-round
+          mkdir -p offline/roundabouts.new .osm-round
+          build_country(){
+            CC="$1"; SLUG="$2"; PBF=".osm-round/${CC}.osm.pbf"
+            URL="https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
+            curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "$URL"
+            test -s "$PBF"
+            .venv/bin/python tools/offline_roundabouts/build_roundabouts.py "$CC" "$PBF" offline/roundabouts.new
+            rm -f "$PBF"
+          }
+          build_country IT italy
+          build_country FR france
+          build_country DE germany
+          build_country CH switzerland
+          build_country AT austria
+          build_country BE belgium
+          build_country LU luxembourg
+      - name: Build Europe manifest and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          .venv/bin/python - <<'PY'
+          import hashlib,json
+          from datetime import datetime,timezone
+          from pathlib import Path
+          root=Path('offline/roundabouts.new'); countries={}; total=ready=0
+          for cc in ('IT','FR','DE','CH','AT','BE','LU'):
+              p=root/cc/'manifest.json'
+              if not p.is_file(): raise SystemExit(f'missing {p}')
+              d=json.loads(p.read_text(encoding='utf-8'))
+              if d.get('country')!=cc or not d.get('tiles'): raise SystemExit(f'invalid {cc} manifest')
+              total+=int(d['roundabouts']); ready+=int(d['topologyReady'])
+              countries[cc]={'manifest':f'{cc}/manifest.json','roundabouts':d['roundabouts'],'topologyReady':d['topologyReady'],'tiles':len(d['tiles'])}
+          out={'schemaVersion':1,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':countries,'totalRoundabouts':total,'topologyReady':ready,'tileDegrees':0.5,'authority':'ORS maneuver; OSM offline topology enrichment'}
+          (root/'manifest.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(out,indent=2))
+          PY
+      - name: Publish atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf offline/roundabouts
+          mv offline/roundabouts.new offline/roundabouts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A offline/roundabouts tools/offline_roundabouts/build_roundabouts.py
+          if git diff --cached --quiet; then echo "No roundabout changes"; exit 0; fi
+          git commit -m "Update offline Europe roundabout topology"
+          for ATTEMPT in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 10
+          done
+          exit 1
