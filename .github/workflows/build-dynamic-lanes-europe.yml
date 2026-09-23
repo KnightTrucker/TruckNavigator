@@ -1,0 +1,126 @@
+name: Build offline Europe dynamic lanes
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * 4"
+permissions:
+  contents: write
+concurrency:
+  group: offline-europe-dynamic-lanes
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install osmium
+          cat > .dynamic_lanes_builder.py <<'PY'
+          import argparse,hashlib,json,math
+          from collections import defaultdict
+          from datetime import datetime,timezone
+          from pathlib import Path
+          import osmium
+          LK=('lanes','lanes:forward','lanes:backward','turn:lanes','turn:lanes:forward','turn:lanes:backward','destination:lanes','destination:lanes:forward','destination:lanes:backward','destination:ref','destination:ref:lanes','change:lanes','change:lanes:forward','change:lanes:backward')
+          KK=('highway','name','ref','oneway','junction','maxspeed','destination','destination:ref')+LK
+          def tags(t):
+              return {k:str(t.get(k)) for k in KK if t.get(k) not in (None,'')}
+          def pt(n): return [round(float(n.lat),7),round(float(n.lon),7)]
+          def key(a,b): return f'{math.floor(a*2)}_{math.floor(b*2)}'
+          def bbox(k):
+              a,b=map(int,k.split('_')); return [a/2,b/2,(a+1)/2,(b+1)/2]
+          def relevant(t): return bool(t.get('highway')) and any(t.get(k) not in (None,'') for k in LK)
+          def touched(g):
+              s=set()
+              for i,p in enumerate(g):
+                  s.add(key(*p))
+                  if not i: continue
+                  a=g[i-1]; n=max(1,int(max(abs(p[0]-a[0]),abs(p[1]-a[1]))/.20)+1)
+                  for j in range(1,n):
+                      q=j/n; s.add(key(a[0]+(p[0]-a[0])*q,a[1]+(p[1]-a[1])*q))
+              return s
+          class H(osmium.SimpleHandler):
+              def __init__(self): super().__init__(); self.t=defaultdict(list); self.n=0
+              def way(self,w):
+                  if not relevant(w.tags): return
+                  try: g=[pt(n) for n in w.nodes if n.location.valid()]
+                  except Exception: return
+                  if len(g)<2: return
+                  r={'osmId':f'way/{int(w.id)}','geom':g,'tags':tags(w.tags)}; self.n+=1
+                  for k in touched(g): self.t[k].append(r)
+          def main():
+              a=argparse.ArgumentParser(); a.add_argument('country'); a.add_argument('pbf'); a.add_argument('outdir'); x=a.parse_args()
+              cc=x.country.upper(); d=Path(x.outdir)/cc; d.mkdir(parents=True,exist_ok=True); h=H(); h.apply_file(x.pbf,locations=True)
+              mt={}; entries=0
+              for k,v in sorted(h.t.items()):
+                  u={z['osmId']:z for z in v}; v=[u[z] for z in sorted(u)]
+                  q={'schemaVersion':1,'country':cc,'tile':k,'bbox':bbox(k),'count':len(v),'ways':v}; raw=json.dumps(q,ensure_ascii=False,separators=(',',':')).encode()
+                  (d/f'{k}.json').write_bytes(raw); entries+=len(v); mt[k]={'file':f'{cc}/{k}.json','count':len(v),'sha256':hashlib.sha256(raw).hexdigest(),'bbox':bbox(k)}
+              m={'schemaVersion':1,'country':cc,'generatedAt':datetime.now(timezone.utc).isoformat(),'uniqueWays':h.n,'tileEntries':entries,'tileDegrees':0.5,'tiles':mt,'authority':'ORS canonical maneuver; offline OSM lane enrichment only'}
+              (d/'manifest.json').write_text(json.dumps(m,ensure_ascii=False,indent=2),encoding='utf-8')
+              print(f'{cc}: uniqueWays={h.n} tileEntries={entries} tiles={len(mt)}')
+              if h.n<10: raise SystemExit(f'{cc}: too few lane-tagged ways')
+          if __name__=='__main__': main()
+          PY
+          .venv/bin/python -m py_compile .dynamic_lanes_builder.py
+      - name: Build seven-country dynamic-lane database
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf offline/dynamic_lanes.new .osm-lanes
+          mkdir -p offline/dynamic_lanes.new .osm-lanes
+          build_country(){
+            CC="$1"; SLUG="$2"; PBF=".osm-lanes/${CC}.osm.pbf"
+            curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
+            test -s "$PBF"
+            .venv/bin/python .dynamic_lanes_builder.py "$CC" "$PBF" offline/dynamic_lanes.new
+            rm -f "$PBF"
+          }
+          build_country IT italy
+          build_country FR france
+          build_country DE germany
+          build_country CH switzerland
+          build_country AT austria
+          build_country BE belgium
+          build_country LU luxembourg
+      - name: Build Europe manifest and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          .venv/bin/python - <<'PY'
+          import json
+          from datetime import datetime,timezone
+          from pathlib import Path
+          r=Path('offline/dynamic_lanes.new'); cs={}; total=entries=0
+          for cc in ('IT','FR','DE','CH','AT','BE','LU'):
+              d=json.loads((r/cc/'manifest.json').read_text())
+              if d.get('country')!=cc or not d.get('tiles'): raise SystemExit(f'invalid {cc}')
+              total+=d['uniqueWays']; entries+=d['tileEntries']; cs[cc]={'manifest':f'{cc}/manifest.json','uniqueWays':d['uniqueWays'],'tileEntries':d['tileEntries'],'tiles':len(d['tiles'])}
+          o={'schemaVersion':1,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':cs,'totalUniqueWays':total,'totalTileEntries':entries,'tileDegrees':0.5,'authority':'ORS canonical maneuver; offline OSM lane enrichment only','fallback':'existing live OSM/Overpass lane enrichment'}
+          (r/'manifest.json').write_text(json.dumps(o,indent=2)); print(json.dumps(o,indent=2))
+          PY
+      - name: Publish atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf offline/dynamic_lanes
+          mv offline/dynamic_lanes.new offline/dynamic_lanes
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A offline/dynamic_lanes
+          if git diff --cached --quiet; then echo "No dynamic-lane changes"; exit 0; fi
+          git commit -m "Update offline Europe dynamic lanes"
+          for ATTEMPT in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 10
+          done
+          exit 1
