@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "country": "LU",
+  "generatedAt": "2026-09-23T06:07:22.640866+00:00",
+  "uniqueWays": 29221,
+  "tileEntries": 29438,
+  "tileDegrees": 0.5,
+  "tiles": {
+    "100_11": {
+      "file": "LU/100_11.json",
+      "count": 798,
+      "sha256": "5da9d7d2afe72838b4ed537a6f7e6ec1c030fe647a5be6d7810b0b0266d0d02c",
+      "bbox": [
+        50.0,
+        5.5,
+        50.5,
+        6.0
+      ]
+    },
+    "100_12": {
+      "file": "LU/100_12.json",
+      "count": 1204,
+      "sha256": "53dcd8a4291f046b0dbb305528bfeb76ab0355f7c57c49b82ea78fcabda0b80e",
+      "bbox": [
+        50.0,
+        6.0,
+        50.5,
+        6.5
+      ]
+    },
+    "98_11": {
+      "file": "LU/98_11.json",
+      "count": 315,
+      "sha256": "78ff96208d1b2e54e9ca5bb8b413632c437f72244d5fd7704f08854f0cbe1837",
+      "bbox": [
+        49.0,
+        5.5,
+        49.5,
+        6.0
+      ]
+    },
+    "98_12": {
+      "file": "LU/98_12.json",
+      "count": 1254,
+      "sha256": "efced5cd0f436fb6ba5b72084625df7ad4b1389d92e27b7fd2e5e909ea2ebdb1",
+      "bbox": [
+        49.0,
+        6.0,
+        49.5,
+        6.5
+      ]
+    },
+    "99_11": {
+      "file": "LU/99_11.json",
+      "count": 7037,
+      "sha256": "1887b2fe99687abbbc78b6ba1a3457fd6123c9c9349d7db58eb811025731b85b",
+      "bbox": [
+        49.5,
+        5.5,
+        50.0,
+        6.0
+      ]
+    },
+    "99_12": {
+      "file": "LU/99_12.json",
+      "count": 18551,
+      "sha256": "77274f3a072970a7e4b4a1a31a7155f066b33aedfe8ba07532f9210331a416d1",
+      "bbox": [
+        49.5,
+        6.0,
+        50.0,
+        6.5
+      ]
+    },
+    "99_13": {
+      "file": "LU/99_13.json",
+      "count": 279,
+      "sha256": "6a82de95fde3bb3cab61cee72ffaf99cc892c66d6be5305db5dfdb9cd8ad7644",
+      "bbox": [
+        49.5,
+        6.5,
+        50.0,
+        7.0
+      ]
+    }
+  },
+  "authority": "ORS canonical maneuver; offline OSM lane enrichment only"
+}
