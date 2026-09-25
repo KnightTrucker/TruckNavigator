@@ -1,12 +1,12 @@
 {
   "schemaVersion": 10,
   "country": "LU",
-  "generatedAt": "2026-09-23T12:25:13.798695+00:00",
-  "records": 38949,
+  "generatedAt": "2026-09-25T08:12:46.644190+00:00",
+  "records": 38951,
   "counts": {
     "restrictions": 8200,
     "cameras": 39,
-    "speedlimits": 32947,
+    "speedlimits": 32949,
     "tunnels": 5109,
     "overtaking": 49,
     "tolls": 104,
@@ -20,8 +20,8 @@
     },
     "99_12": {
       "file": "LU/99_12.json",
-      "count": 25158,
-      "sha256": "584fb7d1a62ddb76a47c23b242f8bb21b0953ad1177b698cfa32012b3a479e27"
+      "count": 25160,
+      "sha256": "df4cb23bc7268e647d2d8ce008c0a3b5c06a4f474365f6343243c70780e0dc45"
     },
     "99_11": {
       "file": "LU/99_11.json",
