@@ -1,0 +1,21 @@
+ToraNavy 0.17.151 — targeted repair after 0.17.150 field test
+
+APPLIED
+- Portrait only: restored a dedicated ▦ AREE toggle for the existing 4-area HUD.
+- Landscape: no layout/CSS rule changed by the 0.17.151 patch; toggle is forced hidden in landscape.
+- Traffic: KTN traffic remains the existing owner. If TomTom key exists and the traffic preference was never initialized, traffic now defaults ON. An explicit stored OFF ('0') remains respected.
+- HGV TTS: decimal km are normalized before warning styling/speech (e.g. 6,4 km -> 6 chilometri e 400 metri).
+- Version: shell/runtime diagnostic literal labels normalized to 0.17.151 where they were stale 0.17.121/0.17.125 labels.
+
+PRESERVED / NOT REWRITTEN
+- ORS canonical route/manoeuvre authority.
+- Existing GPS owner/watchPosition.
+- Road Safety v10, Dynamic Lanes and Service Areas workflow logic.
+- Existing traffic fetch endpoints/owner; no parallel traffic engine added.
+
+IMPORTANT DB STATUS
+The 0.17.150 field diagnostic proved Roundabout=WAITING/UNAVAILABLE and Fuel Cards=WAITING. This package does NOT falsely mark them READY and does not replace their workflow with a live fallback. Their actual READY state must be verified against the repository offline DB assets/paths at runtime. No DB file was bundled in the 0.17.150 package supplied as source, so this index-only repair does not fabricate DB data.
+
+STATIC CHECK
+- 45 shell scripts parsed with node --check: 0 syntax errors.
+- No 0.17.150/0.17.146/0.17.125/0.17.121 version literals remain as active version strings in index.html search.
