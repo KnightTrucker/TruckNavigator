@@ -694,4 +694,23 @@ jobs:
           git add road_safety/
           git add -u road_safety.json || true
           git commit -m "Aggiornamento database sicurezza stradale v8.1 split"
-          git push
+
+          # main può avanzare mentre i job nazionali sono in esecuzione.
+          # Riallinea il commit generato alla main più recente e riprova il push
+          # senza force-push, così non vengono sovrascritte modifiche concorrenti.
+          for attempt in 1 2 3 4; do
+            echo "Road Safety publish attempt ${attempt}/4"
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin HEAD:main; then
+              echo "Road Safety database published successfully."
+              exit 0
+            fi
+
+            echo "main advanced during publish; retrying after rebase..."
+            sleep $((attempt * 2))
+          done
+
+          echo "ERROR: unable to publish Road Safety database after 4 attempts."
+          exit 1
