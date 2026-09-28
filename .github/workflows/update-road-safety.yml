@@ -16,7 +16,7 @@ jobs:
   download-country:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 20
 
     strategy:
       fail-fast: false
@@ -201,13 +201,21 @@ jobs:
                   },
               )
               started = time.time()
-              with urllib.request.urlopen(req, timeout=120) as r:
+              with urllib.request.urlopen(req, timeout=45) as r:
                   body = r.read().decode("utf-8")
                   return json.loads(body), int((time.time() - started) * 1000)
+
+          COUNTRY_NETWORK_BUDGET_SEC = 14 * 60
+          country_network_started = time.monotonic()
 
           def download_family(family, query):
               attempts = []
               for endpoint in ENDPOINTS:
+                  elapsed_country = time.monotonic() - country_network_started
+                  if elapsed_country >= COUNTRY_NETWORK_BUDGET_SEC:
+                      msg = f"budget rete paese esaurito dopo {int(elapsed_country)}s"
+                      attempts.append({"endpoint": endpoint, "ok": False, "error": msg})
+                      return {"ok": False, "error": msg, "attempts": attempts}
                   try:
                       raw, elapsed_ms = request_once(endpoint, query)
                       attempts.append({
@@ -228,7 +236,7 @@ jobs:
                           "ok": False,
                           "error": str(e),
                       })
-                      time.sleep(2)
+                      time.sleep(1)
 
               return {
                   "ok": False,
