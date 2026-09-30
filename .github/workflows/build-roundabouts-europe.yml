@@ -34,30 +34,30 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
           import osmium
-          
+
           KEEP_TAGS=('highway','junction','name','ref','destination','destination:ref','lanes','turn:lanes','oneway','maxspeed')
-          
+
           def tags_dict(tags):
               d={}
               for k in KEEP_TAGS:
                   v=tags.get(k)
                   if v is not None: d[k]=v
               return d
-          
+
           def pt(n): return [round(float(n.lat),7),round(float(n.lon),7)]
-          
+
           def hav(a,b):
               R=6371000.0
               p1=math.radians(a[0]); p2=math.radians(b[0])
               dp=math.radians(b[0]-a[0]); dl=math.radians(b[1]-a[1])
               x=math.sin(dp/2)**2+math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
               return 2*R*math.atan2(math.sqrt(x),math.sqrt(max(0,1-x)))
-          
+
           def tile_key(lat,lon): return f'{math.floor(lat*2)}_{math.floor(lon*2)}'
-          
+
           def tile_bbox(key):
               a,b=map(int,key.split('_')); return [a/2,b/2,(a+1)/2,(b+1)/2]
-          
+
           class RoundPass(osmium.SimpleHandler):
               def __init__(self):
                   super().__init__(); self.rounds={}; self.node_to_rounds=defaultdict(set)
@@ -72,7 +72,7 @@ jobs:
                   rec={'id':int(w.id),'nodes':nodes,'ring':geom,'center':[round(center[0],7),round(center[1],7)],'tags':tags_dict(w.tags)}
                   self.rounds[int(w.id)]=rec
                   for nid in nodes: self.node_to_rounds[nid].add(int(w.id))
-          
+
           class BranchPass(osmium.SimpleHandler):
               def __init__(self,node_to_rounds):
                   super().__init__(); self.node_to_rounds=node_to_rounds; self.branches=defaultdict(list)
@@ -88,7 +88,6 @@ jobs:
                   except Exception:return
                   if len(geom)<2:return
                   for idx,nid,rs in hits:
-                      # Compact geometry around the attachment node (~180 m each direction).
                       lo=max(0,idx); hi=min(len(geom)-1,idx)
                       d=0.0; i=idx
                       while i>0 and d<180: d+=hav(geom[i],geom[i-1]); i-=1
@@ -98,7 +97,7 @@ jobs:
                       seg=geom[lo:hi+1]
                       for rid in rs:
                           self.branches[rid].append({'wayId':int(w.id),'attachNode':nid,'attachIndex':idx-lo,'geom':seg,'tags':tags_dict(w.tags)})
-          
+
           def main():
               ap=argparse.ArgumentParser(); ap.add_argument('country'); ap.add_argument('pbf'); ap.add_argument('outdir'); args=ap.parse_args()
               cc=args.country.upper(); out=Path(args.outdir); country_dir=out/cc; country_dir.mkdir(parents=True,exist_ok=True)
@@ -122,7 +121,7 @@ jobs:
               (country_dir/'manifest.json').write_text(json.dumps(country_manifest,ensure_ascii=False,indent=2),encoding='utf-8')
               print(f'{cc}: roundabouts={len(rp.rounds)} ready={ready} tiles={len(tiles)}')
               if len(rp.rounds)<10: raise SystemExit(f'{cc}: too few roundabouts, refusing publication')
-          
+
           if __name__=='__main__': main()
           PY
           .venv/bin/python -m py_compile .roundabout_builder.py
@@ -134,11 +133,31 @@ jobs:
           mkdir -p offline/roundabouts.new .osm-round
           build_country(){
             CC="$1"; SLUG="$2"; PBF=".osm-round/${CC}.osm.pbf"
-            URL="https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
-            curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "$URL"
+
+            # Geofabrik may redirect *-latest.osm.pbf to a dated file.
+            # Resolve the dated PBF from the official country index first.
+            # This avoids the intermittent GitHub Actions redirect-loop failure.
+            INDEX_URL="https://download.geofabrik.de/europe/${SLUG}.html"
+            INDEX=".osm-round/${CC}.html"
+            curl --fail --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$INDEX" "$INDEX_URL"
+
+            URL="$(.venv/bin/python - "$INDEX" "$SLUG" <<'PY'
+          import re,sys
+          from pathlib import Path
+          html=Path(sys.argv[1]).read_text(encoding="utf-8",errors="ignore")
+          slug=sys.argv[2]
+          pattern = r'href=["\']([^"\']*' + re.escape(slug) + r'-[0-9]{6}\.osm\.pbf)["\']'
+          matches=sorted(set(re.findall(pattern,html)))
+          if not matches:
+              raise SystemExit(f"Could not resolve a dated {slug} PBF from Geofabrik index")
+          print("https://download.geofabrik.de/europe/" + matches[-1].split("/")[-1])
+          PY
+          )"
+            echo "Resolved ${CC} PBF: ${URL##*/}"
+            curl --fail --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "$URL"
             test -s "$PBF"
             .venv/bin/python .roundabout_builder.py "$CC" "$PBF" offline/roundabouts.new
-            rm -f "$PBF"
+            rm -f "$PBF" "$INDEX"
           }
           build_country IT italy
           build_country FR france
