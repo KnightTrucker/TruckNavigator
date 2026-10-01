@@ -83,10 +83,22 @@ jobs:
             # Geofabrik serves *-latest.osm.pbf through a redirect. Resolve the
             # newest dated PBF from the official country index first so a
             # redirect-loop (curl 47) cannot abort the build before the builder.
-            INDEX_URL="https://download.geofabrik.de/europe/${SLUG}.html"
+            # Try the country page first; if Geofabrik answers 502 (or the page
+            # has no dated link) fall back to the main Europe directory listing.
             INDEX=".osm-lanes/${CC}.html"
-            curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
-              --connect-timeout 30 -o "$INDEX" "$INDEX_URL"
+            : > "$INDEX"
+            for INDEX_URL in "https://download.geofabrik.de/europe/${SLUG}.html" "https://download.geofabrik.de/europe/"; do
+              if curl --fail --retry 4 --retry-all-errors --retry-delay 15 \
+                   --connect-timeout 30 -o "$INDEX" "$INDEX_URL"; then
+                if grep -Eq "${SLUG}-[0-9]{6}\.osm\.pbf" "$INDEX"; then
+                  echo "Index OK: ${INDEX_URL}"
+                  break
+                fi
+                echo "No dated ${SLUG} link in ${INDEX_URL}, trying next source"
+              else
+                echo "Index failed: ${INDEX_URL}, trying next source"
+              fi
+            done
 
             URL="$(.venv/bin/python - "$INDEX" "$SLUG" <<'PY'
           import re,sys
