@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-29T13:32:37.129535+00:00",
+  "generatedAt": "2026-10-01T20:21:38.425595+00:00",
   "networks": {
     "dkv": {
       "count": 77211,
@@ -16,7 +16,7 @@
       "coverage": "official-public-shell-network"
     },
     "ipcard": {
-      "count": 3120,
+      "count": 3121,
       "source": "OpenStreetMap/Geofabrik IP network candidates",
       "coverage": "IP/Italiana Petroli/Api stations identified from OSM; card acceptance is not inferred beyond mapped network identity"
     }
