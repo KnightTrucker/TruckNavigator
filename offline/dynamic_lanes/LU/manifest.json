@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "country": "LU",
-  "generatedAt": "2026-09-24T09:09:36.472063+00:00",
-  "uniqueWays": 29223,
-  "tileEntries": 29440,
+  "generatedAt": "2026-10-01T16:26:44.049986+00:00",
+  "uniqueWays": 29238,
+  "tileEntries": 29455,
   "tileDegrees": 0.5,
   "tiles": {
     "100_11": {
       "file": "LU/100_11.json",
-      "count": 798,
-      "sha256": "5da9d7d2afe72838b4ed537a6f7e6ec1c030fe647a5be6d7810b0b0266d0d02c",
+      "count": 802,
+      "sha256": "b9b44f8fa01ee6a247952a29ea39ab676753b0db784738f24d8b51ac45478a5c",
       "bbox": [
         50.0,
         5.5,
@@ -42,7 +42,7 @@
     "98_12": {
       "file": "LU/98_12.json",
       "count": 1254,
-      "sha256": "efced5cd0f436fb6ba5b72084625df7ad4b1389d92e27b7fd2e5e909ea2ebdb1",
+      "sha256": "9f8e9f4baafb6ac1b95292f6ec3cd20a68b31539df8c981f0ac3e9451fdd6224",
       "bbox": [
         49.0,
         6.0,
@@ -52,8 +52,8 @@
     },
     "99_11": {
       "file": "LU/99_11.json",
-      "count": 7037,
-      "sha256": "1887b2fe99687abbbc78b6ba1a3457fd6123c9c9349d7db58eb811025731b85b",
+      "count": 7035,
+      "sha256": "db21806da464adf81d74a8a88d64b2a0141fa7a5c5f4e844fd72e6a17b461ae0",
       "bbox": [
         49.5,
         5.5,
@@ -63,8 +63,8 @@
     },
     "99_12": {
       "file": "LU/99_12.json",
-      "count": 18553,
-      "sha256": "8ca5a09805cd4fe4fdea95a9c7331f60f4bcadc74d2f9e46db71aae433562138",
+      "count": 18566,
+      "sha256": "a6a98d97fea8b51614153c122c04b0d6e6a9f5ef27d949510d1dd0ba6422bf64",
       "bbox": [
         49.5,
         6.0,
