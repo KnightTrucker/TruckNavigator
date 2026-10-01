@@ -79,10 +79,34 @@ jobs:
           mkdir -p offline/dynamic_lanes.new .osm-lanes
           build_country(){
             CC="$1"; SLUG="$2"; PBF=".osm-lanes/${CC}.osm.pbf"
-            curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "https://download.geofabrik.de/europe/${SLUG}-latest.osm.pbf"
+
+            # Geofabrik serves *-latest.osm.pbf through a redirect. Resolve the
+            # newest dated PBF from the official country index first so a
+            # redirect-loop (curl 47) cannot abort the build before the builder.
+            INDEX_URL="https://download.geofabrik.de/europe/${SLUG}.html"
+            INDEX=".osm-lanes/${CC}.html"
+            curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
+              --connect-timeout 30 -o "$INDEX" "$INDEX_URL"
+
+            URL="$(.venv/bin/python - "$INDEX" "$SLUG" <<'PY'
+          import re,sys
+          from pathlib import Path
+          html=Path(sys.argv[1]).read_text(encoding="utf-8",errors="ignore")
+          slug=sys.argv[2]
+          pattern=r'href=["\']([^"\']*'+re.escape(slug)+r'-[0-9]{6}\.osm\.pbf)["\']'
+          matches=sorted(set(re.findall(pattern,html)))
+          if not matches:
+              raise SystemExit(f"Could not resolve a dated {slug} PBF from Geofabrik index")
+          print("https://download.geofabrik.de/europe/"+matches[-1].split("/")[-1])
+          PY
+          )"
+            echo "Resolved ${CC} PBF: ${URL##*/}"
+            rm -f "$PBF"
+            curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
+              --connect-timeout 30 -o "$PBF" "$URL"
             test -s "$PBF"
             .venv/bin/python .dynamic_lanes_builder.py "$CC" "$PBF" offline/dynamic_lanes.new
-            rm -f "$PBF"
+            rm -f "$PBF" "$INDEX"
           }
           build_country IT italy
           build_country FR france

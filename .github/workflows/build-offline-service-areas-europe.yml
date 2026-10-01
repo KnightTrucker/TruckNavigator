@@ -46,9 +46,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 \
-            -o country.osm.pbf "https://download.geofabrik.de/europe/${{ matrix.slug }}-latest.osm.pbf"
+
+          # Geofabrik serves *-latest.osm.pbf through a redirect. Resolve the
+          # newest dated PBF from the official country index first.
+          INDEX_URL="https://download.geofabrik.de/europe/${{ matrix.slug }}.html"
+          INDEX="country-geofabrik.html"
+          curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
+            --connect-timeout 30 -o "$INDEX" "$INDEX_URL"
+
+          URL="$(python3 - "$INDEX" "${{ matrix.slug }}" <<'PY'
+          import re,sys
+          from pathlib import Path
+          html=Path(sys.argv[1]).read_text(encoding="utf-8",errors="ignore")
+          slug=sys.argv[2]
+          pattern=r'href=["\']([^"\']*'+re.escape(slug)+r'-[0-9]{6}\.osm\.pbf)["\']'
+          matches=sorted(set(re.findall(pattern,html)))
+          if not matches:
+              raise SystemExit(f"Could not resolve a dated {slug} PBF from Geofabrik index")
+          print("https://download.geofabrik.de/europe/"+matches[-1].split("/")[-1])
+          PY
+          )"
+          echo "Resolved ${{ matrix.cc }} PBF: ${URL##*/}"
+
+          curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
+            --connect-timeout 30 -o country.osm.pbf "$URL"
           test -s country.osm.pbf
+          rm -f "$INDEX"
 
           # Keep only actual service/rest areas, plus referenced nodes needed
           # to preserve way geometry for the existing Python builder.

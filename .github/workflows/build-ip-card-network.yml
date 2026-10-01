@@ -21,7 +21,30 @@ jobs:
           set -euo pipefail
           python3 -m venv .venv
           .venv/bin/python -m pip install --upgrade pip osmium
-          curl --fail --location --retry 8 --retry-all-errors --retry-delay 10 -o italy.osm.pbf https://download.geofabrik.de/europe/italy-latest.osm.pbf
+
+          # Resolve the newest dated Geofabrik PBF from the official Italy
+          # index instead of requesting italy-latest.osm.pbf directly.
+          INDEX_URL="https://download.geofabrik.de/europe/italy.html"
+          INDEX=".italy-geofabrik.html"
+          curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
+            --connect-timeout 30 -o "$INDEX" "$INDEX_URL"
+          PBF="italy.osm.pbf"
+          URL="$(.venv/bin/python - "$INDEX" <<'PY'
+          import re,sys
+          from pathlib import Path
+          html=Path(sys.argv[1]).read_text(encoding="utf-8",errors="ignore")
+          matches=sorted(set(re.findall(r'href=["\']([^"\']*italy-[0-9]{6}\.osm\.pbf)["\']',html)))
+          if not matches:
+              raise SystemExit("Could not resolve a dated italy PBF from Geofabrik index")
+          print("https://download.geofabrik.de/europe/"+matches[-1].split("/")[-1])
+          PY
+          )"
+          echo "Resolved Italy PBF: ${URL##*/}"
+          curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
+            --connect-timeout 30 -o "$PBF" "$URL"
+          test -s "$PBF"
+          rm -f "$INDEX"
+
           cat > .ip.py <<'PY'
           import json,re
           from datetime import datetime,timezone
@@ -49,6 +72,7 @@ jobs:
           PY
           .venv/bin/python -m py_compile .ip.py
           .venv/bin/python .ip.py
+          rm -f "$PBF"
       - name: Publish
         shell: bash
         run: |
