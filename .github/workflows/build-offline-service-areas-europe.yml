@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      max-parallel: 7
+      max-parallel: 1
       matrix:
         include:
           - {cc: IT, slug: italy}
@@ -88,7 +88,8 @@ jobs:
           echo "Resolved ${{ matrix.cc }} PBF: ${URL##*/}"
 
           curl --fail --retry 8 --retry-all-errors --retry-delay 10 \
-            --connect-timeout 30 -o country.osm.pbf "$URL"
+            --connect-timeout 30 --speed-limit 1500000 --speed-time 90 \
+            -C - -o country.osm.pbf "$URL"
           test -s country.osm.pbf
           rm -f "$INDEX"
 
