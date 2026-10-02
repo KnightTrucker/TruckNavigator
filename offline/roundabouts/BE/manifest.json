@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "country": "BE",
-  "generatedAt": "2026-09-30T12:24:12.131133+00:00",
-  "roundabouts": 15644,
-  "topologyReady": 15125,
+  "generatedAt": "2026-10-02T05:08:39.538054+00:00",
+  "roundabouts": 15651,
+  "topologyReady": 15131,
   "tileDegrees": 0.5,
   "tiles": {
     "100_10": {
@@ -52,8 +52,8 @@
     },
     "100_8": {
       "file": "BE/100_8.json",
-      "count": 867,
-      "sha256": "fae5467b3478e840e7f557135c35ee201dd848c8d73e0b0a963bc991414f7e36",
+      "count": 870,
+      "sha256": "4dd7f72440029953adf4d519acbc9fb500a7ad19fa33c98a640ab59c6c186f1a",
       "bbox": [
         50.0,
         4.0,
@@ -63,8 +63,8 @@
     },
     "100_9": {
       "file": "BE/100_9.json",
-      "count": 621,
-      "sha256": "15cd9d52946cbd9827b0482d9da7da62bfb15a63a880a651babdb743969c2fb9",
+      "count": 625,
+      "sha256": "bb863bca719a63b1fdc5a6cf4aeba127ef85d0978bf1a3baa26b62a02a36d810",
       "bbox": [
         50.0,
         4.5,
@@ -141,7 +141,7 @@
     "101_8": {
       "file": "BE/101_8.json",
       "count": 2860,
-      "sha256": "d9f6ded42ee546525f7d66b62035589b693d6a893149ddad27120d3a094e0318",
+      "sha256": "9d587ce431e920281a11163cd4021c12f85ba8db4e5f561b1885e9e88ebeb0d6",
       "bbox": [
         50.5,
         4.0,
