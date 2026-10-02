@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: fuel-card-networks
+  cancel-in-progress: false
+
 jobs:
   build-dkv:
     runs-on: ubuntu-latest
@@ -124,7 +128,12 @@ jobs:
             exit 0
           fi
           git commit -m "Update official DKV fuel-card network"
-          git push
+          for ATTEMPT in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 10
+          done
+          exit 1
 
   build-as24:
     needs: build-dkv
@@ -396,7 +405,12 @@ jobs:
             exit 0
           fi
           git commit -m "Update official AS24 fuel-card network"
-          git push
+          for ATTEMPT in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 10
+          done
+          exit 1
 
 
 
@@ -804,4 +818,9 @@ jobs:
             exit 0
           fi
           git commit -m "Update Shell fuel-card network"
-          git push
+          for ATTEMPT in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git pull --rebase origin main
+            sleep 10
+          done
+          exit 1

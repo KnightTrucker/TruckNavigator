@@ -139,7 +139,12 @@ jobs:
             # This avoids the intermittent GitHub Actions redirect-loop failure.
             INDEX_URL="https://download.geofabrik.de/europe/${SLUG}.html"
             INDEX=".osm-round/${CC}.html"
-            curl --fail --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$INDEX" "$INDEX_URL"
+            : > "$INDEX"
+            if curl --fail --retry 3 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$INDEX" "$INDEX_URL"; then
+              echo "Index OK: ${INDEX_URL}"
+            else
+              echo "Index failed: ${INDEX_URL}; will probe dated files directly"
+            fi
 
             URL="$(.venv/bin/python - "$INDEX" "$SLUG" <<'PY'
           import re,sys
@@ -152,7 +157,20 @@ jobs:
               raise SystemExit(f"Could not resolve a dated {slug} PBF from Geofabrik index")
           print("https://download.geofabrik.de/europe/" + matches[-1].split("/")[-1])
           PY
-          )"
+          )" || URL=""
+            if [ -z "$URL" ]; then
+              # Index page unusable (e.g. HTTP 502): probe the dated file names
+              # directly, newest first (Geofabrik names them slug-YYMMDD.osm.pbf).
+              for DAYS_AGO in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
+                D="$(date -u -d "${DAYS_AGO} days ago" +%y%m%d)"
+                CAND="https://download.geofabrik.de/europe/${SLUG}-${D}.osm.pbf"
+                if curl --silent --head --fail --retry 2 --retry-all-errors \
+                     --retry-delay 3 --connect-timeout 30 -o /dev/null "$CAND"; then
+                  URL="$CAND"; break
+                fi
+              done
+            fi
+            test -n "$URL" || { echo "Could not find a dated ${SLUG} PBF"; exit 1; }
             echo "Resolved ${CC} PBF: ${URL##*/}"
             curl --fail --retry 8 --retry-all-errors --retry-delay 10 --connect-timeout 30 -o "$PBF" "$URL"
             test -s "$PBF"
