@@ -1,58 +1,58 @@
 {
   "schemaVersion": 10,
-  "generatedAt": "2026-09-25T08:38:00.407184+00:00",
+  "generatedAt": "2026-10-02T05:17:23.048224+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "records": 917233,
+      "records": 919096,
       "counts": {
-        "tolls": 23819,
-        "speedlimits": 633243,
-        "cameras": 5206,
-        "restrictions": 63538,
-        "overtaking": 2366,
-        "tunnels": 254894,
-        "hazmat": 1083
+        "tolls": 23863,
+        "speedlimits": 633842,
+        "cameras": 5216,
+        "restrictions": 63588,
+        "overtaking": 2392,
+        "tunnels": 256102,
+        "hazmat": 1084
       },
       "tiles": 234
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "records": 2151835,
+      "records": 2154956,
       "counts": {
-        "speedlimits": 1747971,
-        "tolls": 27158,
-        "restrictions": 120996,
+        "speedlimits": 1750533,
+        "tolls": 27168,
+        "restrictions": 121259,
         "cameras": 3888,
         "overtaking": 3117,
-        "tunnels": 347303,
+        "tunnels": 347683,
         "hazmat": 2338
       },
       "tiles": 341
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 3769808,
+      "records": 3773433,
       "counts": {
-        "restrictions": 289112,
-        "speedlimits": 2901474,
-        "hazmat": 72763,
-        "overtaking": 10353,
-        "cameras": 5204,
-        "tolls": 4309,
-        "tunnels": 740198
+        "restrictions": 289474,
+        "speedlimits": 2903861,
+        "hazmat": 72799,
+        "overtaking": 10356,
+        "cameras": 5203,
+        "tolls": 4313,
+        "tunnels": 741250
       },
       "tiles": 240
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "records": 341871,
+      "records": 342009,
       "counts": {
-        "speedlimits": 256362,
-        "cameras": 603,
-        "restrictions": 21606,
-        "tolls": 12179,
-        "tunnels": 77835,
+        "speedlimits": 256473,
+        "cameras": 605,
+        "restrictions": 21638,
+        "tolls": 12185,
+        "tunnels": 77849,
         "hazmat": 193,
         "overtaking": 647
       },
@@ -60,39 +60,39 @@
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "records": 500791,
+      "records": 501290,
       "counts": {
-        "restrictions": 28054,
-        "speedlimits": 346642,
-        "cameras": 1410,
-        "tolls": 24884,
+        "restrictions": 28092,
+        "speedlimits": 347052,
+        "cameras": 1411,
+        "tolls": 24889,
         "overtaking": 2875,
-        "tunnels": 138527,
+        "tunnels": 138626,
         "hazmat": 215
       },
       "tiles": 68
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "records": 419002,
+      "records": 419371,
       "counts": {
         "tolls": 31877,
-        "cameras": 1615,
-        "speedlimits": 338046,
-        "restrictions": 25927,
+        "cameras": 1616,
+        "speedlimits": 338376,
+        "restrictions": 25941,
         "hazmat": 25,
-        "tunnels": 70838,
+        "tunnels": 70892,
         "overtaking": 398
       },
       "tiles": 29
     },
     "LU": {
       "manifest": "LU/manifest.json",
-      "records": 38951,
+      "records": 38974,
       "counts": {
-        "restrictions": 8200,
+        "restrictions": 8202,
         "cameras": 39,
-        "speedlimits": 32949,
+        "speedlimits": 32972,
         "tunnels": 5109,
         "overtaking": 49,
         "tolls": 104,
@@ -101,15 +101,15 @@
       "tiles": 7
     }
   },
-  "totalRecords": 8139491,
+  "totalRecords": 8149129,
   "counts": {
-    "tolls": 124330,
-    "speedlimits": 6256687,
-    "cameras": 17965,
-    "restrictions": 557433,
-    "overtaking": 19805,
-    "tunnels": 1634704,
-    "hazmat": 76661
+    "tolls": 124399,
+    "speedlimits": 6263109,
+    "cameras": 17978,
+    "restrictions": 558194,
+    "overtaking": 19834,
+    "tunnels": 1637511,
+    "hazmat": 76698
   },
   "tileDegrees": 0.5,
   "source": "Geofabrik OSM PBF + osmium prefilter",
