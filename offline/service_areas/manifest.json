@@ -1,58 +1,58 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-10-01T20:23:16.455975Z",
+  "generatedAt": "2026-10-06T11:58:52.404807Z",
   "graphRequired": false,
   "countries": {
     "IT": {
       "file": "IT.json",
-      "count": 5033,
-      "sha256": "c4a1014ac6212a8ffd2985c97094113f5ed64a452016594721d17726b7a48c8d",
+      "count": 5031,
+      "sha256": "6afa52b957514d281fe7c249739cd667d7772bcf36680aa79c76759a2322adbb",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:16:25.359540Z"
+      "generatedAt": "2026-10-06T10:37:23.216405Z"
     },
     "FR": {
       "file": "FR.json",
-      "count": 3075,
-      "sha256": "301236ae47e13ba1d64ca65f1ee9a0f159c5714c06da84aaafff374745bb2368",
+      "count": 3077,
+      "sha256": "738597d69b12b26b41b3bd0c55413591902d975661e3d04c264ca3a2499507fd",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:21:40.127560Z"
+      "generatedAt": "2026-10-06T10:57:26.688220Z"
     },
     "DE": {
       "file": "DE.json",
-      "count": 3762,
-      "sha256": "f8f34f9d24797646d5442f66cd9cfca7d76fb7c76d997ea0aeedaf96ff319050",
+      "count": 3766,
+      "sha256": "a95bf5613d9cd0da0827db1aa16ea67336cc057f6e8aea1ff6a9212f5c16a032",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:20:37.546674Z"
+      "generatedAt": "2026-10-06T11:10:34.126343Z"
     },
     "CH": {
       "file": "CH.json",
       "count": 255,
-      "sha256": "17fc2a543c0a27856fc8a0a0a7566b478d0b8131146123350d91fd1155457558",
+      "sha256": "938036647af97e4fa1e8bb76b07aaee2420f846af5a14c18f03b1612177da698",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:17:23.297459Z"
+      "generatedAt": "2026-10-06T11:18:04.798709Z"
     },
     "AT": {
       "file": "AT.json",
       "count": 410,
-      "sha256": "c01cdafcdb849a28d3e57d4576290781da4f7948308cef9a38de54eae17329fe",
+      "sha256": "c1e9301846f17bd8ad6680a810b2f73027e3727ed3c17c3a20af49247b99bc77",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:14:03.691601Z"
+      "generatedAt": "2026-10-06T11:25:44.422099Z"
     },
     "BE": {
       "file": "BE.json",
       "count": 221,
-      "sha256": "4511c3d8c6bccc5d93c886980513fe28701d296390aca934c8920458d42584ef",
+      "sha256": "f033cd83fe21c7c8c27cd90103b6e56f5527caad67c7549ac24957e43e6c5ca5",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:12:58.067013Z"
+      "generatedAt": "2026-10-06T11:39:16.157967Z"
     },
     "LU": {
       "file": "LU.json",
       "count": 164,
-      "sha256": "3eec510868d3271ac1eba7c924785bdb71fd7af935e1c514a61078f0afc74c68",
+      "sha256": "7c3412a80d6b95316f6897dfb3858eda0c3b35a67d0df959371cbf66af151688",
       "schemaVersion": 6,
-      "generatedAt": "2026-10-01T20:13:35.145006Z"
+      "generatedAt": "2026-10-06T11:46:37.449698Z"
     }
   },
-  "totalAreas": 12920,
+  "totalAreas": 12924,
   "scope": "IT,FR,DE,CH,AT,BE,LU"
 }
