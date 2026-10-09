@@ -1,13 +1,13 @@
 {
   "schemaVersion": 10,
   "country": "LU",
-  "generatedAt": "2026-10-02T10:40:28.298689+00:00",
-  "records": 38974,
+  "generatedAt": "2026-10-09T10:45:36.193230+00:00",
+  "records": 39002,
   "counts": {
-    "restrictions": 8202,
+    "restrictions": 8206,
     "cameras": 39,
-    "speedlimits": 32972,
-    "tunnels": 5109,
+    "speedlimits": 32998,
+    "tunnels": 5111,
     "overtaking": 49,
     "tolls": 104,
     "hazmat": 44
@@ -15,18 +15,18 @@
   "tiles": {
     "98_12": {
       "file": "LU/98_12.json",
-      "count": 1650,
-      "sha256": "aa7b85a5747139f6a75cfe20c7b6074ef3166e045d58a4b82bde5a87ed0eed9e"
+      "count": 1651,
+      "sha256": "ed81d27de43b865574a24a5a45046640a0aa49e379183e077f92a042ced54616"
     },
     "99_12": {
       "file": "LU/99_12.json",
-      "count": 25173,
-      "sha256": "ad5492de5f78ebe69d1005f3b1b2f36c0af15a0453454b7d69ff470f157235a4"
+      "count": 25178,
+      "sha256": "745fc52eed18031510d014c2299276d0f33cb2c71cd6dc34163350a31a6bba74"
     },
     "99_11": {
       "file": "LU/99_11.json",
-      "count": 8805,
-      "sha256": "286688fbf66e567632e35dc71161751601a78a91ad565ef7ec0bf3337799ac77"
+      "count": 8825,
+      "sha256": "61bfda8398acbf5f29119d511ec374a54646190cb78e42f277760ad6246edbcc"
     },
     "100_11": {
       "file": "LU/100_11.json",
@@ -36,17 +36,17 @@
     "100_12": {
       "file": "LU/100_12.json",
       "count": 1597,
-      "sha256": "2e30d8c8ae3181b1dff2493c8ac47555ce0ec0b77824590f21d5f357d34616fb"
+      "sha256": "58a2ee522bdaf954a329e2f502badb39c6acad0830f6aa404efad236f78efd42"
     },
     "99_13": {
       "file": "LU/99_13.json",
       "count": 329,
-      "sha256": "bf1aab80c2cca200841d136d60713e8dacd361c1a1888d7348612ea0bd899d32"
+      "sha256": "9af384e630c6d2af327c9b1ceff5c8bf76c2e24821ed3a66733788bdedd4c9a5"
     },
     "98_11": {
       "file": "LU/98_11.json",
-      "count": 340,
-      "sha256": "fd5ad678444f32b39560cfa57d55dcc8e3d54e1a1d371cb419e0e08734f904d5"
+      "count": 342,
+      "sha256": "32e9e79cc42663f199301661a6df34955dec7290fe2b850da2ddb32f55920350"
     }
   }
 }
