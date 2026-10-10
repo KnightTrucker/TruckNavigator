@@ -97,8 +97,13 @@ jobs:
             nwr/toll nwr/toll:hgv nwr/tunnel nwr/hazmat nwr/hazmat:conditional nwr/hazmat:water \
             nwr/hazmat:tunnel nwr/adr nwr/maxspeed nwr/maxspeed:hgv nwr/traffic_sign \
             -o safety.osm.pbf --overwrite
+          # C-0.0.22 ROAD POINTS v1: semafori, passaggi a livello, svincoli autostradali (solo nodi, dal
+          # gia' scaricato country.osm.pbf: nessun download in piu').
+          osmium tags-filter country.osm.pbf \
+            n/highway=traffic_signals n/railway=level_crossing n/highway=motorway_junction \
+            -o points.osm.pbf --overwrite
           rm -f country.osm.pbf
-          ls -lh safety.osm.pbf
+          ls -lh safety.osm.pbf points.osm.pbf
           cat > build.py <<'PY'
           import json,math,sys,hashlib
           from pathlib import Path
@@ -146,10 +151,57 @@ jobs:
           .venv/bin/python -m py_compile build.py
           mkdir -p out
           .venv/bin/python build.py "${{ matrix.cc }}" safety.osm.pbf out
+          cat > build_points.py <<'PY'
+          # Formato compatto per l'app: un record per punto, tile da 0,5 gradi come road_safety_v10.
+          #  k: 's' semaforo | 'x' passaggio a livello | 'j' svincolo autostradale
+          #  r: numero uscita (ref)  n: nome  e: exit_to  d: direzione semaforo (forward/backward/both)
+          import json,math,sys,hashlib
+          from pathlib import Path
+          from collections import defaultdict
+          from datetime import datetime,timezone
+          import osmium
+          cc,pbf,out=sys.argv[1:];out=Path(out)/cc;out.mkdir(parents=True,exist_ok=True)
+          tiles=defaultdict(list);counts=defaultdict(int)
+          class H(osmium.SimpleHandler):
+            def node(self,n):
+              if not n.location.valid():return
+              t=n.tags;k=None
+              if t.get('highway')=='traffic_signals':k='s'
+              elif t.get('railway')=='level_crossing':k='x'
+              elif t.get('highway')=='motorway_junction':k='j'
+              if not k:return
+              lat=float(n.location.lat);lon=float(n.location.lon)
+              r={'i':n.id,'a':round(lat,6),'o':round(lon,6),'k':k}
+              if k=='j':
+                if t.get('ref'):r['r']=str(t.get('ref'))[:16]
+                if t.get('name'):r['n']=str(t.get('name'))[:60]
+                if t.get('exit_to'):r['e']=str(t.get('exit_to'))[:80]
+              elif k=='s':
+                d=t.get('traffic_signals:direction') or t.get('direction')
+                if d in ('forward','backward','both'):r['d']=d
+              counts[k]+=1
+              tiles[f'{math.floor(lat*2)}_{math.floor(lon*2)}'].append(r)
+          H().apply_file(pbf,locations=False);mt={};total=0
+          for k,v in tiles.items():
+            total+=len(v)
+            raw=json.dumps({'schemaVersion':1,'country':cc,'tile':k,'count':len(v),'items':v},separators=(',',':')).encode()
+            (out/f'{k}.json').write_bytes(raw);mt[k]={'file':f'{cc}/{k}.json','count':len(v),'sha256':hashlib.sha256(raw).hexdigest()}
+          (out/'manifest.json').write_text(json.dumps({'schemaVersion':1,'country':cc,'generatedAt':datetime.now(timezone.utc).isoformat(),'records':total,'counts':{'signals':counts['s'],'level_crossings':counts['x'],'junctions':counts['j']},'tiles':mt},indent=2))
+          print(cc,'points',total,dict(counts),len(mt))
+          if total<10:raise SystemExit('too few road points')
+          PY
+          .venv/bin/python -m py_compile build_points.py
+          mkdir -p out_points
+          .venv/bin/python build_points.py "${{ matrix.cc }}" points.osm.pbf out_points
       - uses: actions/upload-artifact@v4
         with:
           name: rs10-${{ matrix.cc }}
           path: out/${{ matrix.cc }}
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rp1-${{ matrix.cc }}
+          path: out_points/${{ matrix.cc }}
           retention-days: 1
 
   publish:
@@ -163,6 +215,10 @@ jobs:
         with:
           pattern: rs10-*
           path: dl
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rp1-*
+          path: dlp
       - name: Assemble and publish
         shell: bash
         run: |
@@ -190,10 +246,34 @@ jobs:
           PY
           rm -rf offline/road_safety_v10
           mv offline/road_safety_v10.new offline/road_safety_v10
+          # C-0.0.22: ROAD POINTS v1
+          rm -rf offline/road_points_v1.new
+          mkdir -p offline/road_points_v1.new
+          for CC in IT FR DE CH AT BE LU; do
+            SRC="dlp/rp1-${CC}"
+            test -s "${SRC}/manifest.json"
+            mkdir -p "offline/road_points_v1.new/${CC}"
+            cp -a "${SRC}/." "offline/road_points_v1.new/${CC}/"
+          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import datetime,timezone
+          r=Path('offline/road_points_v1.new');cs={};tot=0;c={}
+          for cc in ('IT','FR','DE','CH','AT','BE','LU'):
+            d=json.loads((r/cc/'manifest.json').read_text())
+            if d['country']!=cc or d['records']<10 or not d['tiles']:raise SystemExit('invalid points '+cc)
+            tot+=d['records']
+            for k,v in d['counts'].items():c[k]=c.get(k,0)+v
+            cs[cc]={'manifest':f'{cc}/manifest.json','records':d['records'],'counts':d['counts'],'tiles':len(d['tiles'])}
+          (r/'manifest.json').write_text(json.dumps({'schemaVersion':1,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':cs,'totalRecords':tot,'counts':c,'tileDegrees':0.5,'kinds':{'s':'traffic_signals','x':'level_crossing','j':'motorway_junction'},'source':'Geofabrik OSM PBF + osmium prefilter','scope':'IT,FR,DE,CH,AT,BE,LU'},indent=2))
+          PY
+          rm -rf offline/road_points_v1
+          mv offline/road_points_v1.new offline/road_points_v1
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A offline/road_safety_v10
+          git add -A offline/road_safety_v10 offline/road_points_v1
           git diff --cached --quiet && exit 0
-          git commit -m "Update offline Road Safety v10 PBF"
+          git commit -m "Update offline Road Safety v10 + Road Points v1"
           for A in 1 2 3;do git push origin HEAD:main && exit 0;git pull --rebase origin main;sleep 10;done
           exit 1
