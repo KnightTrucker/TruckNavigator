@@ -1,6 +1,6 @@
 {
   "schemaVersion": 10,
-  "generatedAt": "2026-10-09T10:47:43.155025+00:00",
+  "generatedAt": "2026-10-10T06:01:17.436473+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
@@ -32,15 +32,15 @@
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 3777327,
+      "records": 3777919,
       "counts": {
-        "restrictions": 289884,
-        "speedlimits": 2906528,
-        "hazmat": 72836,
+        "restrictions": 290049,
+        "speedlimits": 2906869,
+        "hazmat": 72840,
         "overtaking": 10357,
         "cameras": 5206,
         "tolls": 4313,
-        "tunnels": 742219
+        "tunnels": 742333
       },
       "tiles": 240
     },
@@ -101,15 +101,15 @@
       "tiles": 7
     }
   },
-  "totalRecords": 8169154,
+  "totalRecords": 8169746,
   "counts": {
     "tolls": 124472,
-    "speedlimits": 6279492,
+    "speedlimits": 6279833,
     "cameras": 17992,
-    "restrictions": 559077,
+    "restrictions": 559242,
     "overtaking": 19854,
-    "tunnels": 1640885,
-    "hazmat": 76735
+    "tunnels": 1640999,
+    "hazmat": 76739
   },
   "tileDegrees": 0.5,
   "source": "Geofabrik OSM PBF + osmium prefilter",

@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "country": "BE",
+  "generatedAt": "2026-10-10T05:54:45.065288+00:00",
+  "records": 19640,
+  "counts": {
+    "signals": 13391,
+    "level_crossings": 4757,
+    "junctions": 1492
+  },
+  "tiles": {
+    "100_7": {
+      "file": "BE/100_7.json",
+      "count": 243,
+      "sha256": "72b63d50f0b105b925d2b7a5c8db0e004b6bf5ead3debd04ea081486d8af80ca"
+    },
+    "101_8": {
+      "file": "BE/101_8.json",
+      "count": 4969,
+      "sha256": "a338c3ea9d57f5f2332631bfcaec0ee0fbaa9615610d21510d256a0d08ddf67b"
+    },
+    "101_11": {
+      "file": "BE/101_11.json",
+      "count": 1145,
+      "sha256": "a64759686126fbafa20ca7b8705b4885cbb0d184fbc4f38e1b0ddb825330f550"
+    },
+    "99_11": {
+      "file": "BE/99_11.json",
+      "count": 214,
+      "sha256": "66fa56653dcf0d564a0f98260914b14fa3553ac364dfb9bed45a77872c93b483"
+    },
+    "101_9": {
+      "file": "BE/101_9.json",
+      "count": 932,
+      "sha256": "b05cf11f2a05e46b45bdd92171a794f9401e99a84b118b4022346b64c648da45"
+    },
+    "100_9": {
+      "file": "BE/100_9.json",
+      "count": 508,
+      "sha256": "3ec39cc2db594d234ef7f6f622a88faec722edb4ceba6c9b5e14f91a1892b3f4"
+    },
+    "100_10": {
+      "file": "BE/100_10.json",
+      "count": 124,
+      "sha256": "f07a927453b1e4cf46d245bc64d4f2b8c5a3be5c73bc4bc6b3898bf1c3b21732"
+    },
+    "101_7": {
+      "file": "BE/101_7.json",
+      "count": 638,
+      "sha256": "2355facefc92cabd6a29361ac5e3d6894298ee703816488f22a4b03cfd25c592"
+    },
+    "102_7": {
+      "file": "BE/102_7.json",
+      "count": 1314,
+      "sha256": "715af6663ac23f9114a852d539d4a2b2377bb1da0153ea44d8c883f811b9efe0"
+    },
+    "100_11": {
+      "file": "BE/100_11.json",
+      "count": 103,
+      "sha256": "9625dd2075db383d3153d445d4f681e78a49472d0a17933f7c672da7b51ebbb2"
+    },
+    "102_11": {
+      "file": "BE/102_11.json",
+      "count": 116,
+      "sha256": "3921f8bf13e39bec4bd2c29e852fa5c860b8ec4fcee903e8c6eb41bf71d62118"
+    },
+    "101_6": {
+      "file": "BE/101_6.json",
+      "count": 1249,
+      "sha256": "d4dc59e62117b4577c7a104ee94952ffbb5ab38ddff3b984ece8c4c138c17042"
+    },
+    "100_8": {
+      "file": "BE/100_8.json",
+      "count": 815,
+      "sha256": "ba1ca7d8f1298316ba89e6b9ded04be0dfef94035ebf996c5206714c28c217d3"
+    },
+    "99_10": {
+      "file": "BE/99_10.json",
+      "count": 76,
+      "sha256": "48cb98327ac7d6c5cc57c84df8e6c08de6703ed510ca15adcee997319218b02f"
+    },
+    "102_8": {
+      "file": "BE/102_8.json",
+      "count": 3548,
+      "sha256": "c4d9a71574c4766664925e48a92c6f77016202bcbf6e22f7c866b68d846a7110"
+    },
+    "102_9": {
+      "file": "BE/102_9.json",
+      "count": 881,
+      "sha256": "ccb045c742f4c3918f9fb45dae54d5518bea4419e0c6333044b91ad9d5a7fe5d"
+    },
+    "101_10": {
+      "file": "BE/101_10.json",
+      "count": 798,
+      "sha256": "8fe3cc8ac532961850c62a0441e6df061291acf71574cfaaac96b52ad93de24d"
+    },
+    "101_12": {
+      "file": "BE/101_12.json",
+      "count": 51,
+      "sha256": "f8f74f0440577451cf47db0656cd6db48049e68f56bfc8f709993c3d851178c8"
+    },
+    "102_5": {
+      "file": "BE/102_5.json",
+      "count": 491,
+      "sha256": "315030dc6f5b5206802449526978db78e314b26d496eb925b5d6bd86f86affe2"
+    },
+    "102_10": {
+      "file": "BE/102_10.json",
+      "count": 477,
+      "sha256": "ca0786cd3c09eb442ff0c679ac2324468eeb29aca5ac0ed440142cef47d82087"
+    },
+    "102_6": {
+      "file": "BE/102_6.json",
+      "count": 852,
+      "sha256": "cb5447a5b6651ecd5e9735ee0b15fba8f479b08d68aea4164c709eba97cfffa1"
+    },
+    "101_5": {
+      "file": "BE/101_5.json",
+      "count": 67,
+      "sha256": "c69fc0d8eae28ab7f19a89fcde636d441702346a269ed3da90b3406dd0ea78ac"
+    },
+    "100_12": {
+      "file": "BE/100_12.json",
+      "count": 19,
+      "sha256": "9478386b439b49e01bf336c41a76a63c0fb98e6a53e344752924efb1edfc27c6"
+    },
+    "99_9": {
+      "file": "BE/99_9.json",
+      "count": 10,
+      "sha256": "c37f6319c77c4f16b030eef0bc1b52c05485512581f8d3e64fd7566f67804c02"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "country": "LU",
+  "generatedAt": "2026-10-10T05:59:25.340721+00:00",
+  "records": 1910,
+  "counts": {
+    "signals": 1317,
+    "level_crossings": 450,
+    "junctions": 143
+  },
+  "tiles": {
+    "99_12": {
+      "file": "LU/99_12.json",
+      "count": 1438,
+      "sha256": "f93778652350877a652cb9b5dedde630d04eec9bb761ed682b846dc3c94e3fc1"
+    },
+    "98_12": {
+      "file": "LU/98_12.json",
+      "count": 76,
+      "sha256": "d70b861858f4e0ea74eb5875da89bfc5ce7f3b2ba7cbf45d4aa917306d1a859b"
+    },
+    "99_11": {
+      "file": "LU/99_11.json",
+      "count": 320,
+      "sha256": "68d4c58148bf4d5ef9096d8e7b2f5c5d6ac3bbe7bb489178b5998d53b0ef85c5"
+    },
+    "100_11": {
+      "file": "LU/100_11.json",
+      "count": 6,
+      "sha256": "8de505e7f14b8446e25d712830e6a90114dc7233b2ecc8c9015a0b732d8a0ace"
+    },
+    "98_11": {
+      "file": "LU/98_11.json",
+      "count": 61,
+      "sha256": "6f0850f58f8e857f00128118ba34c62f8860d9db2de7e8fae7e852aa35037708"
+    },
+    "100_12": {
+      "file": "LU/100_12.json",
+      "count": 9,
+      "sha256": "8714ef2f702f0b54fc5ef008f5afb9ac71b9ab91f4256cc5407c652cdac6e473"
+    }
+  }
+}
