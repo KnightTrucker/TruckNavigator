@@ -101,6 +101,7 @@ jobs:
           # gia' scaricato country.osm.pbf: nessun download in piu').
           osmium tags-filter country.osm.pbf \
             n/highway=traffic_signals n/railway=level_crossing n/highway=motorway_junction \
+            n/barrier=toll_booth n/highway=toll_gantry \
             -o points.osm.pbf --overwrite
           rm -f country.osm.pbf
           ls -lh safety.osm.pbf points.osm.pbf
@@ -153,7 +154,7 @@ jobs:
           .venv/bin/python build.py "${{ matrix.cc }}" safety.osm.pbf out
           cat > build_points.py <<'PY'
           # Formato compatto per l'app: un record per punto, tile da 0,5 gradi come road_safety_v10.
-          #  k: 's' semaforo | 'x' passaggio a livello | 'j' svincolo autostradale
+          #  k: 's' semaforo | 'x' passaggio a livello | 'j' svincolo autostradale | 't' casello / portale pedaggio
           #  r: numero uscita (ref)  n: nome  e: exit_to  d: direzione semaforo (forward/backward/both)
           import json,math,sys,hashlib
           from pathlib import Path
@@ -169,6 +170,7 @@ jobs:
               if t.get('highway')=='traffic_signals':k='s'
               elif t.get('railway')=='level_crossing':k='x'
               elif t.get('highway')=='motorway_junction':k='j'
+              elif t.get('barrier')=='toll_booth' or t.get('highway')=='toll_gantry':k='t'
               if not k:return
               lat=float(n.location.lat);lon=float(n.location.lon)
               r={'i':n.id,'a':round(lat,6),'o':round(lon,6),'k':k}
@@ -176,6 +178,8 @@ jobs:
                 if t.get('ref'):r['r']=str(t.get('ref'))[:16]
                 if t.get('name'):r['n']=str(t.get('name'))[:60]
                 if t.get('exit_to'):r['e']=str(t.get('exit_to'))[:80]
+              elif k=='t':
+                if t.get('name'):r['n']=str(t.get('name'))[:60]
               elif k=='s':
                 d=t.get('traffic_signals:direction') or t.get('direction')
                 if d in ('forward','backward','both'):r['d']=d
@@ -186,7 +190,7 @@ jobs:
             total+=len(v)
             raw=json.dumps({'schemaVersion':1,'country':cc,'tile':k,'count':len(v),'items':v},separators=(',',':')).encode()
             (out/f'{k}.json').write_bytes(raw);mt[k]={'file':f'{cc}/{k}.json','count':len(v),'sha256':hashlib.sha256(raw).hexdigest()}
-          (out/'manifest.json').write_text(json.dumps({'schemaVersion':1,'country':cc,'generatedAt':datetime.now(timezone.utc).isoformat(),'records':total,'counts':{'signals':counts['s'],'level_crossings':counts['x'],'junctions':counts['j']},'tiles':mt},indent=2))
+          (out/'manifest.json').write_text(json.dumps({'schemaVersion':1,'country':cc,'generatedAt':datetime.now(timezone.utc).isoformat(),'records':total,'counts':{'signals':counts['s'],'level_crossings':counts['x'],'junctions':counts['j'],'tolls':counts['t']},'tiles':mt},indent=2))
           print(cc,'points',total,dict(counts),len(mt))
           if total<10:raise SystemExit('too few road points')
           PY
@@ -266,7 +270,7 @@ jobs:
             tot+=d['records']
             for k,v in d['counts'].items():c[k]=c.get(k,0)+v
             cs[cc]={'manifest':f'{cc}/manifest.json','records':d['records'],'counts':d['counts'],'tiles':len(d['tiles'])}
-          (r/'manifest.json').write_text(json.dumps({'schemaVersion':1,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':cs,'totalRecords':tot,'counts':c,'tileDegrees':0.5,'kinds':{'s':'traffic_signals','x':'level_crossing','j':'motorway_junction'},'source':'Geofabrik OSM PBF + osmium prefilter','scope':'IT,FR,DE,CH,AT,BE,LU'},indent=2))
+          (r/'manifest.json').write_text(json.dumps({'schemaVersion':1,'generatedAt':datetime.now(timezone.utc).isoformat(),'countries':cs,'totalRecords':tot,'counts':c,'tileDegrees':0.5,'kinds':{'s':'traffic_signals','x':'level_crossing','j':'motorway_junction','t':'toll_booth/toll_gantry'},'source':'Geofabrik OSM PBF + osmium prefilter','scope':'IT,FR,DE,CH,AT,BE,LU'},indent=2))
           PY
           rm -rf offline/road_points_v1
           mv offline/road_points_v1.new offline/road_points_v1
