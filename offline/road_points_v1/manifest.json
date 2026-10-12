@@ -1,89 +1,98 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-10T06:01:18.011729+00:00",
+  "generatedAt": "2026-10-12T06:36:19.231614+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "records": 52177,
+      "records": 53817,
       "counts": {
-        "signals": 32987,
-        "level_crossings": 11726,
-        "junctions": 7464
+        "signals": 32999,
+        "level_crossings": 11735,
+        "junctions": 7463,
+        "tolls": 1620
       },
-      "tiles": 197
+      "tiles": 199
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "records": 129180,
+      "records": 131087,
       "counts": {
-        "signals": 90810,
-        "level_crossings": 29706,
-        "junctions": 8664
+        "signals": 90864,
+        "level_crossings": 29703,
+        "junctions": 8664,
+        "tolls": 1856
       },
-      "tiles": 310
+      "tiles": 312
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 213085,
+      "records": 213269,
       "counts": {
-        "signals": 143784,
-        "level_crossings": 59314,
-        "junctions": 9987
+        "signals": 143800,
+        "level_crossings": 59333,
+        "junctions": 9987,
+        "tolls": 149
       },
-      "tiles": 226
+      "tiles": 227
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "records": 17318,
+      "records": 17362,
       "counts": {
         "signals": 9362,
         "level_crossings": 6970,
-        "junctions": 986
+        "junctions": 986,
+        "tolls": 44
       },
-      "tiles": 33
+      "tiles": 34
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "records": 20609,
+      "records": 20829,
       "counts": {
-        "signals": 10950,
-        "level_crossings": 8333,
-        "junctions": 1326
+        "signals": 10949,
+        "level_crossings": 8336,
+        "junctions": 1326,
+        "tolls": 218
       },
-      "tiles": 58
+      "tiles": 60
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "records": 19640,
+      "records": 19726,
       "counts": {
-        "signals": 13391,
-        "level_crossings": 4757,
-        "junctions": 1492
+        "signals": 13389,
+        "level_crossings": 4747,
+        "junctions": 1492,
+        "tolls": 98
       },
       "tiles": 24
     },
     "LU": {
       "manifest": "LU/manifest.json",
-      "records": 1910,
+      "records": 1911,
       "counts": {
-        "signals": 1317,
+        "signals": 1318,
         "level_crossings": 450,
-        "junctions": 143
+        "junctions": 143,
+        "tolls": 0
       },
       "tiles": 6
     }
   },
-  "totalRecords": 453919,
+  "totalRecords": 458001,
   "counts": {
-    "signals": 302601,
-    "level_crossings": 121256,
-    "junctions": 30062
+    "signals": 302681,
+    "level_crossings": 121274,
+    "junctions": 30061,
+    "tolls": 3985
   },
   "tileDegrees": 0.5,
   "kinds": {
     "s": "traffic_signals",
     "x": "level_crossing",
-    "j": "motorway_junction"
+    "j": "motorway_junction",
+    "t": "toll_booth/toll_gantry"
   },
   "source": "Geofabrik OSM PBF + osmium prefilter",
   "scope": "IT,FR,DE,CH,AT,BE,LU"

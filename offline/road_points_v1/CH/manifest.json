@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
   "country": "CH",
-  "generatedAt": "2026-10-10T05:40:26.873396+00:00",
-  "records": 17318,
+  "generatedAt": "2026-10-12T06:14:38.944593+00:00",
+  "records": 17362,
   "counts": {
     "signals": 9362,
     "level_crossings": 6970,
-    "junctions": 986
+    "junctions": 986,
+    "tolls": 44
   },
   "tiles": {
     "93_13": {
@@ -16,8 +17,8 @@
     },
     "95_15": {
       "file": "CH/95_15.json",
-      "count": 1001,
-      "sha256": "b2386a746215d9f728e80954a643226bc0b8ccdd8021b13c7c0565317c70106c"
+      "count": 1003,
+      "sha256": "ebc99bc8509db0b84361c779b8709a4f30a7bba4b2c95f47a304110dfc3c6181"
     },
     "95_16": {
       "file": "CH/95_16.json",
@@ -26,13 +27,13 @@
     },
     "94_16": {
       "file": "CH/94_16.json",
-      "count": 2587,
-      "sha256": "559ba8e33ce15c8a1906ebd7160abfc4a41f1c5ab16e16506e0e60cfaddbf234"
+      "count": 2589,
+      "sha256": "5cba13796f3d15b785e5f30a36ece124a8fbfd9d9a09d068650e662e15a266e8"
     },
     "94_17": {
       "file": "CH/94_17.json",
-      "count": 2714,
-      "sha256": "6c6fec26f6911a7b351e435217bcbbffe67386a561df5dd6487384560c3f1e3d"
+      "count": 2718,
+      "sha256": "2a0a5cf772f1cfb9e31bf9bc2b2f4b842c19e4e8d00d3ac471c2c566146d62f4"
     },
     "92_12": {
       "file": "CH/92_12.json",
@@ -41,8 +42,8 @@
     },
     "94_15": {
       "file": "CH/94_15.json",
-      "count": 1116,
-      "sha256": "17fa06a6f5c5a0558d527c04501556f00c797f6d0c25e304fb5349aea8378b00"
+      "count": 1117,
+      "sha256": "c367dee7b9fc64f9df5e4cf9f3c61af79a49ab3daba8126e29c16b78555520c6"
     },
     "93_14": {
       "file": "CH/93_14.json",
@@ -51,8 +52,8 @@
     },
     "93_15": {
       "file": "CH/93_15.json",
-      "count": 404,
-      "sha256": "75b105dbd88e42d290bf581b5641337c7400582c457ff72d538e94ece3397a21"
+      "count": 405,
+      "sha256": "aee6ee77dbd3188877581ba2f5d5b912214097a6a4333683d3adb326a7525dcd"
     },
     "94_19": {
       "file": "CH/94_19.json",
@@ -61,13 +62,13 @@
     },
     "94_18": {
       "file": "CH/94_18.json",
-      "count": 1022,
-      "sha256": "438c1719779d036adab5435cf937c3e4363d88486c504d3f7d5dd37583a46006"
+      "count": 1026,
+      "sha256": "cc9ca5d2b2642740d7d5826815d3faebb698d6acc9437a2555d3c07a1629d8f6"
     },
     "94_14": {
       "file": "CH/94_14.json",
-      "count": 643,
-      "sha256": "dd09073205840c5274f19837a4952ef011e66fcb963e0a020bf3fea86d0319aa"
+      "count": 645,
+      "sha256": "0fa78f3dec4efa511d70312898bf80406a125eba56ae97b1d14958616c5c12e3"
     },
     "92_17": {
       "file": "CH/92_17.json",
@@ -76,18 +77,18 @@
     },
     "92_18": {
       "file": "CH/92_18.json",
-      "count": 110,
-      "sha256": "db073f7182f289d2a7f18e9e563e7d32946ce14c6c9c52b0c82eef28879aef51"
+      "count": 112,
+      "sha256": "83cb7050410096acd547e014453d7db67aed720d7fd5115033ed51a257bdf808"
     },
     "93_17": {
       "file": "CH/93_17.json",
-      "count": 122,
-      "sha256": "5e18ffd5d7c4b12393c692a5e4fbe5f814cbd9ffc395906426d6058ed4e66c1d"
+      "count": 123,
+      "sha256": "52ec82cdae59124c400adb6411376e4d15bd65aa0b210ebe41f712023e89443e"
     },
     "91_18": {
       "file": "CH/91_18.json",
-      "count": 49,
-      "sha256": "3c9cf61eaa9c3bc52cd7fe4356dafb21f7e0baa66512a9fa071aae007954d8b7"
+      "count": 52,
+      "sha256": "617b81dc72c3d713ccaf9694db03dff273bca5b99902f6ff234a60b324e83a77"
     },
     "91_17": {
       "file": "CH/91_17.json",
@@ -106,33 +107,38 @@
     },
     "93_12": {
       "file": "CH/93_12.json",
-      "count": 122,
-      "sha256": "040130942f866620d93190d33bf0793509c2488054d0aa44f3e8934c5a31cded"
+      "count": 123,
+      "sha256": "ef0c2e7f5695257d17e51522ac427bdfb498d7f49d194cd1cd577297fc5055d5"
     },
     "93_19": {
       "file": "CH/93_19.json",
-      "count": 233,
-      "sha256": "f777f2ace94bdd2b89e5e5a600a3ddf605db50fadd146f23a20f3e44b93c523a"
+      "count": 235,
+      "sha256": "0b7092d25c6046c3cd0654d947d832bdf913eac1bbbbe3ad52df082b2c899e8f"
     },
     "92_15": {
       "file": "CH/92_15.json",
-      "count": 200,
-      "sha256": "8960f8d07f1b98e992fcc37a54638d345bfd654f84496cd1060f37f301d55d8d"
+      "count": 206,
+      "sha256": "0d99cb09c498510e34bed30a4710a220cc523ddb8d95052bd2b8abec6180e794"
     },
     "92_11": {
       "file": "CH/92_11.json",
       "count": 11,
       "sha256": "8604c84ab7c777d3d40d8b22f8859751c775e73d04727cf153cc2845bac1172f"
     },
+    "93_20": {
+      "file": "CH/93_20.json",
+      "count": 17,
+      "sha256": "aa556f27c3d19096301be5e326f725a92a9accc00be0fbf872d11dbbba2109ca"
+    },
     "93_18": {
       "file": "CH/93_18.json",
-      "count": 129,
-      "sha256": "d97de1c93307f6487cc61979cea8051779b166dadb93372963e3bdaeadd14489"
+      "count": 133,
+      "sha256": "5764efb56a62c473c28e0adbf67e7830d1de5fd2ac1c5149b2b7e778aa404a34"
     },
     "93_16": {
       "file": "CH/93_16.json",
-      "count": 234,
-      "sha256": "59057ee55ee8aa5b8ac8b179a683ed2e552942997be1401d749160da7b408fbc"
+      "count": 239,
+      "sha256": "b19c8bf0af3eee7d92cf2d214872f8e86297366bf6361ccba76cfeed09858f64"
     },
     "92_16": {
       "file": "CH/92_16.json",
@@ -146,8 +152,8 @@
     },
     "92_14": {
       "file": "CH/92_14.json",
-      "count": 304,
-      "sha256": "9ab011527ecd0849d82f76b09bf80103fe9ecd247074b78b4485e8afa138ace4"
+      "count": 305,
+      "sha256": "a28b852a8b1b67bf58add8f2b7ad9d4c6bac0ab821331f47296f8d5c34ce434d"
     },
     "92_13": {
       "file": "CH/92_13.json",
@@ -164,15 +170,15 @@
       "count": 63,
       "sha256": "30949cdc8e18ebdcefea66a3a3ac9e8abbca398b798b405729bb19b375297105"
     },
-    "93_20": {
-      "file": "CH/93_20.json",
-      "count": 15,
-      "sha256": "f6edcd02c6be9f508376cc5b4922bd1cc2bac646f7563f1d2967acae37f63872"
-    },
     "95_14": {
       "file": "CH/95_14.json",
       "count": 1,
       "sha256": "981e614f65ae6b4444a2847a9e16ab47b53cce17d523f2a93e2172d17c955fd0"
+    },
+    "91_14": {
+      "file": "CH/91_14.json",
+      "count": 1,
+      "sha256": "fc5a6db6187454aea30b7c5ef1eec623b656cfbc8bb7408697000b3dd06a5334"
     }
   }
 }
