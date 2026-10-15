@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "country": "AT",
-  "generatedAt": "2026-10-08T11:22:28.650940+00:00",
-  "uniqueWays": 164260,
-  "tileEntries": 165052,
+  "generatedAt": "2026-10-15T09:04:56.221014+00:00",
+  "uniqueWays": 164499,
+  "tileEntries": 165295,
   "tileDegrees": 0.5,
   "tiles": {
     "92_27": {
@@ -42,7 +42,7 @@
     "93_20": {
       "file": "AT/93_20.json",
       "count": 337,
-      "sha256": "d5d3980ee9b8b2ee41957117cdc3bb41cc0edb8a7c854502f0473f55c4b8c034",
+      "sha256": "ea300030904c36a52769a935b1a5a48b18db9615a858300bb5476a5297cc1ddb",
       "bbox": [
         46.5,
         10.0,
@@ -96,8 +96,8 @@
     },
     "93_25": {
       "file": "AT/93_25.json",
-      "count": 1027,
-      "sha256": "cb984459dc4399ec5973957f621702aa3f2605baedede1733221a8c44d79071c",
+      "count": 1026,
+      "sha256": "492f9e52743e230c1f542fe5eed49ab5e440d81a2917813ef11905a843825c08",
       "bbox": [
         46.5,
         12.5,
@@ -108,7 +108,7 @@
     "93_26": {
       "file": "AT/93_26.json",
       "count": 1224,
-      "sha256": "fc3493e652c29cfdcb1b57979f71722d0382165f4d7005ee43a9d331dd7d46e6",
+      "sha256": "98bc81a95472e6088a4464f8ff8cc3cb11772eb9c44b2ae7fafa0c58c8d60d73",
       "bbox": [
         46.5,
         13.0,
@@ -119,7 +119,7 @@
     "93_27": {
       "file": "AT/93_27.json",
       "count": 3883,
-      "sha256": "fe6bbcb7bb34e7f551cd99f7d4b9fdd7e33237bead145929fe38bd3fa0d35eab",
+      "sha256": "6cd203c99264472c26df93592ea42bb6b5aaded195d2eff3982d652f294d6165",
       "bbox": [
         46.5,
         13.5,
@@ -130,7 +130,7 @@
     "93_28": {
       "file": "AT/93_28.json",
       "count": 4526,
-      "sha256": "31f11e9859b739693d25f7db555e038ebc46678167d305370e476ae3ae990b86",
+      "sha256": "02d69d8551b3cc11c29d9a1a4b10a77ca7f46197803c866e370f04e20800ced2",
       "bbox": [
         46.5,
         14.0,
@@ -141,7 +141,7 @@
     "93_29": {
       "file": "AT/93_29.json",
       "count": 1828,
-      "sha256": "68163c16381f65f089420b3bb6f18c9ce9ea19b34a3ab7a7404b9c0d409d8921",
+      "sha256": "fd16204dedb4c0477cf2e1ce92eeff68d546859e277780ddd807644e1057eb33",
       "bbox": [
         46.5,
         14.5,
@@ -162,8 +162,8 @@
     },
     "93_31": {
       "file": "AT/93_31.json",
-      "count": 2194,
-      "sha256": "df9c7d32a5b200a8dd95d9cfabcbdd4f3edbbc5cade01e3514fa50a880ed215d",
+      "count": 2198,
+      "sha256": "5efb2fd6ddc44d78643d053fabcca93d2a0839b8e8a137457be1d69ef9c015d2",
       "bbox": [
         46.5,
         15.5,
@@ -173,8 +173,8 @@
     },
     "93_32": {
       "file": "AT/93_32.json",
-      "count": 290,
-      "sha256": "b8a5796e61e9beef305d027a72c5ac1f033715152f287a0dfd7b9522dedd2765",
+      "count": 291,
+      "sha256": "20b759be00f6349b8df97a3008185af261a643d1ebadd2ada3a33b7b9e1f8fc1",
       "bbox": [
         46.5,
         16.0,
@@ -184,8 +184,8 @@
     },
     "94_19": {
       "file": "AT/94_19.json",
-      "count": 6407,
-      "sha256": "a31e94f9a443cb5fed52ba2951f251605393dc901cb767f947a1ec4b77e2d02c",
+      "count": 6410,
+      "sha256": "e3ab30ced8756eacb9ee00be0bcbadde81472325f8461680eb106b436cb3a673",
       "bbox": [
         47.0,
         9.5,
@@ -195,8 +195,8 @@
     },
     "94_20": {
       "file": "AT/94_20.json",
-      "count": 1369,
-      "sha256": "f1c7431a01dd86495aeea4540ceac69100ea070636fb11bfb73494fa4464caaf",
+      "count": 1374,
+      "sha256": "5186aac19b8605940c25e4e8dc9089e260c4114cd214e99befb0435e57d93d57",
       "bbox": [
         47.0,
         10.0,
@@ -206,8 +206,8 @@
     },
     "94_21": {
       "file": "AT/94_21.json",
-      "count": 3266,
-      "sha256": "833d5569c21f34767c2f3f361a917cb2aae17f2a896c827c5afe48cc0dd88f9e",
+      "count": 3267,
+      "sha256": "c83f7e033a9ecab666bc8e3f8622bf15ead4e44a83dd2b5c6fe7dcfcce2ee30e",
       "bbox": [
         47.0,
         10.5,
@@ -217,8 +217,8 @@
     },
     "94_22": {
       "file": "AT/94_22.json",
-      "count": 4882,
-      "sha256": "8c0790345ee5430b593cfd47de18f88b9098eac1f3037ee795e19b5b677053ff",
+      "count": 4883,
+      "sha256": "9d0351451cb427dc4becae52378a39f076a24578543215e7b928b28dc40b2072",
       "bbox": [
         47.0,
         11.0,
@@ -228,8 +228,8 @@
     },
     "94_23": {
       "file": "AT/94_23.json",
-      "count": 2550,
-      "sha256": "42daa24a31fdecddd806c8c2f148636634be4edc85f1d4257184f4c54600683c",
+      "count": 2555,
+      "sha256": "06e292fed418f3b86d0ccdd00b99dc98bcd36cedcce89b4230fdb9aa91755a4a",
       "bbox": [
         47.0,
         11.5,
@@ -239,8 +239,8 @@
     },
     "94_24": {
       "file": "AT/94_24.json",
-      "count": 1886,
-      "sha256": "41ee79346c671901aa2e9f79b68895f00912b088d7b5b9e98e285c6081443fbd",
+      "count": 1888,
+      "sha256": "7f4767dcfeac51ef630fd753e39993769d531dc03628c8568ededf832c9345c4",
       "bbox": [
         47.0,
         12.0,
@@ -262,7 +262,7 @@
     "94_26": {
       "file": "AT/94_26.json",
       "count": 2627,
-      "sha256": "c07e25dc374e7312f89357152cf1d22d7e34981751cbfbe7276f571c9bba87f0",
+      "sha256": "dfa249b7e343432012f5b4303e3a8758171cdefd1e6f2336fc9db8d45e4518bf",
       "bbox": [
         47.0,
         13.0,
@@ -305,8 +305,8 @@
     },
     "94_30": {
       "file": "AT/94_30.json",
-      "count": 8410,
-      "sha256": "dadf80183dc0c184775ea7b52ad92ef849f3faa02420ed6c90483b636aee56c8",
+      "count": 8415,
+      "sha256": "9a5058743a7c4ee7a0217ea4e91bf7fd1ade1d3bb16a66bf318a4ec14dbb50da",
       "bbox": [
         47.0,
         15.0,
@@ -316,8 +316,8 @@
     },
     "94_31": {
       "file": "AT/94_31.json",
-      "count": 2879,
-      "sha256": "dcddd6f53ba29f46f7ab4d1e300e82775776e674319c999eddf3e94cad51ba5f",
+      "count": 2891,
+      "sha256": "bf54055dadfa6e742b2e009faab020044e98c9ef3e5d46e75c3fac2b1e753ec7",
       "bbox": [
         47.0,
         15.5,
@@ -327,8 +327,8 @@
     },
     "94_32": {
       "file": "AT/94_32.json",
-      "count": 2569,
-      "sha256": "e62dbf3a3d2b57e37a444a035cb72bbe8f6a587b5591c7dba03ca650c1922d4a",
+      "count": 2571,
+      "sha256": "fda3a7db041f72db9d0c8d4661c93861ee581563cce77488f05982bd3c93c524",
       "bbox": [
         47.0,
         16.0,
@@ -349,8 +349,8 @@
     },
     "95_19": {
       "file": "AT/95_19.json",
-      "count": 495,
-      "sha256": "0bf30e855a745f31b57c7dd1b3b26edf0017a28ed2a2a7ecfc1495f3a3d29415",
+      "count": 498,
+      "sha256": "9c8d9b6ceabf0d771f374c1fd0f0a30ffad47e3beac60e0d09ad1f387eb60f85",
       "bbox": [
         47.5,
         9.5,
@@ -404,8 +404,8 @@
     },
     "95_24": {
       "file": "AT/95_24.json",
-      "count": 1978,
-      "sha256": "109db55131aba0dcdaf3383f620ca762c7dc5bebe2274ac17d605bc3f5f610f4",
+      "count": 1979,
+      "sha256": "0a2054d6d30b5fc5c23416e70dcbe1b3236050b42ef8a3843972181a28db0a06",
       "bbox": [
         47.5,
         12.0,
@@ -416,7 +416,7 @@
     "95_25": {
       "file": "AT/95_25.json",
       "count": 1058,
-      "sha256": "21875411bafca52e3567adbf423ac605664deb47617bf2afbbe41687e777ff03",
+      "sha256": "2743b7f16aa3d322b596b48b8d5a94f5ba301f65b1e955b0cccde3860f085fca",
       "bbox": [
         47.5,
         12.5,
@@ -426,8 +426,8 @@
     },
     "95_26": {
       "file": "AT/95_26.json",
-      "count": 5797,
-      "sha256": "50a5967862efaafbf9a5007ff094d7360d23ec4f336574179145144ff3e7dfa1",
+      "count": 5807,
+      "sha256": "62960b5df9dfa165b986c492cd616928f8505ab33f5b06da6e5533f1d8fa2fa5",
       "bbox": [
         47.5,
         13.0,
@@ -437,8 +437,8 @@
     },
     "95_27": {
       "file": "AT/95_27.json",
-      "count": 3385,
-      "sha256": "b3a99ecfe7f990f9b750baa05884c2e3a80df929ed84664b1b3c2200734f8712",
+      "count": 3387,
+      "sha256": "400f25ca3f61ee2375bb5590dcd336e6db4da393df925f5b731572042d79a430",
       "bbox": [
         47.5,
         13.5,
@@ -448,8 +448,8 @@
     },
     "95_28": {
       "file": "AT/95_28.json",
-      "count": 2573,
-      "sha256": "e3e4a662c4b282eb6ea27d321111b46ec73fdd9b26698b0667e3822c4c19e613",
+      "count": 2574,
+      "sha256": "0ae1ebf7302385f7c6b19896f8e4a3ab038a2247027113c834e7fad8349ed56a",
       "bbox": [
         47.5,
         14.0,
@@ -460,7 +460,7 @@
     "95_29": {
       "file": "AT/95_29.json",
       "count": 1344,
-      "sha256": "756aae68064a6ef08fda112a7fdc4fb89899036fb42c7b06200987b38666b797",
+      "sha256": "69a42d794326d10cff5bec82ff5c167196a9b8ce5ecf731caf120d3aa3bb3b7a",
       "bbox": [
         47.5,
         14.5,
@@ -493,7 +493,7 @@
     "95_32": {
       "file": "AT/95_32.json",
       "count": 8368,
-      "sha256": "a137ac43563feea0085c7d1ddf9f2caff556b9cdf2eca1ed56252a23af9fe2bb",
+      "sha256": "7932330b1c0f4dfe49c7f11a90cd84f4fc31ae8b9bad18d42ed57ff777b33fca",
       "bbox": [
         47.5,
         16.0,
@@ -503,8 +503,8 @@
     },
     "95_33": {
       "file": "AT/95_33.json",
-      "count": 2467,
-      "sha256": "f681f0e4013d5f4b7e1e5caf4e2c265f636e8116a198f40d57426844d2bd1868",
+      "count": 2470,
+      "sha256": "71c21dceb9ee3c1b2c483acf515553f5cd1ca8677cdfe1af4b974b0921c8baf8",
       "bbox": [
         47.5,
         16.5,
@@ -515,7 +515,7 @@
     "95_34": {
       "file": "AT/95_34.json",
       "count": 209,
-      "sha256": "f914cae73b883cb7ada5764ad23d6395915a4a4c1ae864ece0ed311c86d259c9",
+      "sha256": "21310ef99112700794023c76c88ccec4b86a65e937f5bf595592155034dc5b13",
       "bbox": [
         47.5,
         17.0,
@@ -537,7 +537,7 @@
     "96_26": {
       "file": "AT/96_26.json",
       "count": 2430,
-      "sha256": "614d205687a0f4905980abad905614bf0536ff4415086bebd27c193d4f36874d",
+      "sha256": "794226df5b9a5ea32c98546b872c315bbbb1c975d0fcb012572b6a38adfbd539",
       "bbox": [
         48.0,
         13.0,
@@ -547,8 +547,8 @@
     },
     "96_27": {
       "file": "AT/96_27.json",
-      "count": 4478,
-      "sha256": "bd664798dd92e908151e4f581dc63df6a6b013187d3ff12c4f781838fae847f8",
+      "count": 4488,
+      "sha256": "08c0acdb723a8d2049ca756a07b29882168c24c2f6ffe6e13bde93ff50748bbb",
       "bbox": [
         48.0,
         13.5,
@@ -558,8 +558,8 @@
     },
     "96_28": {
       "file": "AT/96_28.json",
-      "count": 19427,
-      "sha256": "1832fc436c4468dba2cd82077642c63f391367aacf625a926c5a7efc652f2def",
+      "count": 19512,
+      "sha256": "91872a7f3cf9bafdc0222135f69b4ed46b55110f40d52f0ec030c388b11434eb",
       "bbox": [
         48.0,
         14.0,
@@ -569,8 +569,8 @@
     },
     "96_29": {
       "file": "AT/96_29.json",
-      "count": 3398,
-      "sha256": "1906596b5732edc4af27eb8697f96811616f61a05b49af8aa6882294b2bb0676",
+      "count": 3413,
+      "sha256": "f31389763c451427f81b414122c7e82ef84389212d12ca4df41cd1b33609503f",
       "bbox": [
         48.0,
         14.5,
@@ -580,8 +580,8 @@
     },
     "96_30": {
       "file": "AT/96_30.json",
-      "count": 2454,
-      "sha256": "cbb7f3d34e164941e61549dbd8969350788e02ee44a1869f50568ca4361bd2de",
+      "count": 2459,
+      "sha256": "7549c8e83971e06f3121b865fd1d2bb72dc11f06ca204c04f1b32b97650412ea",
       "bbox": [
         48.0,
         15.0,
@@ -591,8 +591,8 @@
     },
     "96_31": {
       "file": "AT/96_31.json",
-      "count": 6343,
-      "sha256": "1c8da61de7e62cbd3aecd10b5ff226ab188b8ca327dfc52fd1d3d03458a24cb2",
+      "count": 6367,
+      "sha256": "fb66b4930c906b197b259911ec1422620ff8f8343508ada7f90e4c761b0b1f66",
       "bbox": [
         48.0,
         15.5,
@@ -602,8 +602,8 @@
     },
     "96_32": {
       "file": "AT/96_32.json",
-      "count": 22718,
-      "sha256": "c05d4ecb10bc9eb7962c8ff921bd61b37321179c40eb0ac79d3011d8dd3570e3",
+      "count": 22743,
+      "sha256": "b0f8e201ad7e0c5e92825f99597eecea819b7fd5d06ba10609485913b97d8668",
       "bbox": [
         48.0,
         16.0,
@@ -614,7 +614,7 @@
     "96_33": {
       "file": "AT/96_33.json",
       "count": 4167,
-      "sha256": "fbaf4e3caf92ab10b71cf97a362daa04ad329179e1fd4ee1a9e26242d35c4367",
+      "sha256": "66520b1659f953708a69c3f6321e7005be8407dad368d7330b05c3899b093722",
       "bbox": [
         48.0,
         16.5,
@@ -658,7 +658,7 @@
     "97_28": {
       "file": "AT/97_28.json",
       "count": 424,
-      "sha256": "c4f109a0c0d48223e3e2582920bad8ea507099c5a0b5eb5fad56c8168cfed996",
+      "sha256": "ae135d9646f087b117da7f47894893d6d700eaa29fce608c4e44887b056d61e1",
       "bbox": [
         48.5,
         14.0,
@@ -668,8 +668,8 @@
     },
     "97_29": {
       "file": "AT/97_29.json",
-      "count": 565,
-      "sha256": "89f11568d3a9348461a9ebafd77b97820199bdee1a310d4d526143e21f146044",
+      "count": 567,
+      "sha256": "0a67d3130311f4e7dc84aa554ec7a9a92e284c762b7b9747e5a1eee7173798f8",
       "bbox": [
         48.5,
         14.5,
@@ -680,7 +680,7 @@
     "97_30": {
       "file": "AT/97_30.json",
       "count": 1387,
-      "sha256": "c120f0d104dba5fde453658f831c469585608386e8fd501755ea98855c58f3be",
+      "sha256": "2fddf9b7c0ad7f0428361da563f14dce105fe9814c87a2330c6eb1d228a6f1c9",
       "bbox": [
         48.5,
         15.0,
@@ -690,8 +690,8 @@
     },
     "97_31": {
       "file": "AT/97_31.json",
-      "count": 1199,
-      "sha256": "27091b5d6bb4bc031240905be7538e48a5f95f284f13e47b584d35a198e35cea",
+      "count": 1202,
+      "sha256": "a09f558bbf5e9f60f3f7d56bb81b3c2e5557ae6a87a47518f10921b08e3bbbf2",
       "bbox": [
         48.5,
         15.5,
@@ -701,8 +701,8 @@
     },
     "97_32": {
       "file": "AT/97_32.json",
-      "count": 1123,
-      "sha256": "2fb4c5cf3c765008c5587dc9b3f6ecad0979d149f1f9b28d7fb3e8760d70b5e7",
+      "count": 1130,
+      "sha256": "38a6df6c35ca765e54b771292e64649d18734e69ab82e3493a3b54a7d42445db",
       "bbox": [
         48.5,
         16.0,
@@ -712,8 +712,8 @@
     },
     "97_33": {
       "file": "AT/97_33.json",
-      "count": 1419,
-      "sha256": "ee529f35985ede1d2f4c035ffa405d4e5834473f86ab092ee4806f8c8e734e3e",
+      "count": 1426,
+      "sha256": "2fe0def4a51b082968bc94bdd50649ad4b36faa25514f3711ede08826d340e7d",
       "bbox": [
         48.5,
         16.5,
