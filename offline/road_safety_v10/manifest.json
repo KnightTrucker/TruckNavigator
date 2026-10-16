@@ -1,58 +1,58 @@
 {
   "schemaVersion": 10,
-  "generatedAt": "2026-10-12T06:36:18.791141+00:00",
+  "generatedAt": "2026-10-16T08:55:11.711957+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "records": 921840,
+      "records": 922741,
       "counts": {
-        "tolls": 23910,
-        "speedlimits": 635037,
-        "cameras": 5221,
-        "restrictions": 63775,
-        "overtaking": 2400,
-        "tunnels": 257590,
+        "tolls": 23935,
+        "speedlimits": 635433,
+        "cameras": 5225,
+        "restrictions": 63843,
+        "overtaking": 2405,
+        "tunnels": 258059,
         "hazmat": 1084
       },
       "tiles": 234
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "records": 2168300,
+      "records": 2170239,
       "counts": {
-        "speedlimits": 1762767,
-        "tolls": 27226,
-        "restrictions": 121468,
-        "cameras": 3887,
+        "speedlimits": 1763976,
+        "tolls": 27227,
+        "restrictions": 121648,
+        "cameras": 3886,
         "overtaking": 3171,
-        "tunnels": 348795,
+        "tunnels": 349407,
         "hazmat": 2338
       },
       "tiles": 341
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 3779223,
+      "records": 3781373,
       "counts": {
-        "restrictions": 290320,
-        "speedlimits": 2907772,
-        "hazmat": 72842,
+        "restrictions": 290524,
+        "speedlimits": 2909214,
+        "hazmat": 72887,
         "overtaking": 10358,
-        "cameras": 5205,
-        "tolls": 4312,
-        "tunnels": 742565
+        "cameras": 5206,
+        "tolls": 4310,
+        "tunnels": 743171
       },
       "tiles": 240
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "records": 342731,
+      "records": 342897,
       "counts": {
-        "speedlimits": 257117,
+        "speedlimits": 257251,
         "cameras": 605,
-        "restrictions": 21696,
+        "restrictions": 21708,
         "tolls": 12187,
-        "tunnels": 77915,
+        "tunnels": 77935,
         "hazmat": 193,
         "overtaking": 647
       },
@@ -60,40 +60,40 @@
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "records": 502560,
+      "records": 502945,
       "counts": {
-        "restrictions": 28148,
-        "speedlimits": 348127,
-        "cameras": 1414,
+        "restrictions": 28204,
+        "speedlimits": 348254,
+        "cameras": 1417,
         "tolls": 24893,
         "overtaking": 2875,
-        "tunnels": 138794,
+        "tunnels": 139049,
         "hazmat": 215
       },
       "tiles": 68
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "records": 420079,
+      "records": 420464,
       "counts": {
-        "tolls": 31878,
-        "cameras": 1623,
-        "speedlimits": 338937,
-        "restrictions": 26001,
+        "tolls": 31883,
+        "cameras": 1622,
+        "speedlimits": 339293,
+        "restrictions": 26016,
         "hazmat": 25,
-        "tunnels": 71034,
+        "tunnels": 71061,
         "overtaking": 398
       },
       "tiles": 29
     },
     "LU": {
       "manifest": "LU/manifest.json",
-      "records": 39015,
+      "records": 39040,
       "counts": {
-        "restrictions": 8206,
+        "restrictions": 8207,
         "cameras": 39,
-        "speedlimits": 33009,
-        "tunnels": 5114,
+        "speedlimits": 33034,
+        "tunnels": 5113,
         "overtaking": 49,
         "tolls": 104,
         "hazmat": 44
@@ -101,15 +101,15 @@
       "tiles": 7
     }
   },
-  "totalRecords": 8173748,
+  "totalRecords": 8179699,
   "counts": {
-    "tolls": 124510,
-    "speedlimits": 6282766,
-    "cameras": 17994,
-    "restrictions": 559614,
-    "overtaking": 19898,
-    "tunnels": 1641807,
-    "hazmat": 76741
+    "tolls": 124539,
+    "speedlimits": 6286455,
+    "cameras": 18000,
+    "restrictions": 560150,
+    "overtaking": 19903,
+    "tunnels": 1643795,
+    "hazmat": 76786
   },
   "tileDegrees": 0.5,
   "source": "Geofabrik OSM PBF + osmium prefilter",

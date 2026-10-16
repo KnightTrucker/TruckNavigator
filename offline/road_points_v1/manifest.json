@@ -1,45 +1,45 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-12T06:36:19.231614+00:00",
+  "generatedAt": "2026-10-16T08:55:14.211377+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "records": 53817,
+      "records": 53832,
       "counts": {
-        "signals": 32999,
-        "level_crossings": 11735,
-        "junctions": 7463,
+        "signals": 33010,
+        "level_crossings": 11736,
+        "junctions": 7466,
         "tolls": 1620
       },
       "tiles": 199
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "records": 131087,
+      "records": 131157,
       "counts": {
-        "signals": 90864,
-        "level_crossings": 29703,
-        "junctions": 8664,
+        "signals": 90932,
+        "level_crossings": 29700,
+        "junctions": 8669,
         "tolls": 1856
       },
       "tiles": 312
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 213269,
+      "records": 213296,
       "counts": {
-        "signals": 143800,
-        "level_crossings": 59333,
-        "junctions": 9987,
+        "signals": 143824,
+        "level_crossings": 59335,
+        "junctions": 9988,
         "tolls": 149
       },
       "tiles": 227
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "records": 17362,
+      "records": 17363,
       "counts": {
-        "signals": 9362,
+        "signals": 9363,
         "level_crossings": 6970,
         "junctions": 986,
         "tolls": 44
@@ -48,10 +48,10 @@
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "records": 20829,
+      "records": 20809,
       "counts": {
-        "signals": 10949,
-        "level_crossings": 8336,
+        "signals": 10943,
+        "level_crossings": 8322,
         "junctions": 1326,
         "tolls": 218
       },
@@ -59,9 +59,9 @@
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "records": 19726,
+      "records": 19729,
       "counts": {
-        "signals": 13389,
+        "signals": 13392,
         "level_crossings": 4747,
         "junctions": 1492,
         "tolls": 98
@@ -80,11 +80,11 @@
       "tiles": 6
     }
   },
-  "totalRecords": 458001,
+  "totalRecords": 458097,
   "counts": {
-    "signals": 302681,
-    "level_crossings": 121274,
-    "junctions": 30061,
+    "signals": 302782,
+    "level_crossings": 121260,
+    "junctions": 30070,
     "tolls": 3985
   },
   "tileDegrees": 0.5,
