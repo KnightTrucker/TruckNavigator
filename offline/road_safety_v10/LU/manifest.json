@@ -1,13 +1,13 @@
 {
   "schemaVersion": 10,
   "country": "LU",
-  "generatedAt": "2026-10-16T08:53:05.472850+00:00",
-  "records": 39040,
+  "generatedAt": "2026-10-23T09:23:52.334736+00:00",
+  "records": 39081,
   "counts": {
-    "restrictions": 8207,
+    "restrictions": 8209,
     "cameras": 39,
-    "speedlimits": 33034,
-    "tunnels": 5113,
+    "speedlimits": 33064,
+    "tunnels": 5125,
     "overtaking": 49,
     "tolls": 104,
     "hazmat": 44
@@ -15,33 +15,33 @@
   "tiles": {
     "98_12": {
       "file": "LU/98_12.json",
-      "count": 1651,
-      "sha256": "ed81d27de43b865574a24a5a45046640a0aa49e379183e077f92a042ced54616"
+      "count": 1652,
+      "sha256": "ada001ed4ce38bbf3ff7115945ecd218442fc61bf2a5477d650ecb859f416c94"
     },
     "99_12": {
       "file": "LU/99_12.json",
-      "count": 25199,
-      "sha256": "a734e343034066d2a91b21fca72d57685d8414ed2f9d1852466adff153ffe7c8"
+      "count": 25209,
+      "sha256": "aa21c00347fcaea1e6f57f23411c3ab42d20d20b93f2ec9fe7c1d7bedc6278df"
     },
     "99_11": {
       "file": "LU/99_11.json",
-      "count": 8842,
-      "sha256": "c2b9306d46a1d061992c1184abd120da1341a89889bdcb14a26ab2280ff9e62b"
+      "count": 8864,
+      "sha256": "e4ddeea024e880fb15668a4ddd1d7b5f3cbff6ef6bdea7e8bed052e82fbe3077"
     },
     "100_11": {
       "file": "LU/100_11.json",
       "count": 1080,
-      "sha256": "3dc16d6063229019db01b2a32143c4ed78275d96e9f8fd6c3e6ca19b726ec7c4"
+      "sha256": "73b53a88d31ec6d6a88c8f49ccc0051a28c774f42f1042be3ed24d84c6d96220"
     },
     "100_12": {
       "file": "LU/100_12.json",
       "count": 1597,
-      "sha256": "58a2ee522bdaf954a329e2f502badb39c6acad0830f6aa404efad236f78efd42"
+      "sha256": "a2734f4cd12535a0f479e68c0c9d81b964f6bd149c3957d53d650ae8300ad236"
     },
     "99_13": {
       "file": "LU/99_13.json",
-      "count": 329,
-      "sha256": "9af384e630c6d2af327c9b1ceff5c8bf76c2e24821ed3a66733788bdedd4c9a5"
+      "count": 337,
+      "sha256": "109bcefa7d338be07e7a296da1f24e1ae6751ef135394d30f449e0ec2a5e06b6"
     },
     "98_11": {
       "file": "LU/98_11.json",

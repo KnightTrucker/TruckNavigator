@@ -1,58 +1,58 @@
 {
   "schemaVersion": 10,
-  "generatedAt": "2026-10-16T08:55:11.711957+00:00",
+  "generatedAt": "2026-10-23T09:26:52.483042+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "records": 922741,
+      "records": 923748,
       "counts": {
-        "tolls": 23935,
-        "speedlimits": 635433,
-        "cameras": 5225,
-        "restrictions": 63843,
+        "tolls": 23959,
+        "speedlimits": 635987,
+        "cameras": 5229,
+        "restrictions": 63934,
         "overtaking": 2405,
-        "tunnels": 258059,
+        "tunnels": 258451,
         "hazmat": 1084
       },
       "tiles": 234
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "records": 2170239,
+      "records": 2173212,
       "counts": {
-        "speedlimits": 1763976,
-        "tolls": 27227,
-        "restrictions": 121648,
-        "cameras": 3886,
+        "speedlimits": 1766292,
+        "tolls": 27234,
+        "restrictions": 121715,
+        "cameras": 3888,
         "overtaking": 3171,
-        "tunnels": 349407,
+        "tunnels": 350065,
         "hazmat": 2338
       },
       "tiles": 341
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 3781373,
+      "records": 3783943,
       "counts": {
-        "restrictions": 290524,
-        "speedlimits": 2909214,
-        "hazmat": 72887,
-        "overtaking": 10358,
+        "restrictions": 290711,
+        "speedlimits": 2911042,
+        "hazmat": 72940,
+        "overtaking": 10361,
         "cameras": 5206,
-        "tolls": 4310,
-        "tunnels": 743171
+        "tolls": 4312,
+        "tunnels": 743822
       },
       "tiles": 240
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "records": 342897,
+      "records": 343161,
       "counts": {
-        "speedlimits": 257251,
+        "speedlimits": 257424,
         "cameras": 605,
-        "restrictions": 21708,
-        "tolls": 12187,
-        "tunnels": 77935,
+        "restrictions": 21748,
+        "tolls": 12188,
+        "tunnels": 77998,
         "hazmat": 193,
         "overtaking": 647
       },
@@ -60,40 +60,40 @@
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "records": 502945,
+      "records": 503407,
       "counts": {
-        "restrictions": 28204,
-        "speedlimits": 348254,
+        "restrictions": 28243,
+        "speedlimits": 348452,
         "cameras": 1417,
         "tolls": 24893,
         "overtaking": 2875,
-        "tunnels": 139049,
+        "tunnels": 139280,
         "hazmat": 215
       },
       "tiles": 68
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "records": 420464,
+      "records": 420953,
       "counts": {
-        "tolls": 31883,
+        "tolls": 31971,
         "cameras": 1622,
-        "speedlimits": 339293,
-        "restrictions": 26016,
+        "speedlimits": 339625,
+        "restrictions": 26045,
         "hazmat": 25,
-        "tunnels": 71061,
-        "overtaking": 398
+        "tunnels": 71126,
+        "overtaking": 411
       },
       "tiles": 29
     },
     "LU": {
       "manifest": "LU/manifest.json",
-      "records": 39040,
+      "records": 39081,
       "counts": {
-        "restrictions": 8207,
+        "restrictions": 8209,
         "cameras": 39,
-        "speedlimits": 33034,
-        "tunnels": 5113,
+        "speedlimits": 33064,
+        "tunnels": 5125,
         "overtaking": 49,
         "tolls": 104,
         "hazmat": 44
@@ -101,15 +101,15 @@
       "tiles": 7
     }
   },
-  "totalRecords": 8179699,
+  "totalRecords": 8187505,
   "counts": {
-    "tolls": 124539,
-    "speedlimits": 6286455,
-    "cameras": 18000,
-    "restrictions": 560150,
-    "overtaking": 19903,
-    "tunnels": 1643795,
-    "hazmat": 76786
+    "tolls": 124661,
+    "speedlimits": 6291886,
+    "cameras": 18006,
+    "restrictions": 560605,
+    "overtaking": 19919,
+    "tunnels": 1645867,
+    "hazmat": 76839
   },
   "tileDegrees": 0.5,
   "source": "Geofabrik OSM PBF + osmium prefilter",
