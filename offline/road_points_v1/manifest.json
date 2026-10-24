@@ -1,24 +1,24 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-23T09:26:52.965127+00:00",
+  "generatedAt": "2026-10-24T06:41:48.101243+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "records": 53848,
+      "records": 53861,
       "counts": {
-        "signals": 33025,
+        "signals": 33037,
         "level_crossings": 11735,
-        "junctions": 7468,
+        "junctions": 7469,
         "tolls": 1620
       },
       "tiles": 199
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "records": 131244,
+      "records": 131269,
       "counts": {
-        "signals": 91004,
-        "level_crossings": 29716,
+        "signals": 91039,
+        "level_crossings": 29706,
         "junctions": 8669,
         "tolls": 1855
       },
@@ -26,10 +26,10 @@
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "records": 213374,
+      "records": 213382,
       "counts": {
-        "signals": 143894,
-        "level_crossings": 59344,
+        "signals": 143903,
+        "level_crossings": 59343,
         "junctions": 9986,
         "tolls": 150
       },
@@ -37,9 +37,9 @@
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "records": 17362,
+      "records": 17363,
       "counts": {
-        "signals": 9361,
+        "signals": 9362,
         "level_crossings": 6971,
         "junctions": 986,
         "tolls": 44
@@ -48,9 +48,9 @@
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "records": 20812,
+      "records": 20810,
       "counts": {
-        "signals": 10944,
+        "signals": 10942,
         "level_crossings": 8324,
         "junctions": 1326,
         "tolls": 218
@@ -80,11 +80,11 @@
       "tiles": 6
     }
   },
-  "totalRecords": 458293,
+  "totalRecords": 458338,
   "counts": {
-    "signals": 302954,
-    "level_crossings": 121286,
-    "junctions": 30068,
+    "signals": 303009,
+    "level_crossings": 121275,
+    "junctions": 30069,
     "tolls": 3985
   },
   "tileDegrees": 0.5,
