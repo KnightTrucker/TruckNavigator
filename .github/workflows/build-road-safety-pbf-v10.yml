@@ -91,6 +91,8 @@ jobs:
             nwr/highway=speed_camera nwr/enforcement=maxspeed \
             nwr/overtaking:hgv nwr/overtaking:hgv:forward nwr/overtaking:hgv:backward nwr/overtaking:hgv:conditional \
             nwr/hgv:overtaking nwr/hgv:overtaking:conditional nwr/hgv nwr/hgv:conditional \
+            nwr/overtaking nwr/overtaking:forward nwr/overtaking:backward nwr/overtaking:conditional \
+            nwr/overtaking:forward:conditional nwr/overtaking:backward:conditional \
             nwr/maxheight nwr/maxheight:conditional nwr/maxweight nwr/maxweight:conditional \
             nwr/maxwidth nwr/maxwidth:conditional nwr/maxlength nwr/maxlength:conditional \
             nwr/maxaxleload nwr/maxaxleload:conditional nwr/barrier=toll_booth nwr/highway=toll_gantry \
@@ -112,11 +114,11 @@ jobs:
           from datetime import datetime,timezone
           import osmium
           cc,pbf,out=sys.argv[1:];out=Path(out)/cc;out.mkdir(parents=True,exist_ok=True)
-          keep=('highway','enforcement','maxspeed','maxspeed:hgv','direction','ref','name','hgv','hgv:conditional','access','access:conditional','maxheight','maxheight:conditional','maxweight','maxweight:conditional','maxwidth','maxwidth:conditional','maxlength','maxlength:conditional','maxaxleload','maxaxleload:conditional','overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional','traffic_sign','barrier','toll','toll:hgv','tunnel','hazmat','hazmat:conditional','hazmat:water','hazmat:tunnel','adr','oneway')
+          keep=('highway','enforcement','maxspeed','maxspeed:hgv','direction','ref','name','hgv','hgv:conditional','access','access:conditional','maxheight','maxheight:conditional','maxweight','maxweight:conditional','maxwidth','maxwidth:conditional','maxlength','maxlength:conditional','maxaxleload','maxaxleload:conditional','overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional','overtaking','overtaking:forward','overtaking:backward','overtaking:conditional','overtaking:forward:conditional','overtaking:backward:conditional','traffic_sign','barrier','toll','toll:hgv','tunnel','hazmat','hazmat:conditional','hazmat:water','hazmat:tunnel','adr','oneway')
           def fs(t):
             s=[];ts=str(t.get('traffic_sign') or '').lower()
             if t.get('highway')=='speed_camera' or t.get('enforcement')=='maxspeed':s.append('cameras')
-            if any(t.get(k) for k in ('overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional')) or any(x in ts for x in ('277','b3a','overtak')):s.append('overtaking')
+            if any(t.get(k) for k in ('overtaking:hgv','overtaking:hgv:forward','overtaking:hgv:backward','overtaking:hgv:conditional','hgv:overtaking','hgv:overtaking:conditional')) or any(str(t.get(k) or '').lower() in ('no','prohibited') for k in ('overtaking','overtaking:forward','overtaking:backward')) or any(t.get(k) for k in ('overtaking:conditional','overtaking:forward:conditional','overtaking:backward:conditional')) or any(x in ts for x in ('276','277','b3','overtak')):s.append('overtaking')  # C-0.0.107: anche divieto generale (tutti i veicoli) e 'oltre 3,5 t'
             if any(t.get(k) for k in ('hgv','hgv:conditional','maxheight','maxheight:conditional','maxweight','maxweight:conditional','maxwidth','maxwidth:conditional','maxlength','maxlength:conditional','maxaxleload','maxaxleload:conditional')):s.append('restrictions')
             if t.get('barrier')=='toll_booth' or t.get('highway')=='toll_gantry' or t.get('toll') not in (None,'','no') or t.get('toll:hgv') not in (None,'','no'):s.append('tolls')
             if t.get('tunnel') not in (None,'','no'):s.append('tunnels')
