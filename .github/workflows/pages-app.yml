@@ -1,0 +1,51 @@
+# ToraNavy - pubblica su GitHub Pages SOLO l'app (senza la cartella offline/).
+# I database offline restano nella repository e l'app li legge da raw.githubusercontent.com.
+name: Pubblica app (Pages)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'offline/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Scarica la repository senza i database
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/offline/
+
+      - name: Prepara il sito (solo app)
+        run: |
+          mkdir -p _site
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'offline' --exclude '_site' ./ _site/
+          touch _site/.nojekyll
+          echo "Peso del sito:"; du -sh _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Pubblica
+        id: deployment
+        uses: actions/deploy-pages@v4
