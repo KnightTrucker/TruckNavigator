@@ -1,24 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-20T12:23:44.527808+00:00",
+  "generatedAt": "2026-10-27T09:06:55.363860+00:00",
   "networks": {
     "dkv": {
-      "count": 77579,
+      "count": 77554,
       "source": "https://my.dkv-mobility.com/apidnext/geo-static-content-service/v1/station-network,zip/dkv_standard_gpx.zip"
-    },
-    "as24": {
-      "count": 4015,
-      "source": "https://network.as24.com/stationfinder/en/stations"
-    },
-    "shell": {
-      "count": 3393,
-      "source": "https://shellretaillocator.geoapp.me/api/v2/locations/within_bounds",
-      "coverage": "official-public-shell-network"
-    },
-    "ipcard": {
-      "count": 3122,
-      "source": "OpenStreetMap/Geofabrik IP network candidates",
-      "coverage": "IP/Italiana Petroli/Api stations identified from OSM; card acceptance is not inferred beyond mapped network identity"
     }
   }
 }
