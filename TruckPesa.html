@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b0f14">
-<title>TruckPesa v20 · Caricamento veicoli robusto</title>
+<title>TruckPesa v21 · Dashboard carico e conformità</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@500;600&display=swap');
 
@@ -269,6 +269,20 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 .cargo-table input,.cargo-table button{touch-action:auto}
 
 
+/* ===== TAPPE DI SCARICO / ORDINE BLOCCATO ===== */
+.cargo-table .td-stop{width:70px}
+.cargo-table .td-stop input{min-width:52px;text-align:center}
+.stage-table{width:100%;border-collapse:collapse;min-width:560px;font-size:.8rem}
+.stage-table th{text-align:left;padding:8px 6px;color:var(--accent2);font-size:.66rem;font-family:var(--mono);border-bottom:1px solid var(--line2);white-space:nowrap}
+.stage-table td{padding:8px 6px;border-bottom:1px solid var(--line);font-family:var(--mono);white-space:nowrap}
+.stage-table td.over{color:#ff8a8a;font-weight:700}
+.stage-table td.name{font-family:inherit;white-space:normal;min-width:130px}
+.stage-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px}
+.lifo-box{margin-top:10px;padding:10px;border-radius:10px;background:var(--warn-dim);border:1px solid rgba(245,166,35,.35);font-size:.78rem;line-height:1.5}
+.lifo-box .btn{margin-top:8px}
+.fix-check.lock{margin-top:6px;padding-top:8px;border-top:1px dashed var(--line2)}
+.fix-check input:disabled+span,.fix-check.dim{opacity:.45}
+
 /* ===== SCELTA TRATTORE DA DATABASE JSON ===== */
 .truck-picker{
   margin:12px 0 14px;padding:12px;border:1px solid var(--line);
@@ -374,6 +388,67 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 .project-bar-left{min-width:0}.project-title{font-weight:700;color:#fff;font-size:.88rem}.project-file-name{font-family:var(--mono);font-size:.66rem;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48vw}
 .project-bar-actions{display:flex;gap:7px}.project-bar-actions .btn{padding:8px 11px;font-size:.74rem;white-space:nowrap}
 @media(min-width:720px){.project-bar{margin:0 -22px 14px;padding:10px 22px}.project-file-name{max-width:420px}}
+
+/* ===== v21 · GERARCHIA OPERATIVA ===== */
+.hero{padding:14px 16px 13px;margin-bottom:10px}
+.hero h1{font-size:clamp(1.16rem,4.1vw,1.62rem);margin:8px 0 2px}
+.hero p{font-size:.78rem;line-height:1.35;max-width:none}
+.hero-grid{grid-template-columns:repeat(4,1fr);gap:6px;margin-top:11px}
+.hero-kpi{padding:9px 8px;border-radius:10px}
+.hero-kpi b{font-size:clamp(.92rem,3.7vw,1.14rem)}
+.hero-kpi span{font-size:.60rem}
+.hero-kpi.margin-good b{color:#5fe3a0}.hero-kpi.margin-bad b{color:#ff9494}
+
+.deck-card{border-color:rgba(45,212,255,.34);box-shadow:0 16px 36px rgba(0,0,0,.48),0 0 0 1px rgba(45,212,255,.04)}
+.deck-card .section-title h2{font-size:1.12rem}
+.deck-shell{border-color:#34465b}
+.deck-toolbar .btn{min-height:46px;font-size:.80rem}
+
+.metric{padding:11px}.metric .value{font-size:1.34rem}.metric .label{font-size:.66rem}
+.axis-card{padding:13px 13px 11px}
+.axis-value{font-size:1.28rem}
+.axis-margin{margin-top:3px;font:600 .70rem var(--mono);color:#5fe3a0;text-align:right}
+.axis-margin.bad{color:#ff9494}.axis-margin.warn{color:#ffd47a}
+.bar{height:15px;overflow:visible}
+.bar-limit{position:absolute;top:-4px;bottom:-4px;width:2px;background:#fff;opacity:.9;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+
+.legal-item .calc{font-size:.77rem;line-height:1.35}
+.all-status{font-size:1rem;padding:14px}
+.fix-panel.is-ok{display:none}
+.fix-panel.needs-attention{box-shadow:0 0 0 1px rgba(245,166,35,.10),0 10px 24px rgba(0,0,0,.28)}
+
+@media(max-width:600px){
+  .app{padding-left:10px;padding-right:10px}
+  .project-bar{margin-left:-10px;margin-right:-10px}
+  .hero-top{align-items:center}.crest{width:32px;height:32px}.plate .num{font-size:.80rem}
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .hero-kpi{min-height:58px}
+  .deck-shell{padding:10px 5px}
+  .deck-toolbar{grid-template-columns:repeat(3,1fr);gap:6px}
+  .deck-toolbar .btn{padding:8px 5px;font-size:.70rem;line-height:1.15}
+
+  /* Su telefono i colli diventano schede: niente scroll orizzontale. */
+  .cargo-table-wrap{overflow:visible;border:0;background:transparent}
+  .cargo-table{display:block;min-width:0;width:100%;font-size:.82rem}
+  .cargo-table thead{display:none}
+  .cargo-table tbody{display:grid;gap:9px}
+  .cargo-table tr{display:grid;grid-template-columns:1fr 1fr 52px;gap:7px;padding:9px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.22)}
+  .cargo-table tr.selected-editor{border-color:rgba(255,176,32,.48);box-shadow:inset 3px 0 0 var(--accent)}
+  .cargo-table td{display:block;width:auto!important;min-width:0!important;padding:0;border:0}
+  .cargo-table td::before{display:block;margin:0 0 3px;font:700 .58rem var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .cargo-table .td-name{grid-column:1/-1}.cargo-table .td-name::before{content:'Nome collo'}
+  .cargo-table .td-weight::before{content:'Peso kg'}
+  .cargo-table .td-length::before{content:'Lunghezza mm'}
+  .cargo-table .td-width::before{content:'Larghezza mm'}
+  .cargo-table .td-color{grid-column:3;grid-row:2}.cargo-table .td-color::before{content:'Colore'}
+  .cargo-table .td-center{grid-column:1/3;display:flex!important;align-items:center;gap:8px;padding:7px 9px!important;border:1px solid rgba(45,212,255,.20)!important;border-radius:8px;background:rgba(45,212,255,.055)}
+  .cargo-table .td-center::before{content:'Centro';margin:0}
+  .cargo-table .td-actions{grid-column:1/-1;display:grid!important;grid-template-columns:1fr 1fr 46px;gap:6px}
+  .cargo-table .td-actions::before{display:none}
+  .cargo-table .mini-btn{margin:0;min-height:38px}
+  .cargo-table input[type="text"],.cargo-table input[type="number"]{min-width:0;padding:9px 8px;font-size:.86rem}
+  .cargo-table input[type="color"]{width:46px;height:39px}
+}
 </style>
 </head>
 <body>
@@ -391,7 +466,7 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 <div class="plate"><span class="eu">🇪🇺<span>I</span></span><span class="num">AZ&nbsp;40T</span></div>
 <div class="crest" title="Andrea Zollet">Z</div>
 </div>
-<h1>Ripartizione Pesi · Autoarticolato 5 Assi</h1><p>Ford F‑Max 2023 + Schmitz Cargobull · posizionamento grafico della merce e calcolo statico tramite equilibrio dei momenti.</p><div class="hero-grid"><div class="hero-kpi"><b id="heroTotal">14.600 kg</b><span>Massa complessiva</span></div><div class="hero-kpi"><b id="heroCargo">0 kg</b><span>Merce caricata</span></div><div class="hero-kpi"><b id="heroCg">—</b><span>Baricentro merce</span></div></div></header>
+<h1>Ripartizione Pesi · Autoarticolato 5 Assi</h1><p>Ford F‑Max 2023 + Schmitz Cargobull · posizionamento grafico della merce e calcolo statico tramite equilibrio dei momenti.</p><div class="hero-grid"><div class="hero-kpi"><b id="heroTotal">14.600 kg</b><span>Massa complessiva</span></div><div class="hero-kpi"><b id="heroCargo">0 kg</b><span>Merce caricata</span></div><div class="hero-kpi"><b id="heroCg">—</b><span>Baricentro merce</span></div><div class="hero-kpi" id="heroMarginCard"><b id="heroMargin">—</b><span>Margine massa</span></div></div></header>
 <section class="card"><details id="vehicleDetails">
 <summary>
   <span>Dati veicolo <span class="small">· tocca per aprire/chiudere</span>
@@ -426,7 +501,7 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 <div class="tech-box"><h3>Trattore</h3>
 <div class="vfield"><label>Passo asse 1 → asse 2 (mm)</label><input id="vWheelbase" type="number" step="10"></div>
 <div class="vfield"><label>Ralla, avanti asse motore (mm)</label><input id="vFifthLead" type="number" step="5"></div>
-<div class="vfield"><label>Peso trattore usato nei calcoli (kg)</label><input id="vTareTotal" type="number" step="10"></div>
+<div class="vfield"><label>Peso motrice agganciata a vuoto (kg)</label><input id="vTareTotal" type="number" step="10"></div>
 <div class="vfield"><label>Quota su asse motore (%)</label><input id="vDriveSharePct" type="number" step="0.01"></div>
 <div class="vderived">Asse 1: <b id="vAxle1Preview">—</b> · Asse 2: <b id="vAxle2Preview">—</b></div>
 </div>
@@ -441,6 +516,7 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 <div class="tech-box"><h3>Limiti legali</h3>
 <div class="vfield"><label>Massa totale max (kg)</label><input id="vMaxGross" type="number" step="100"></div>
 <div class="vfield"><label>Asse motore max (kg)</label><input id="vMaxDrive" type="number" step="100"></div>
+<div class="vfield"><label>Gruppo tridem max (kg)</label><input id="vMaxTridem" type="number" step="100"></div>
 <div class="vfield"><label>Asse 1 sterzante max (kg)</label><input id="vMaxSteer" type="number" step="100"></div>
 <div class="vfield"><label>Peso totale motrice max (kg) — 0 = non verificato</label><input id="vMaxTractor" type="number" step="100"></div>
 <div class="vfield"><label>Aderenza minima asse motore (%)</label><input id="vMinShare" type="number" step="0.5" readonly title="Regola di aderenza fissata al 25% per il profilo internazionale"></div>
@@ -459,13 +535,14 @@ body{touch-action:auto;overscroll-behavior-y:auto}
 <div id="savedMeta" class="saved-meta">Usa “Salva JSON” in alto per salvare tutto il progetto.</div>
 <div class="report-actions"><button class="btn btn-primary" id="pdfReportBtn">📄 Crea PDF carico + conformità</button></div>
 </section><section class="card"><div class="section-title"><h2>Riepilogo carico</h2><span class="small">aggiornamento automatico</span></div><div class="summary-grid"><div class="metric"><div class="label">Peso merce</div><div class="value" id="cargoWeight">0 kg</div></div><div class="metric"><div class="label">Baricentro globale</div><div class="value" id="cargoCg">—</div></div><div class="metric"><div class="label">Quota merce su ralla</div><div class="value" id="kingpinLoad">0 kg</div></div><div class="metric"><div class="label">Quota merce su tridem</div><div class="value" id="tridemCargo">0 kg</div></div><div class="metric"><div class="label">Spazio vuoto davanti</div><div class="value" id="emptyFront">—</div></div><div class="metric"><div class="label">Spazio vuoto dietro</div><div class="value" id="emptyRear">—</div></div></div></section>
-<div class="dashboard"><section class="card"><div class="section-title"><h2>Pesi finali a terra</h2><span class="small">tara + effetto merce</span></div><div id="axes"></div><div class="notice">La barra del tridem è indicativa; i limiti vincolanti applicati sono massa totale, asse 1 sterzante, asse motore e regola del 25% di aderenza.</div></section><section class="card"><div class="section-title"><h2>Conformità legale</h2><span class="small">profilo 40 t internazionale</span></div><div class="legal-grid"><div class="legal-item"><div><b id="grossLabel">Massa totale ≤ 40.000 kg</b><div class="calc" id="grossCalc"></div></div><span id="grossBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="steerLabel">Asse 1 sterzante ≤ 7.500 kg</b><div class="calc" id="steerCalc"></div></div><span id="steerBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="driveLabel">Asse motore ≤ 11.500 kg</b><div class="calc" id="driveCalc"></div></div><span id="driveBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="tractorLabel">Peso totale motrice</b><div class="calc" id="tractorCalc"></div></div><span id="tractorBadge" class="badge na">N/D</span></div><div class="legal-item"><div><b id="adhLabel">Aderenza asse motore ≥ 25%</b><div class="calc" id="adhCalc"></div></div><span id="adhBadge" class="badge ok">OK</span></div></div><div id="allStatus" class="all-status ok">TUTTO A NORMA</div>
+<div class="dashboard"><section class="card"><div class="section-title"><h2>Pesi finali a terra</h2><span class="small">tara + effetto merce</span></div><div id="axes"></div><div class="notice">Le barre mostrano il peso reale e il limite impostato. Il gruppo tridem ora partecipa al giudizio complessivo di conformità.</div></section><section class="card"><div class="section-title"><h2>Conformità legale</h2><span class="small">profilo 40 t internazionale</span></div><div class="legal-grid"><div class="legal-item"><div><b id="grossLabel">Massa totale ≤ 40.000 kg</b><div class="calc" id="grossCalc"></div></div><span id="grossBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="steerLabel">Asse 1 sterzante ≤ 7.500 kg</b><div class="calc" id="steerCalc"></div></div><span id="steerBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="driveLabel">Asse motore ≤ 11.500 kg</b><div class="calc" id="driveCalc"></div></div><span id="driveBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="tridemLabel">Gruppo tridem ≤ 24.000 kg</b><div class="calc" id="tridemCalc"></div></div><span id="tridemBadge" class="badge ok">OK</span></div><div class="legal-item"><div><b id="tractorLabel">Peso totale motrice</b><div class="calc" id="tractorCalc"></div></div><span id="tractorBadge" class="badge na">N/D</span></div><div class="legal-item"><div><b id="adhLabel">Aderenza asse motore ≥ 25%</b><div class="calc" id="adhCalc"></div></div><span id="adhBadge" class="badge ok">OK</span></div></div><div id="allStatus" class="all-status ok">TUTTO A NORMA</div>
 <div id="fixPanel" class="fix-panel">
   <div class="fix-title">Assetto non a norma? Prova a ricalcolare la disposizione</div>
   <div class="fix-conditions">
     <label class="fix-check"><input type="checkbox" id="condRotate" checked> Posso ruotare i colli di 90° se serve spazio</label>
     <label class="fix-check"><input type="checkbox" id="condRepack" checked> Posso raggruppare i colli su più file (doppia/tripla) o distenderli in fila singola</label>
     <label class="fix-check"><input type="checkbox" id="condReorder" checked> Posso riordinare / scambiare la posizione dei colli</label>
+    <label class="fix-check lock"><input type="checkbox" id="condLockOrder"> Ordine di carico bloccato: nessun collo cambia posto nella sequenza, aggiungo solo spazi tra le file (controlla anche ogni tappa di scarico)</label>
   </div>
   <div class="fix-note">Il carico resta attaccato alla parete anteriore. Solo se non basta, ti chiedo se posso arretrarlo.</div>
   <div class="fix-actions">
@@ -475,7 +552,8 @@ body{touch-action:auto;overscroll-behavior-y:auto}
   <div id="autoFixResult" class="fix-result"></div>
   <div id="autoFixBackWrap" style="display:none;margin-top:10px"><button class="btn btn-primary" id="autoFixBackBtn">⬅ Prova anche ad arretrare il carico</button></div>
 </div>
-<div class="notice">Controllo orientato ai tre criteri richiesti. Non sostituisce carta di circolazione, limiti nazionali specifici, limiti del gruppo tridem, pneumatici/sospensioni, omologazioni o pesatura certificata.</div></section></div>
+<div class="notice">Controllo statico di supporto: massa complessiva, assi, gruppo tridem, motrice e aderenza. Non sostituisce carta di circolazione, limiti nazionali specifici, pneumatici/sospensioni, omologazioni o pesatura certificata.</div></section></div>
+<section class="card" id="stagesCard" style="margin-top:14px;display:none"><div class="section-title"><h2>Verifica a ogni scarico</h2><span class="small">scarico 1 = vicino alle porte</span></div><div id="stagesBody"></div><div class="notice">Ogni riga mostra i pesi mentre viaggi verso quello scarico, con a bordo solo la merce ancora da consegnare. Togliendo la merce dalle porte il baricentro avanza: l'asse motore è quello da tenere d'occhio.</div></section>
 <section class="card" style="margin-top:14px"><details><summary>Come viene calcolata la ripartizione <span class="small">formule</span></summary><div style="margin-top:12px" class="formula" id="formulaText"></div><div class="notice">Il modello è statico e tratta kingpin e centro del tridem come appoggi equivalenti. La posizione longitudinale del carico è quindi determinante. I valori qui sopra si aggiornano con i dati veicolo inseriti.</div></details></section>
 <div class="footer">Calcolatore statico di supporto al carico · dati veicolo incorporati nel file<span class="sig">by <b>Andrea Zollet</b></span></div></div>
 <script>
@@ -522,7 +600,7 @@ const TRAILER_SELECTION_KEY='truckPesaSemirimorchioSelezionatoV1';
 const TRUCK_SELECTION_KEY='truckPesaTrattoreSelezionatoV1';
 const TRUCK_TANK_KEY='truckPesaSerbatoioSelezionatoV1';
 const VEHICLE_STORAGE_KEY='ripartizionePesiVeicoloV1';
-const VEHICLE_DEFAULTS={tractorWheelbase:3600,fifthWheelLead:50,trailerInternalLength:13620,deckLength:13600,deckWidth:2440,frontWallToKingpin:1620,kingpinToTridem:7650,tareTractorTotal:10300,driveAxleSharePct:.470874,tareTridem:4300,maxGross:40000,maxDriveAxle:11500,maxSteerAxle:7500,maxTractorTotal:0,minDriveShare:.25};
+const VEHICLE_DEFAULTS={tractorWheelbase:3600,fifthWheelLead:50,trailerInternalLength:13620,deckLength:13600,deckWidth:2440,frontWallToKingpin:1620,kingpinToTridem:7650,tareTractorTotal:10300,driveAxleSharePct:.470874,tareTridem:4300,maxGross:40000,maxDriveAxle:11500,maxTridem:24000,maxSteerAxle:7500,maxTractorTotal:0,minDriveShare:.25};
 function buildVehicle(base){
   const v={...VEHICLE_DEFAULTS,...base};
   Object.defineProperty(v,'tareAxle1',{get(){return this.tareTractorTotal*(1-this.driveAxleSharePct)},enumerable:true});
@@ -534,6 +612,26 @@ let VEHICLE=buildVehicle(loadVehicleBase());
 let rows=[],nextId=1,selectedId=null,drag=null,longPressTimer=null;let state={},preFixSnapshot=null;
 const STORAGE_KEY='ripartizionePesiCarichiV2';
 const $=s=>document.querySelector(s);const fmtKg=n=>`${Math.round(n).toLocaleString('it-IT')} kg`;const fmtMm=n=>`${Math.round(n).toLocaleString('it-IT')} mm`;const fmtM=n=>`${(Math.max(0,n)/1000).toFixed(3).replace('.',',')} m`;const safeNum=v=>{const n=Number(String(v).replace(',','.'));return Number.isFinite(n)?n:0};const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const isNum=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+const KINGPIN_EMPTY_FALLBACK_KG=2060;
+function stopOf(r){const n=parseInt(r?.stop,10);return Number.isFinite(n)&&n>=1?Math.min(n,20):1}
+function maxStop(list=rows){return list.reduce((m,r)=>Math.max(m,stopOf(r)),1)}
+function computeLoads(list){
+  let cargo=0,moment=0,kp=0,tri=0;
+  list.forEach(r=>{const w=Math.max(0,safeNum(r.weight)),x=clamp(safeNum(r.x),0,VEHICLE.deckLength);if(!w)return;cargo+=w;moment+=w*x;const t=w*(x-VEHICLE.frontWallToKingpin)/VEHICLE.kingpinToTridem;tri+=t;kp+=w-t});
+  const wb=VEHICLE.tractorWheelbase,fx=wb-VEHICLE.fifthWheelLead;
+  const axle1=VEHICLE.tareAxle1+kp*(wb-fx)/wb,axle2=VEHICLE.tareAxle2+kp*fx/wb,tridem=VEHICLE.tareTridem+tri;
+  const gross=axle1+axle2+tridem,adhesion=gross>0?axle2/gross:0,tractorTotal=axle1+axle2,e=1e-9;
+  const f={gross:gross<=VEHICLE.maxGross+e,steer:axle1<=VEHICLE.maxSteerAxle+e,drive:axle2<=VEHICLE.maxDriveAxle+e,tridem:tridem<=VEHICLE.maxTridem+e,adh:adhesion+e>=VEHICLE.minDriveShare,tractor:!(VEHICLE.maxTractorTotal>0)||tractorTotal<=VEHICLE.maxTractorTotal+e};
+  return{cargo,cg:cargo?moment/cargo:0,axle1,axle2,tridem,gross,adhesion,tractorTotal,f,ok:Object.values(f).every(Boolean)};
+}
+// Tappa k = viaggio verso lo scarico k, a bordo i colli con scarico >= k
+function stageLists(list=rows){const n=maxStop(list),out=[];for(let k=1;k<=n;k++)out.push({k,rows:list.filter(r=>stopOf(r)>=k)});return out}
+// Collo b (scaricato dopo) blocca a se sta tra a e le porte nella stessa corsia
+function lifoViolations(list=rows){const v=[];list.forEach(a=>list.forEach(b=>{if(stopOf(b)<=stopOf(a))return;const da=dims(a),db=dims(b);if(Math.abs(a.y-b.y)<(da.wide+db.wide)/2-1&&b.x>a.x+1)v.push([a,b])}));return v}
+// File di colli: gruppi che si sovrappongono in lunghezza
+function buildClusters(list){const sorted=[...list].sort((a,b)=>(a.x-dims(a).long/2)-(b.x-dims(b).long/2));const cl=[];sorted.forEach(r=>{const d=dims(r),f=r.x-d.long/2,e=r.x+d.long/2,last=cl[cl.length-1];if(last&&f<last.end-0.5){last.rows.push(r);last.end=Math.max(last.end,e)}else cl.push({rows:[r],start:f,end:e})});return cl}
+function rowName(r){return r.desc||('Collo '+r.id)}
 function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function dims(r){const L=Math.max(1,safeNum(r.length)),W=Math.max(1,safeNum(r.width));return r.rotated?{long:W,wide:L}:{long:L,wide:W}}
 function clampPosition(r){const d=dims(r);const halfL=d.long/2,halfW=d.wide/2;r.x=clamp(safeNum(r.x)||halfL,halfL,Math.max(halfL,VEHICLE.deckLength-halfL));r.y=clamp(safeNum(r.y)||VEHICLE.deckWidth/2,halfW,Math.max(halfW,VEHICLE.deckWidth-halfW))}
@@ -542,7 +640,7 @@ function hasCollision(r,x=r.x,y=r.y){return rows.some(o=>o.id!==r.id&&overlaps(r
 function findFreePosition(r,preferredX=r.x,preferredY=r.y){clampPosition(r);const d=dims(r),minX=d.long/2,maxX=VEHICLE.deckLength-d.long/2,minY=d.wide/2,maxY=VEHICLE.deckWidth-d.wide/2;if(maxX<minX||maxY<minY)return false;const candidates=[];candidates.push([clamp(preferredX,minX,maxX),clamp(preferredY,minY,maxY)]);for(let x=minX;x<=maxX+1;x+=100){for(let y=minY;y<=maxY+1;y+=100)candidates.push([x,y])}for(const [x,y] of candidates){if(!hasCollision(r,x,y)){r.x=x;r.y=y;return true}}return false}
 function moveAxisUntilContact(r,axis,target){const d=dims(r),half=axis==='x'?d.long/2:d.wide/2,max=(axis==='x'?VEHICLE.deckLength:VEHICLE.deckWidth)-half,min=half;target=clamp(target,min,max);const start=r[axis];if(Math.abs(target-start)<.001)return;const test=(v)=>!hasCollision(r,axis==='x'?v:r.x,axis==='y'?v:r.y);if(test(target)){r[axis]=target;return}let lo=0,hi=1;for(let i=0;i<24;i++){const mid=(lo+hi)/2,v=start+(target-start)*mid;if(test(v))lo=mid;else hi=mid}r[axis]=start+(target-start)*lo}
 function moveWithoutOverlap(r,targetX,targetY){const dx=Math.abs(targetX-r.x)/VEHICLE.deckLength,dy=Math.abs(targetY-r.y)/VEHICLE.deckWidth;if(dx>=dy){moveAxisUntilContact(r,'x',targetX);moveAxisUntilContact(r,'y',targetY)}else{moveAxisUntilContact(r,'y',targetY);moveAxisUntilContact(r,'x',targetX)}}
-function addRow(data={}){const id=nextId++;const length=data.length??1200,width=data.width??800;const r={id,desc:data.desc||`Collo ${id}`,weight:data.weight??'',length,width,color:data.color||'#2563eb',rotated:data.rotated??false,x:data.x??0,y:data.y??VEHICLE.deckWidth/2};const d=dims(r);if(!data.x)r.x=Math.min(VEHICLE.deckLength-d.long/2,700+(rows.length*500));clampPosition(r);rows.push(r);if(hasCollision(r)&&!findFreePosition(r,r.x,r.y)){rows.pop();alert('Non c’è spazio libero sufficiente sul pianale per questo collo.');return}selectedId=id;renderAll();calculate()}
+function addRow(data={}){const id=nextId++;const length=data.length??1200,width=data.width??800;const r={id,desc:data.desc||`Collo ${id}`,weight:data.weight??'',length,width,color:data.color||'#2563eb',stop:data.stop??1,rotated:data.rotated??false,x:data.x??0,y:data.y??VEHICLE.deckWidth/2};const d=dims(r);if(!data.x)r.x=Math.min(VEHICLE.deckLength-d.long/2,700+(rows.length*500));clampPosition(r);rows.push(r);if(hasCollision(r)&&!findFreePosition(r,r.x,r.y)){rows.pop();alert('Non c’è spazio libero sufficiente sul pianale per questo collo.');return}selectedId=id;renderAll();calculate()}
 function duplicateRow(id){
   const src=rows.find(x=>x.id===id);
   if(!src)return;
@@ -563,7 +661,7 @@ function duplicateRow(id){
     const copy={
       id:nid,
       desc:(src.desc||`Collo ${src.id}`)+(copies===1?' copia':` copia ${i+1}`),
-      weight:src.weight,length:src.length,width:src.width,color:src.color||'#2563eb',
+      weight:src.weight,length:src.length,width:src.width,color:src.color||'#2563eb',stop:stopOf(src),
       rotated:src.rotated,x:src.x+250,y:src.y+120
     };
     clampPosition(copy);
@@ -587,7 +685,7 @@ function renderRows(){
  wrap.className='cargo-table-wrap';
  wrap.innerHTML=`<table class="cargo-table">
  <thead><tr>
- <th>Nome</th><th>Peso kg</th><th>Lung. mm</th><th>Larg. mm</th><th>Colore</th><th>Centro</th><th>Azioni</th>
+ <th>Nome</th><th>Peso kg</th><th>Lung. mm</th><th>Larg. mm</th><th>Scarico</th><th>Colore</th><th>Centro</th><th>Azioni</th>
  </tr></thead><tbody></tbody></table>`;
  const body=wrap.querySelector('tbody');
  rows.forEach((r,i)=>{
@@ -596,9 +694,10 @@ function renderRows(){
    if(r.id===selectedId)tr.className='selected-editor';
    tr.innerHTML=`
    <td class="td-name"><input data-k="desc" data-id="${r.id}" type="text" value="${escapeHtml(r.desc)}" placeholder="Collo ${i+1}"></td>
-   <td class="td-num"><input data-k="weight" data-id="${r.id}" type="number" min="0" step="1" inputmode="decimal" value="${r.weight}"></td>
-   <td class="td-num"><input data-k="length" data-id="${r.id}" type="number" min="1" step="10" inputmode="numeric" value="${r.length}"></td>
-   <td class="td-num"><input data-k="width" data-id="${r.id}" type="number" min="1" step="10" inputmode="numeric" value="${r.width}"></td>
+   <td class="td-num td-weight"><input data-k="weight" data-id="${r.id}" type="number" min="0" step="1" inputmode="decimal" value="${r.weight}"></td>
+   <td class="td-num td-length"><input data-k="length" data-id="${r.id}" type="number" min="1" step="10" inputmode="numeric" value="${r.length}"></td>
+   <td class="td-num td-width"><input data-k="width" data-id="${r.id}" type="number" min="1" step="10" inputmode="numeric" value="${r.width}"></td>
+   <td class="td-num td-stop"><input data-k="stop" data-id="${r.id}" type="number" min="1" max="20" step="1" inputmode="numeric" value="${stopOf(r)}" title="1 = primo scarico, vicino alle porte"></td>
    <td class="td-color"><input data-k="color" data-id="${r.id}" type="color" value="${/^#[0-9a-f]{6}$/i.test(r.color||'')?r.color:'#2563eb'}" aria-label="Colore collo"></td>
    <td class="td-center" title="${fits?`${Math.round(d.long)}×${Math.round(d.wide)} mm`:'Fuori sagoma'}">${fits?fmtMm(r.x):'⚠'}</td>
    <td class="td-actions">
@@ -643,7 +742,7 @@ function renderDeck(){
      el.style.height=`${(d.long/VEHICLE.deckLength)*100}%`;
    }
    if(!el.classList.contains('invalid')){el.style.background=(r.color||'#2563eb');el.style.color=textColorFor(r.color||'#2563eb')}
-   el.innerHTML=`<div class="block-name">${escapeHtml(r.desc||('Collo '+r.id))}<br><small>${safeNum(r.weight)||0} kg</small></div>`;
+   el.innerHTML=`<div class="block-name">${escapeHtml(r.desc||('Collo '+r.id))}<br><small>${safeNum(r.weight)||0} kg${maxStop()>1?` · S${stopOf(r)}`:''}</small></div>`;
    deck.appendChild(el)
  });
  updateSelectionInfo()
@@ -698,6 +797,7 @@ $('#cargoList').addEventListener('input',e=>{
     }
   }
 
+  if(k==='stop'){renderDeck();calculate(false);return}
   renderDeck();calculate(false)
 });
 $('#cargoList').addEventListener('click',e=>{const rid=Number(e.target.dataset.remove),rot=Number(e.target.dataset.rotate),dup=Number(e.target.dataset.duplicate);if(rid){rows=rows.filter(r=>r.id!==rid);if(selectedId===rid)selectedId=rows[0]?.id??null;renderAll();calculate()}else if(rot)rotate(rot);else if(dup)duplicateRow(dup)});
@@ -769,9 +869,63 @@ function endPointer(ev){
 deck.addEventListener('pointerup',endPointer);
 deck.addEventListener('pointercancel',endPointer);
 deck.addEventListener('pointerleave',ev=>{if(drag)endPointer(ev)});
-function axisHtml(name,value,visualMax,detail,strictLimit=null){const pct=Math.max(0,Math.min(100,(value/visualMax)*100));let state='';if(strictLimit!==null){if(value>strictLimit)state='bad';else if(value>strictLimit*.92)state='warn'}return `<div class="axis-card"><div class="axis-top"><div><div class="axis-name">${name}</div><div class="small">${detail}</div></div><div class="axis-value">${fmtKg(value)}</div></div><div class="bar"><span class="${state}" style="width:${pct}%"></span></div><div class="axis-sub"><span>0 kg</span><span>${strictLimit?`limite ${fmtKg(strictLimit)}`:`scala ${fmtKg(visualMax)}`}</span></div></div>`}
+function axisHtml(name,value,visualMax,detail,strictLimit=null){
+  const scaleMax=Math.max(1,visualMax,strictLimit?strictLimit*1.12:0,value*1.05);
+  const pct=Math.max(0,Math.min(100,(value/scaleMax)*100));
+  let state='';
+  if(strictLimit!==null){if(value>strictLimit)state='bad';else if(value>strictLimit*.92)state='warn'}
+  const marker=strictLimit!==null?Math.max(0,Math.min(100,(strictLimit/scaleMax)*100)):null;
+  const margin=strictLimit!==null?strictLimit-value:null;
+  const marginClass=margin<0?'bad':(margin<strictLimit*.08?'warn':'');
+  const marginTxt=margin===null?'':(margin>=0?`+${fmtKg(margin)} margine`:`${fmtKg(Math.abs(margin))} oltre`);
+  return `<div class="axis-card"><div class="axis-top"><div><div class="axis-name">${name}</div><div class="small">${detail}</div></div><div><div class="axis-value">${fmtKg(value)}</div>${marginTxt?`<div class="axis-margin ${marginClass}">${marginTxt}</div>`:''}</div></div><div class="bar"><span class="${state}" style="width:${pct}%"></span>${marker!==null?`<i class="bar-limit" style="left:${marker}%" title="Limite ${fmtKg(strictLimit)}"></i>`:''}</div><div class="axis-sub"><span>0 kg</span><span>${strictLimit?`limite ${fmtKg(strictLimit)}`:`scala ${fmtKg(scaleMax)}`}</span></div></div>`
+}
 function setBadge(id,ok,badText='SOVRACCARICO'){const e=$(id);e.className='badge '+(ok?'ok':'bad');e.textContent=ok?'OK':badText}
-function calculate(refreshRows=true){let cargo=0,moment=0,kingpinCargo=0,tridemCargo=0;rows.forEach(r=>{const w=Math.max(0,safeNum(r.weight)),x=clamp(safeNum(r.x),0,VEHICLE.deckLength);if(!w)return;cargo+=w;moment+=w*x;const tri=w*(x-VEHICLE.frontWallToKingpin)/VEHICLE.kingpinToTridem;tridemCargo+=tri;kingpinCargo+=(w-tri)});const cg=cargo>0?moment/cargo:0;const fifthWheelXFromFrontAxle=VEHICLE.tractorWheelbase-VEHICLE.fifthWheelLead;const cargoAxle1=kingpinCargo*(VEHICLE.tractorWheelbase-fifthWheelXFromFrontAxle)/VEHICLE.tractorWheelbase;const cargoAxle2=kingpinCargo*fifthWheelXFromFrontAxle/VEHICLE.tractorWheelbase;const axle1=VEHICLE.tareAxle1+cargoAxle1,axle2=VEHICLE.tareAxle2+cargoAxle2,tridem=VEHICLE.tareTridem+tridemCargo,gross=axle1+axle2+tridem,adhesion=gross>0?axle2/gross:0,tractorTotal=axle1+axle2;$('#cargoWeight').textContent=fmtKg(cargo);$('#cargoCg').textContent=cargo?fmtMm(cg):'—';$('#kingpinLoad').textContent=fmtKg(kingpinCargo);$('#tridemCargo').textContent=fmtKg(tridemCargo);if(rows.length){let front=Infinity,rearEdge=-Infinity;rows.forEach(r=>{const d=dims(r);front=Math.min(front,r.x-d.long/2);rearEdge=Math.max(rearEdge,r.x+d.long/2)});$('#emptyFront').textContent=`${(Math.max(0,front)/1000).toFixed(3).replace('.',',')} m`;$('#emptyRear').textContent=`${(Math.max(0,VEHICLE.deckLength-rearEdge)/1000).toFixed(3).replace('.',',')} m`}else{$('#emptyFront').textContent='—';$('#emptyRear').textContent='—'};$('#heroTotal').textContent=fmtKg(gross);$('#heroCargo').textContent=fmtKg(cargo);$('#heroCg').textContent=cargo?fmtMm(cg):'—';$('#axes').innerHTML=axisHtml('Asse 1 · Sterzante',axle1,VEHICLE.maxSteerAxle,'Trattore',VEHICLE.maxSteerAxle)+axisHtml('Asse 2 · Motore',axle2,VEHICLE.maxDriveAxle,'Trattore',VEHICLE.maxDriveAxle)+axisHtml('Tridem semirimorchio',tridem,27000,'Semirimorchio');const grossOk=gross<=VEHICLE.maxGross+1e-9,steerOk=axle1<=VEHICLE.maxSteerAxle+1e-9,driveOk=axle2<=VEHICLE.maxDriveAxle+1e-9,adhOk=adhesion+1e-9>=VEHICLE.minDriveShare,tractorChecked=VEHICLE.maxTractorTotal>0,tractorOk=!tractorChecked||tractorTotal<=VEHICLE.maxTractorTotal+1e-9;$('#grossLabel').textContent=`Massa totale ≤ ${fmtKg(VEHICLE.maxGross)}`;$('#steerLabel').textContent=`Asse 1 sterzante ≤ ${fmtKg(VEHICLE.maxSteerAxle)}`;$('#driveLabel').textContent=`Asse motore ≤ ${fmtKg(VEHICLE.maxDriveAxle)}`;$('#tractorLabel').textContent=tractorChecked?`Peso totale motrice ≤ ${fmtKg(VEHICLE.maxTractorTotal)}`:'Peso totale motrice';$('#adhLabel').textContent=`Aderenza asse motore ≥ ${(VEHICLE.minDriveShare*100).toFixed(1).replace('.',',')}%`;$('#grossCalc').textContent=`${fmtKg(gross)} / ${fmtKg(VEHICLE.maxGross)} · margine ${fmtKg(VEHICLE.maxGross-gross)}`;$('#steerCalc').textContent=`${fmtKg(axle1)} / ${fmtKg(VEHICLE.maxSteerAxle)} · margine ${fmtKg(VEHICLE.maxSteerAxle-axle1)}`;$('#driveCalc').textContent=`${fmtKg(axle2)} / ${fmtKg(VEHICLE.maxDriveAxle)} · margine ${fmtKg(VEHICLE.maxDriveAxle-axle2)}`;$('#tractorCalc').textContent=tractorChecked?`${fmtKg(tractorTotal)} / ${fmtKg(VEHICLE.maxTractorTotal)} · margine ${fmtKg(VEHICLE.maxTractorTotal-tractorTotal)}`:`${fmtKg(tractorTotal)} · imposta un limite nei dati veicolo per attivare il controllo`;$('#adhCalc').textContent=`${(adhesion*100).toFixed(1).replace('.',',')}% · minimo ${(VEHICLE.minDriveShare*100).toFixed(1).replace('.',',')}% · richiesti almeno ${fmtKg(gross*VEHICLE.minDriveShare)}`;setBadge('#grossBadge',grossOk);setBadge('#steerBadge',steerOk);setBadge('#driveBadge',driveOk);setBadge('#adhBadge',adhOk,'ADERENZA INSUFFICIENTE');const tb=$('#tractorBadge');if(tractorChecked){tb.className='badge '+(tractorOk?'ok':'bad');tb.textContent=tractorOk?'OK':'SOVRACCARICO'}else{tb.className='badge na';tb.textContent='N/D'}const all=grossOk&&steerOk&&driveOk&&adhOk&&tractorOk,st=$('#allStatus');st.className='all-status '+(all?'ok':'bad');st.textContent=all?'TUTTO A NORMA':'ATTENZIONE · VERIFICA IL CARICO';state.cargo=cargo;state.gross=gross;state.axle1=axle1;state.axle2=axle2;state.tridem=tridem;state.tractorTotal=tractorTotal;state.cg=cg;state.grossOk=grossOk;state.steerOk=steerOk;state.driveOk=driveOk;state.adhOk=adhOk;state.tractorOk=tractorOk;if(refreshRows)renderRows();updateSelectionInfo()}
+function calculate(refreshRows=true){
+  let cargo=0,moment=0,kingpinCargo=0,tridemCargo=0;
+  rows.forEach(r=>{
+    const w=Math.max(0,safeNum(r.weight)),x=clamp(safeNum(r.x),0,VEHICLE.deckLength);
+    if(!w)return;
+    cargo+=w;moment+=w*x;
+    const tri=w*(x-VEHICLE.frontWallToKingpin)/VEHICLE.kingpinToTridem;
+    tridemCargo+=tri;kingpinCargo+=(w-tri)
+  });
+  const cg=cargo>0?moment/cargo:0;
+  const fifthWheelXFromFrontAxle=VEHICLE.tractorWheelbase-VEHICLE.fifthWheelLead;
+  const cargoAxle1=kingpinCargo*(VEHICLE.tractorWheelbase-fifthWheelXFromFrontAxle)/VEHICLE.tractorWheelbase;
+  const cargoAxle2=kingpinCargo*fifthWheelXFromFrontAxle/VEHICLE.tractorWheelbase;
+  const axle1=VEHICLE.tareAxle1+cargoAxle1,axle2=VEHICLE.tareAxle2+cargoAxle2,tridem=VEHICLE.tareTridem+tridemCargo;
+  const gross=axle1+axle2+tridem,adhesion=gross>0?axle2/gross:0,tractorTotal=axle1+axle2;
+
+  $('#cargoWeight').textContent=fmtKg(cargo);$('#cargoCg').textContent=cargo?fmtMm(cg):'—';$('#kingpinLoad').textContent=fmtKg(kingpinCargo);$('#tridemCargo').textContent=fmtKg(tridemCargo);
+  if(rows.length){let front=Infinity,rearEdge=-Infinity;rows.forEach(r=>{const d=dims(r);front=Math.min(front,r.x-d.long/2);rearEdge=Math.max(rearEdge,r.x+d.long/2)});$('#emptyFront').textContent=`${(Math.max(0,front)/1000).toFixed(3).replace('.',',')} m`;$('#emptyRear').textContent=`${(Math.max(0,VEHICLE.deckLength-rearEdge)/1000).toFixed(3).replace('.',',')} m`}else{$('#emptyFront').textContent='—';$('#emptyRear').textContent='—'}
+  $('#heroTotal').textContent=fmtKg(gross);$('#heroCargo').textContent=fmtKg(cargo);$('#heroCg').textContent=cargo?fmtMm(cg):'—';
+  const grossMargin=VEHICLE.maxGross-gross;
+  $('#heroMargin').textContent=(grossMargin>=0?'+':'−')+fmtKg(Math.abs(grossMargin));
+  const hmc=$('#heroMarginCard');hmc.classList.toggle('margin-good',grossMargin>=0);hmc.classList.toggle('margin-bad',grossMargin<0);
+
+  $('#axes').innerHTML=axisHtml('Asse 1 · Sterzante',axle1,VEHICLE.maxSteerAxle,'Trattore',VEHICLE.maxSteerAxle)+axisHtml('Asse 2 · Motore',axle2,VEHICLE.maxDriveAxle,'Trattore',VEHICLE.maxDriveAxle)+axisHtml('Tridem semirimorchio',tridem,VEHICLE.maxTridem,'Gruppo assi',VEHICLE.maxTridem);
+  const grossOk=gross<=VEHICLE.maxGross+1e-9,steerOk=axle1<=VEHICLE.maxSteerAxle+1e-9,driveOk=axle2<=VEHICLE.maxDriveAxle+1e-9,tridemOk=tridem<=VEHICLE.maxTridem+1e-9,adhOk=adhesion+1e-9>=VEHICLE.minDriveShare,tractorChecked=VEHICLE.maxTractorTotal>0,tractorOk=!tractorChecked||tractorTotal<=VEHICLE.maxTractorTotal+1e-9;
+
+  $('#grossLabel').textContent=`Massa totale ≤ ${fmtKg(VEHICLE.maxGross)}`;
+  $('#steerLabel').textContent=`Asse 1 sterzante ≤ ${fmtKg(VEHICLE.maxSteerAxle)}`;
+  $('#driveLabel').textContent=`Asse motore ≤ ${fmtKg(VEHICLE.maxDriveAxle)}`;
+  $('#tridemLabel').textContent=`Gruppo tridem ≤ ${fmtKg(VEHICLE.maxTridem)}`;
+  $('#tractorLabel').textContent=tractorChecked?`Peso totale motrice ≤ ${fmtKg(VEHICLE.maxTractorTotal)}`:'Peso totale motrice';
+  $('#adhLabel').textContent=`Aderenza asse motore ≥ ${(VEHICLE.minDriveShare*100).toFixed(1).replace('.',',')}%`;
+  $('#grossCalc').textContent=`${fmtKg(gross)} / ${fmtKg(VEHICLE.maxGross)} · margine ${fmtKg(VEHICLE.maxGross-gross)}`;
+  $('#steerCalc').textContent=`${fmtKg(axle1)} / ${fmtKg(VEHICLE.maxSteerAxle)} · margine ${fmtKg(VEHICLE.maxSteerAxle-axle1)}`;
+  $('#driveCalc').textContent=`${fmtKg(axle2)} / ${fmtKg(VEHICLE.maxDriveAxle)} · margine ${fmtKg(VEHICLE.maxDriveAxle-axle2)}`;
+  $('#tridemCalc').textContent=`${fmtKg(tridem)} / ${fmtKg(VEHICLE.maxTridem)} · margine ${fmtKg(VEHICLE.maxTridem-tridem)}`;
+  $('#tractorCalc').textContent=tractorChecked?`${fmtKg(tractorTotal)} / ${fmtKg(VEHICLE.maxTractorTotal)} · margine ${fmtKg(VEHICLE.maxTractorTotal-tractorTotal)}`:`${fmtKg(tractorTotal)} · imposta un limite nei dati veicolo per attivare il controllo`;
+  $('#adhCalc').textContent=`${(adhesion*100).toFixed(1).replace('.',',')}% · minimo ${(VEHICLE.minDriveShare*100).toFixed(1).replace('.',',')}% · richiesti almeno ${fmtKg(gross*VEHICLE.minDriveShare)}`;
+  setBadge('#grossBadge',grossOk);setBadge('#steerBadge',steerOk);setBadge('#driveBadge',driveOk);setBadge('#tridemBadge',tridemOk);setBadge('#adhBadge',adhOk,'ADERENZA INSUFFICIENTE');
+  const tb=$('#tractorBadge');if(tractorChecked){tb.className='badge '+(tractorOk?'ok':'bad');tb.textContent=tractorOk?'OK':'SOVRACCARICO'}else{tb.className='badge na';tb.textContent='N/D'}
+  const all=grossOk&&steerOk&&driveOk&&tridemOk&&adhOk&&tractorOk,st=$('#allStatus');st.className='all-status '+(all?'ok':'bad');st.textContent=all?'TUTTO A NORMA':'ATTENZIONE · VERIFICA IL CARICO';
+  const fp=$('#fixPanel');if(fp){fp.classList.toggle('is-ok',all);fp.classList.toggle('needs-attention',!all)}
+  state.cargo=cargo;state.gross=gross;state.axle1=axle1;state.axle2=axle2;state.tridem=tridem;state.tractorTotal=tractorTotal;state.cg=cg;state.grossOk=grossOk;state.steerOk=steerOk;state.driveOk=driveOk;state.tridemOk=tridemOk;state.adhOk=adhOk;state.tractorOk=tractorOk;
+  if(refreshRows)renderRows();updateSelectionInfo();renderStages()
+}
 function footprintEdges(){let F=Infinity,R=-Infinity;rows.forEach(r=>{const d=dims(r);F=Math.min(F,r.x-d.long/2);R=Math.max(R,r.x+d.long/2)});if(!isFinite(F)){F=0;R=0}return{F:Math.max(0,F),R:Math.min(VEHICLE.deckLength,R)}}
 function cloneRows(){return rows.map(r=>({...r}))}
 function restoreRows(snap){rows=snap.map(r=>({...r}));selectedId=rows.some(r=>r.id===selectedId)?selectedId:(rows[0]?.id??null);renderAll();calculate()}
@@ -845,6 +999,7 @@ function computeCgBounds(C,gross){
   const cgAxleMinRaw=K2>0?xKP+kToT*(VEHICLE.tareAxle2+K2-VEHICLE.maxDriveAxle)/K2:-Infinity;
   const cgSteerMinRaw=K1>0?xKP+kToT*(VEHICLE.tareAxle1+K1-VEHICLE.maxSteerAxle)/K1:-Infinity;
   const cgAdhMaxRaw=K2>0?xKP+kToT*(VEHICLE.tareAxle2+K2-VEHICLE.minDriveShare*gross)/K2:Infinity;
+  const cgTridemMaxRaw=C>0?xKP+kToT*(VEHICLE.maxTridem-VEHICLE.tareTridem)/C:Infinity;
   let cgTractorMinRaw=-Infinity;
   if(VEHICLE.maxTractorTotal>0){
     cgTractorMinRaw=Kt>0?xKP+kToT*(VEHICLE.tareTractorTotal+Kt-VEHICLE.maxTractorTotal)/Kt:-Infinity;
@@ -853,7 +1008,8 @@ function computeCgBounds(C,gross){
   if(cgAxleMinRaw>VEHICLE.deckLength)notes.push('Anche spostando tutto il carico contro le porte posteriori, l\'asse motore resterebbe sovraccarico.');
   if(cgSteerMinRaw>VEHICLE.deckLength)notes.push('Anche spostando tutto il carico verso il retro, l\'asse 1 resterebbe sovraccarico: la leva della ralla è minima, la posizione incide poco.');
   if(cgAdhMaxRaw<0)notes.push('Anche spostando tutto il carico contro la parete anteriore, l\'aderenza resterebbe insufficiente.');
-  const cgLow=Math.max(0,cgAxleMinRaw,cgSteerMinRaw,cgTractorMinRaw),cgHigh=Math.min(VEHICLE.deckLength,cgAdhMaxRaw);
+  if(cgTridemMaxRaw<0)notes.push('Anche spostando tutto il carico contro la parete anteriore, il gruppo tridem resterebbe oltre il limite impostato.');
+  const cgLow=Math.max(0,cgAxleMinRaw,cgSteerMinRaw,cgTractorMinRaw),cgHigh=Math.min(VEHICLE.deckLength,cgAdhMaxRaw,cgTridemMaxRaw);
   return{cgLow,cgHigh,notes};
 }
 function runAutoFix(allowBackward){
@@ -894,16 +1050,17 @@ function runAutoFix(allowBackward){
   rows.forEach(r=>clampPosition(r));
   renderAll();calculate();
   const s2=state;
-  const okAll=s2.driveOk&&s2.adhOk&&s2.steerOk&&s2.tractorOk;
+  const okAll=s2.grossOk&&s2.driveOk&&s2.tridemOk&&s2.adhOk&&s2.steerOk&&s2.tractorOk;
   const canBackward=!allowBackward&&needIncrease&&delta>30;
   return{ok:okAll,notes,canBackward,s2};
 }
 function autoFix(){
   if(!rows.length){alert('Non ci sono colli da sistemare.');return}
+  if($('#condLockOrder')?.checked){autoFixLocked(false);return}
   calculate(false);
   const s0=state,grossNote=[];
   if(!s0.grossOk)grossNote.push(`Il peso totale supera il limite di ${fmtKg(s0.gross-VEHICLE.maxGross)}: riposizionare il carico non riduce la massa complessiva, occorre togliere almeno ${Math.ceil(s0.gross-VEHICLE.maxGross)} kg.`);
-  const alreadyOk=s0.driveOk&&s0.adhOk&&s0.steerOk&&s0.tractorOk;
+  const alreadyOk=s0.grossOk&&s0.driveOk&&s0.tridemOk&&s0.adhOk&&s0.steerOk&&s0.tractorOk;
   if(alreadyOk){
     if(grossNote.length)showFixResult(grossNote,false);else showFixResult(['Il carico è già a norma su tutti i parametri.'],true);
     $('#autoFixBackWrap').style.display='none';
@@ -921,6 +1078,7 @@ function autoFix(){
     const s2=res.s2;
     if(!s2.steerOk)notes.push(`Asse 1 ancora oltre il limite di ${fmtKg(s2.axle1-VEHICLE.maxSteerAxle)}.`);
     if(!s2.driveOk)notes.push(`Asse motore ancora oltre il limite di ${fmtKg(s2.axle2-VEHICLE.maxDriveAxle)}.`);
+    if(!s2.tridemOk)notes.push(`Gruppo tridem ancora oltre il limite di ${fmtKg(s2.tridem-VEHICLE.maxTridem)}.`);
     if(VEHICLE.maxTractorTotal>0&&!s2.tractorOk)notes.push(`Peso motrice ancora oltre il limite di ${fmtKg(s2.tractorTotal-VEHICLE.maxTractorTotal)}.`);
     if(!s2.adhOk)notes.push(`Aderenza ancora insufficiente (mancano ${fmtKg(s2.gross*VEHICLE.minDriveShare-s2.axle2)} sull'asse motore).`);
     if(res.canBackward){
@@ -933,7 +1091,114 @@ function autoFix(){
   }
 }
 $('#autoFixBtn').addEventListener('click',autoFix);
+
+// ===== ORDINE BLOCCATO =====
+// Le file di colli restano nella stessa sequenza. Si parte dal carico compatto contro la parete
+// e si aggiungono spazi solo dove servono, finché ogni tappa rientra nei limiti.
+function planLocked(allowBackward){
+  const work=rows.map(r=>({...r}));
+  const cl=buildClusters(work),n=cl.length;
+  const lens=cl.map(c=>c.end-c.start),used0=lens.reduce((a,b)=>a+b,0),F=VEHICLE.deckLength-used0;
+  if(F<-0.5)return{ok:false,fatal:`In fila i colli occupano ${fmtM(used0)}, più del pianale (${fmtM(VEHICLE.deckLength)}).`};
+  const base=[];let p=0;cl.forEach((c,i)=>{base.push(p);p+=lens[i]});
+  cl.forEach((c,i)=>c.rows.forEach(r=>{r._off=r.x-c.start;r._ci=i}));
+  const place=g=>{let acc=0;cl.forEach((c,i)=>{acc+=g[i];c.rows.forEach(r=>{r.x=base[i]+acc+r._off})})};
+  place(new Array(n).fill(0));
+  const info=stageLists(work).map(s=>{const L=computeLoads(s.rows);if(L.cargo<=0)return null;const b=computeCgBounds(L.cargo,L.gross);const a=[];for(let j=0;j<n;j++)a.push(s.rows.filter(r=>r._ci>=j).reduce((t,r)=>t+Math.max(0,safeNum(r.weight)),0)/L.cargo);return{k:s.k,L,low:b.cgLow,high:b.cgHigh,cg0:L.cg,a}}).filter(Boolean);
+  const run=margin=>{
+    const g=new Array(n).fill(0),shift=info.map(()=>0),step=10;let used=0;
+    const target=info.map(s=>s.low+Math.min(margin,Math.max(0,(s.high-s.low)/4)));
+    for(let it=0;it<4000;it++){
+      const def=info.map((s,i)=>target[i]-(s.cg0+shift[i]));
+      if(def.every(d=>d<=0.5)||used+step>F+0.5)break;
+      let best=-1,bestVal=0;
+      for(let j=allowBackward?0:1;j<n;j++){
+        let ok=true,val=0;
+        info.forEach((s,i)=>{if(s.cg0+shift[i]+s.a[j]*step>s.high+0.5)ok=false;if(def[i]>0)val+=Math.min(s.a[j]*step,def[i])});
+        if(ok&&val>bestVal+1e-9){bestVal=val;best=j}
+      }
+      if(best<0)break;
+      g[best]+=step;used+=step;info.forEach((s,i)=>shift[i]+=s.a[best]*step);
+    }
+    return g;
+  };
+  let g=run(120);place(g);
+  let checks=stageLists(work).map(s=>({k:s.k,L:computeLoads(s.rows)})).filter(c=>c.L.cargo>0);
+  if(!checks.every(c=>c.L.ok)){g=run(0);place(g);checks=stageLists(work).map(s=>({k:s.k,L:computeLoads(s.rows)})).filter(c=>c.L.cargo>0)}
+  return{ok:checks.every(c=>c.L.ok),work,cl,g,checks,info};
+}
+function stageName(k,n){return n<2?'Carico':(k===1?'Partenza → scarico 1':`Dopo scarico ${k-1} → scarico ${k}`)}
+function stageProblems(L){const p=[];
+  if(!L.f.gross)p.push(`massa totale oltre di ${fmtKg(L.gross-VEHICLE.maxGross)}`);
+  if(!L.f.steer)p.push(`asse 1 oltre di ${fmtKg(L.axle1-VEHICLE.maxSteerAxle)}`);
+  if(!L.f.drive)p.push(`asse motore oltre di ${fmtKg(L.axle2-VEHICLE.maxDriveAxle)}`);
+  if(!L.f.tridem)p.push(`tridem oltre di ${fmtKg(L.tridem-VEHICLE.maxTridem)}`);
+  if(!L.f.tractor)p.push(`motrice oltre di ${fmtKg(L.tractorTotal-VEHICLE.maxTractorTotal)}`);
+  if(!L.f.adh)p.push(`aderenza ${(L.adhesion*100).toFixed(1).replace('.',',')}%, mancano ${fmtKg(L.gross*VEHICLE.minDriveShare-L.axle2)} sull'asse motore`);
+  return p}
+function autoFixLocked(allowBackward){
+  calculate(false);
+  const n=maxStop(),now=stageLists().map(s=>({k:s.k,L:computeLoads(s.rows)})).filter(c=>c.L.cargo>0);
+  if(!now.length){showFixResult(['Nessun peso caricato: non c\'è nulla da ridistribuire.'],false);return}
+  const notes=[];
+  const lifo=lifoViolations();
+  if(lifo.length)notes.push(`Attenzione: ${lifo.length} coll${lifo.length===1?'o è':'i sono'} davanti a merce che scarichi prima (vedi “Verifica a ogni scarico”). L'ordine bloccato mantiene la sequenza attuale.`);
+  if(!allowBackward&&now.every(c=>c.L.ok)){notes.push(n>1?'Il carico è già a norma in partenza e in tutte le tappe.':'Il carico è già a norma su tutti i parametri.');showFixResult(notes,!lifo.length);$('#autoFixBackWrap').style.display='none';return}
+  const plan=planLocked(allowBackward);
+  if(plan.fatal){showFixResult([...notes,plan.fatal],false);return}
+  if(plan.ok){
+    preFixSnapshot=cloneRows();$('#undoFixBtn').style.display='';
+    const byId=new Map(plan.work.map(r=>[r.id,r.x]));rows.forEach(r=>{r.x=byId.get(r.id)});
+    renderAll();calculate();
+    const moves=[];
+    if(plan.g[0]>0)moves.push(`carico arretrato di ${fmtM(plan.g[0])} dalla parete anteriore`);
+    for(let j=1;j<plan.g.length;j++)if(plan.g[j]>0){const prev=plan.cl[j-1].rows.map(rowName).join(' / ');moves.push(`spazio di ${fmtM(plan.g[j])} dopo ${prev}`)}
+    notes.push('Disposizione trovata senza cambiare l\'ordine dei colli.');
+    notes.push(moves.length?`Modifiche: ${moves.join('; ')}.`:'È bastato compattare il carico contro la parete anteriore.');
+    if(moves.length)notes.push('Gli spazi vuoti vanno bloccati o ancorati: verifica il fissaggio prima di partire.');
+    showFixResult(notes,!lifo.length);$('#autoFixBackWrap').style.display='none';return;
+  }
+  plan.checks.filter(c=>!c.L.ok).forEach(c=>notes.push(`${stageName(c.k,n)}: ${stageProblems(c.L).join(', ')}.`));
+  const tooBack=plan.info.some(s=>s.cg0>s.high+0.5);
+  if(tooBack)notes.push('Anche con tutto il carico contro la parete anteriore il peso resta troppo verso le porte: con questo ordine non si rientra. Serve alleggerire o cambiare la sequenza di carico.');
+  const tryBack=!allowBackward&&!tooBack&&planLocked(true).ok;
+  if(tryBack){notes.push('Restando attaccati alla parete anteriore non basta, ma arretrando il carico sì.');$('#autoFixBackWrap').style.display=''}
+  else{$('#autoFixBackWrap').style.display='none';if(!tooBack)notes.push('Con l\'ordine bloccato non esiste una disposizione a norma per tutte le tappe: serve alleggerire, cambiare la sequenza o togliere il blocco.')}
+  showFixResult(notes,false);
+}
+function arrangeByStops(){
+  const groups=[...new Set(rows.map(stopOf))].sort((a,b)=>b-a);
+  let pos=0;const nx=new Map();
+  groups.forEach(st=>buildClusters(rows.filter(r=>stopOf(r)===st)).forEach(c=>{const sh=pos-c.start;c.rows.forEach(r=>nx.set(r.id,r.x+sh));pos+=c.end-c.start}));
+  if(pos>VEHICLE.deckLength+0.5){alert(`Divisi per scarico, i colli occupano ${fmtM(pos)}: più del pianale (${fmtM(VEHICLE.deckLength)}). Affianca i colli dello stesso scarico e riprova.`);return}
+  preFixSnapshot=cloneRows();$('#undoFixBtn').style.display='';
+  rows.forEach(r=>{r.x=nx.get(r.id)});renderAll();calculate();
+  showFixResult(['Colli riordinati per scarico: l\'ultimo scarico contro la cabina, il primo verso le porte. Dentro ogni scarico l\'ordine è rimasto quello di prima.','Ora usa “Cerca disposizione a norma” con l\'ordine bloccato per sistemare i pesi.'],true);
+}
+function renderStages(){
+  const card=$('#stagesCard');if(!card)return;
+  const n=maxStop();if(n<2){card.style.display='none';return}
+  card.style.display='';
+  const st=stageLists().map(s=>({k:s.k,L:computeLoads(s.rows),cnt:s.rows.length}));
+  const cell=(v,ok,txt)=>`<td class="${ok?'':'over'}">${txt??fmtKg(v)}</td>`;
+  let h=`<div class="stage-wrap"><table class="stage-table"><thead><tr><th>Tappa</th><th>Merce</th><th>Asse 1</th><th>Asse motore</th><th>Tridem</th><th>Aderenza</th><th>Esito</th></tr></thead><tbody>`;
+  st.forEach(s=>{const L=s.L;h+=`<tr><td class="name">${stageName(s.k,n)}</td><td>${fmtKg(L.cargo)}</td>${cell(L.axle1,L.f.steer)}${cell(L.axle2,L.f.drive)}${cell(L.tridem,L.f.tridem)}${cell(0,L.f.adh,(L.adhesion*100).toFixed(1).replace('.',',')+'%')}<td><span class="badge ${L.ok?'ok':'bad'}">${L.ok?'OK':'NO'}</span></td></tr>`});
+  h+='</tbody></table></div>';
+  const lifo=lifoViolations();
+  if(lifo.length){
+    const ex=lifo.slice(0,3).map(([a,b])=>`${escapeHtml(rowName(b))} (scarico ${stopOf(b)}) è tra ${escapeHtml(rowName(a))} (scarico ${stopOf(a)}) e le porte`).join('<br>');
+    h+=`<div class="lifo-box"><b>Ordine di scarico non rispettato</b><br>${ex}${lifo.length>3?`<br>… e altri ${lifo.length-3}`:''}<br><button class="btn btn-ghost" id="arrangeStopsBtn">Riordina per scarico</button></div>`;
+  }
+  $('#stagesBody').innerHTML=h;
+  const btn=$('#arrangeStopsBtn');if(btn)btn.addEventListener('click',arrangeByStops);
+  const bad=st.filter(s=>!s.L.ok&&s.k>1);
+  const sEl=$('#allStatus');
+  if(bad.length&&sEl&&sEl.classList.contains('ok')){sEl.className='all-status bad';sEl.textContent=`A NORMA IN PARTENZA · ${bad.length===1?'1 TAPPA':bad.length+' TAPPE'} FUORI LIMITE`;const fp=$('#fixPanel');if(fp){fp.classList.remove('is-ok');fp.classList.add('needs-attention')}}
+}
+const syncLockUi=()=>{const on=$('#condLockOrder').checked;['condRotate','condRepack','condReorder'].forEach(id=>{const el=$('#'+id);el.disabled=on;el.closest('label').classList.toggle('dim',on)})};
+$('#condLockOrder').addEventListener('change',syncLockUi);
 $('#autoFixBackBtn').addEventListener('click',()=>{
+  if($('#condLockOrder')?.checked){autoFixLocked(true);return}
   const res=runAutoFix(true);
   const notes=[...res.notes];
   const s2=res.s2;
@@ -943,6 +1208,7 @@ $('#autoFixBackBtn').addEventListener('click',()=>{
   }else{
     if(!s2.steerOk)notes.push(`Asse 1 ancora oltre il limite di ${fmtKg(s2.axle1-VEHICLE.maxSteerAxle)}.`);
     if(!s2.driveOk)notes.push(`Asse motore ancora oltre il limite di ${fmtKg(s2.axle2-VEHICLE.maxDriveAxle)}: non c'è più margine nemmeno arretrando fino alle porte posteriori.`);
+    if(!s2.tridemOk)notes.push(`Gruppo tridem ancora oltre il limite di ${fmtKg(s2.tridem-VEHICLE.maxTridem)}.`);
     if(VEHICLE.maxTractorTotal>0&&!s2.tractorOk)notes.push(`Peso motrice ancora oltre il limite di ${fmtKg(s2.tractorTotal-VEHICLE.maxTractorTotal)}.`);
     if(!s2.adhOk)notes.push('Aderenza ancora insufficiente.');
     notes.push('Anche arretrando il carico non si raggiunge la conformità: occorre alleggerire il carico o ridistribuirlo su un altro veicolo.');
@@ -1067,7 +1333,7 @@ async function createPdfReport(){
  calculate(false);
  const canvas=makeLoadCanvas(),data=canvas.toDataURL('image/jpeg',0.9);
  const bin=atob(data.split(',')[1]),jpg=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)jpg[i]=bin.charCodeAt(i);
- const t=currentTruck(),r=currentTrailer(),status=state.grossOk&&state.steerOk&&state.driveOk&&state.adhOk&&state.tractorOk?'CONFORME':'NON CONFORME';
+ const t=currentTruck(),r=currentTrailer(),status=state.grossOk&&state.steerOk&&state.driveOk&&state.tridemOk&&state.adhOk&&state.tractorOk?'CONFORME':'NON CONFORME';
  const tractorLimit=VEHICLE.maxTractorTotal>0?`${Math.round(VEHICLE.maxTractorTotal)} kg`:'N/D';
  const tractorStatus=VEHICLE.maxTractorTotal>0?(state.tractorOk?'OK':'NO'):'N/D';
  const adhesionWeight=Math.round((state.gross||0)*0.25);
@@ -1081,7 +1347,7 @@ async function createPdfReport(){
  const steerMargin=Math.round(VEHICLE.maxSteerAxle-(state.axle1||0));
  const driveMargin=Math.round(VEHICLE.maxDriveAxle-(state.axle2||0));
  const tractorMargin=VEHICLE.maxTractorTotal>0?Math.round(VEHICLE.maxTractorTotal-(state.tractorTotal||0)):null;
- const trailerLegalLimit=24000;
+ const trailerLegalLimit=VEHICLE.maxTridem;
  const trailerMargin=Math.round(trailerLegalLimit-(state.tridem||0));
  const adhesionMargin=Math.round((state.axle2||0)-adhesionWeight);
 
@@ -1098,8 +1364,9 @@ async function createPdfReport(){
    {text:`Asse 1 sterzante: ${Math.round(state.axle1||0)} kg / limite ${Math.round(VEHICLE.maxSteerAxle)} kg / margine ${steerMargin} kg: ${state.steerOk?'OK':'NO'}`,bold:true},
    {text:`Asse 2 motore: ${Math.round(state.axle2||0)} kg / limite ${Math.round(VEHICLE.maxDriveAxle)} kg / margine ${driveMargin} kg: ${state.driveOk?'OK':'NO'}`,bold:true},
    {text:`Peso trattore caricato: ${Math.round(state.tractorTotal||0)} kg / limite ${tractorLimit}${tractorMargin!==null?` / margine ${tractorMargin} kg`:''}: ${tractorStatus}`,bold:true},
-   {text:`Peso semirimorchio caricato (tridem): ${Math.round(state.tridem||0)} kg / limite ${trailerLegalLimit} kg / margine ${trailerMargin} kg: ${(state.tridem||0)<=trailerLegalLimit?'OK':'NO'}`,bold:true},
+   {text:`Peso semirimorchio caricato (tridem): ${Math.round(state.tridem||0)} kg / limite ${trailerLegalLimit} kg / margine ${trailerMargin} kg: ${state.tridemOk?'OK':'NO'}`,bold:true},
    {text:`Aderenza minima: 25% massa complessiva = ${adhesionWeight} kg / peso reale asse motore = ${Math.round(state.axle2||0)} kg: ${state.adhOk?'OK':'NO'}`,bold:true},
+   ...(maxStop()>1?[{text:'VERIFICA A OGNI SCARICO',bold:true,size:11,gapBefore:5},...stageLists().map(s=>{const L=computeLoads(s.rows);return{text:`${stageName(s.k,maxStop())}: merce ${Math.round(L.cargo)} kg / asse 1 ${Math.round(L.axle1)} / asse motore ${Math.round(L.axle2)} / tridem ${Math.round(L.tridem)} / aderenza ${(L.adhesion*100).toFixed(1)}%: ${L.ok?'OK':'NO'}`,bold:!L.ok}})]:[]),
    {text:`Generato: ${new Date().toLocaleString('it-IT')}`,gapBefore:3}
  ];
  const name=($('#saveName').value.trim()||'carico').replace(/[^a-z0-9_-]+/gi,'_');
@@ -1117,7 +1384,7 @@ function loadSnapshot(data){
   const tt=getTruckById(data.truckId),tr=getTrailerById(data.trailerId);
   if(tt)applyTruckFromDatabase(tt,true);
   if(tr)applyTrailerFromDatabase(tr,true);
-  rows=data.rows.map((r,i)=>({id:i+1,desc:String(r.desc||`Collo ${i+1}`),weight:r.weight??'',length:r.length??1200,width:r.width??800,color:r.color||'#2563eb',rotated:!!r.rotated,x:safeNum(r.x),y:safeNum(r.y)||VEHICLE.deckWidth/2}));
+  rows=data.rows.map((r,i)=>({id:i+1,desc:String(r.desc||`Collo ${i+1}`),weight:r.weight??'',length:r.length??1200,width:r.width??800,color:r.color||'#2563eb',stop:stopOf(r),rotated:!!r.rotated,x:safeNum(r.x),y:safeNum(r.y)||VEHICLE.deckWidth/2}));
   nextId=rows.length+1;rows.forEach(r=>clampPosition(r));selectedId=rows[0]?.id??null;renderAll();calculate()
 }
 
@@ -1142,7 +1409,7 @@ function snapshot(name=''){
     vehicle:`${ct?(ct.custom_name||ct.marca+' '+ct.modello):'Trattore'} + ${cr?(cr.custom_name||cr.marca+' '+cr.modello):'Semirimorchio'}`,
     truckId:ct?.id||'',trailerId:cr?.id||'',
     truckRecord:ct?.custom?ct:null,trailerRecord:cr?.custom?cr:null,
-    rows:rows.map(r=>({desc:r.desc,weight:r.weight,length:r.length,width:r.width,color:r.color||'#2563eb',rotated:r.rotated,x:r.x,y:r.y}))
+    rows:rows.map(r=>({desc:r.desc,weight:r.weight,length:r.length,width:r.width,color:r.color||'#2563eb',stop:stopOf(r),rotated:r.rotated,x:r.x,y:r.y}))
   }
 }
 $('#saveLoadBtn').addEventListener('click',()=>{
@@ -1335,6 +1602,10 @@ function saveCustomTruck(){
     passo_mm:safeNum($('#vWheelbase').value),
     massa_complessiva_tecnica_kg:safeNum($('#vMaxTractor').value),
     peso_a_vuoto_non_agganciato_kg:base.peso_a_vuoto_non_agganciato_kg||0,
+    tare_agganciate:true,
+    tara_agganciata_asse1_kg:Math.round(total*(1-share)),
+    tara_agganciata_asse2_kg:Math.round(total*share),
+    // campi storici, tenuti per compatibilità con le versioni precedenti dell'app
     tara_asse1_sterzante_riferimento_kg:Math.round(total*(1-share)),
     tara_asse2_motore_riferimento_kg:Math.round(total*share),
     avanzamento_ralla_mm_default:safeNum($('#vFifthLead').value),
@@ -1359,7 +1630,8 @@ function saveCustomTrailer(){
     front_to_kingpin_mm:safeNum($('#vFrontToKingpin').value),
     kingpin_to_tridem_mm:safeNum($('#vKingpinToTridem').value),
     tare_tridem_ref_kg:safeNum($('#vTareTridem').value),
-    massa_tecnica_kg:39000,
+    tare_totale_ref_kg:base.tare_totale_ref_kg??null,
+    massa_tecnica_kg:base.massa_tecnica_kg||39000,
     nota:'Configurazione personalizzata salvata dall’utente.'
   };
   const list=getCustomItems(CUSTOM_TRAILERS_KEY); list.push(item);
@@ -1417,22 +1689,23 @@ function renderTruckDbInfo(t,tank=null){
   const box=$('#truckDbInfo');
   if(!t){box.textContent='Nessun trattore selezionato.';return}
   const rel=t.affidabilita||{};
-  const hasAxles=Number.isFinite(Number(t.tara_asse1_sterzante_riferimento_kg))&&Number.isFinite(Number(t.tara_asse2_motore_riferimento_kg));
-  const tare1=hasAxles?safeNum(t.tara_asse1_sterzante_riferimento_kg):0;
-  const tare2=hasAxles?safeNum(t.tara_asse2_motore_riferimento_kg):0;
-  const hasEmpty=Number.isFinite(Number(t.peso_a_vuoto_non_agganciato_kg));
+  const hasAxles=truckHasAxleData(t);
+  const coupledRec=hasAxles&&(t.custom||isNum(t.tara_agganciata_asse1_kg));
+  const tare1=hasAxles?safeNum(coupledRec&&isNum(t.tara_agganciata_asse1_kg)?t.tara_agganciata_asse1_kg:t.tara_asse1_sterzante_riferimento_kg):0;
+  const tare2=hasAxles?safeNum(coupledRec&&isNum(t.tara_agganciata_asse2_kg)?t.tara_agganciata_asse2_kg:t.tara_asse2_motore_riferimento_kg):0;
+  const hasEmpty=isNum(t.peso_a_vuoto_non_agganciato_kg);
   const vuoto=hasEmpty?safeNum(t.peso_a_vuoto_non_agganciato_kg):0;
   const tankTxt=tank?`<br><b>Serbatoi:</b> ${escapeHtml(tankLabel(tank))}`:'';
   const dataTxt=
     `${hasEmpty?`Peso a vuoto: <b>${fmtKg(vuoto)}</b>`:'Peso a vuoto: <b>da confermare</b>'} · `+
-    `${hasAxles?`riferimento assi: <b>${fmtKg(tare1)}</b> / <b>${fmtKg(tare2)}</b>`:'ripartizione assi: <b>da confermare</b>'}`;
+    `${hasAxles?`${coupledRec?'tara agganciata':'tara sganciata'}: <b>${fmtKg(tare1)}</b> / <b>${fmtKg(tare2)}</b>`:'ripartizione assi: <b>da confermare</b>'}`;
   box.innerHTML=
     `<b>${escapeHtml(t.custom_name||t.marca+' '+t.modello)}</b> · ${escapeHtml(t.model_year||'')} · ${safeNum(t.potenza_cv)||'—'} CV<br>`+
     dataTxt+tankTxt+'<br>'+
     `<span class="truck-db-badge">passo ${escapeHtml(rel.passo||'n.d.')}</span>`+
     `<span class="truck-db-badge">peso ${escapeHtml(rel.peso_vuoto||'n.d.')}</span>`+
     `<span class="truck-db-badge">assi ${escapeHtml(rel.ripartizione_assi||'n.d.')}</span>`+
-    (!hasAxles?`<span class="db-incomplete">Dati di peso incompleti: selezionalo, poi crea una copia personalizzata con i dati reali del tuo mezzo.</span>`:'');
+    (!hasAxles?`<span class="db-incomplete">Dati di peso mancanti per questo modello: il calcolo usa ancora la tara del mezzo selezionato prima. Inserisci la tua pesata nei dati veicolo e crea una copia personalizzata.</span>`:(coupledRec?'':`<span class="db-incomplete">Tara agganciata stimata: tara del trattore + peso del semirimorchio vuoto sulla ralla${LAST_KP_FALLBACK?' (valore medio, il semirimorchio scelto non ha la tara totale)':''}. Per precisione usa una copia personalizzata con pesata reale.</span>`));
 }
 function populateTankSelect(t,preferred=''){
   const sel=$('#tankSelect');
@@ -1454,27 +1727,37 @@ function populateTankSelect(t,preferred=''){
   const cfg=tanks.find(c=>(c.id||'')===sel.value)||tanks[0];
   renderTruckDbInfo(t,cfg);
 }
+let LAST_KP_FALLBACK=false;
+function truckHasAxleData(t){
+  if(!t||t.calcolo_ripartizione_disponibile===false)return false;
+  return (isNum(t.tara_agganciata_asse1_kg)&&isNum(t.tara_agganciata_asse2_kg))||(isNum(t.tara_asse1_sterzante_riferimento_kg)&&isNum(t.tara_asse2_motore_riferimento_kg));
+}
+// Tara agganciata = tara trattore sganciato + peso del semirimorchio vuoto che grava sulla ralla,
+// ripartito tra i due assi con la leva della ralla (avanzamento sul passo).
 function estimateCoupledTareFromDb(t){
-  // Mantiene come riferimento la tara agganciata Ford già usata dall'HTML
-  // e applica al trattore scelto le differenze di ripartizione presenti nel JSON.
-  const ref=getTruckById('ford_fmax500_2022_2024')||TRUCK_DB.trattori[0];
-  const refA1=safeNum(ref?.tara_asse1_sterzante_riferimento_kg);
-  const refA2=safeNum(ref?.tara_asse2_motore_riferimento_kg);
-  const a1=5450+(safeNum(t.tara_asse1_sterzante_riferimento_kg)-refA1);
-  const a2=4850+(safeNum(t.tara_asse2_motore_riferimento_kg)-refA2);
+  const tr=currentTrailer();
+  const tridemTare=safeNum(tr?.tare_tridem_ref_kg)||4300;
+  const trailerTare=safeNum(tr?.tare_totale_ref_kg);
+  LAST_KP_FALLBACK=!(trailerTare>tridemTare);
+  const kpEmpty=LAST_KP_FALLBACK?KINGPIN_EMPTY_FALLBACK_KG:trailerTare-tridemTare;
+  const wb=safeNum(t.passo_mm)||VEHICLE.tractorWheelbase,lead=isNum(t.avanzamento_ralla_mm_default)?Number(t.avanzamento_ralla_mm_default):VEHICLE.fifthWheelLead;
+  const a1=safeNum(t.tara_asse1_sterzante_riferimento_kg)+kpEmpty*lead/wb;
+  const a2=safeNum(t.tara_asse2_motore_riferimento_kg)+kpEmpty*(wb-lead)/wb;
   const total=Math.max(1,a1+a2);
   return{a1,a2,total,driveShare:a2/total};
 }
+function coupledTareFor(t){
+  if(isNum(t.tara_agganciata_asse1_kg)&&isNum(t.tara_agganciata_asse2_kg)){const a1=safeNum(t.tara_agganciata_asse1_kg),a2=safeNum(t.tara_agganciata_asse2_kg),total=Math.max(1,a1+a2);return{a1,a2,total,driveShare:a2/total}}
+  if(t.custom){const a1=safeNum(t.tara_asse1_sterzante_riferimento_kg),a2=safeNum(t.tara_asse2_motore_riferimento_kg),total=Math.max(1,a1+a2);return{a1,a2,total,driveShare:a2/total}}
+  return estimateCoupledTareFromDb(t);
+}
 function applyTruckFromDatabase(t,persist=true){
   if(!t)return;
-  const hasAxles=Number.isFinite(Number(t.tara_asse1_sterzante_riferimento_kg))&&Number.isFinite(Number(t.tara_asse2_motore_riferimento_kg));
+  const hasAxles=truckHasAxleData(t);
   if(safeNum(t.passo_mm)>0)$('#vWheelbase').value=safeNum(t.passo_mm);
   if(Number.isFinite(Number(t.avanzamento_ralla_mm_default)))$('#vFifthLead').value=Number(t.avanzamento_ralla_mm_default);
   if(hasAxles){
-    const coupled=t.custom?(()=>{
-      const a1=safeNum(t.tara_asse1_sterzante_riferimento_kg),a2=safeNum(t.tara_asse2_motore_riferimento_kg),total=Math.max(1,a1+a2);
-      return{a1,a2,total,driveShare:a2/total}
-    })():estimateCoupledTareFromDb(t);
+    const coupled=coupledTareFor(t);
     $('#vTareTotal').value=Math.round(coupled.total);
     $('#vDriveSharePct').value=(coupled.driveShare*100).toFixed(2);
   }
@@ -1483,6 +1766,7 @@ function applyTruckFromDatabase(t,persist=true){
   updateVehiclePreview();
   commitVehicle(readVehicleFromForm(),true);
   if(persist){try{localStorage.setItem(TRUCK_SELECTION_KEY,t.id)}catch(e){}}
+  renderTruckDbInfo(t,(t?.serbatoi||[]).find(c=>(c.id||'')===$('#tankSelect')?.value)||t?.serbatoi?.[0]||null);
   updateComboLabel();
   const subtitle=document.querySelector('.hero p');
   if(subtitle)subtitle.textContent=`${t.custom_name||t.marca+' '+t.modello} ${t.potenza_cv||''} CV · ${currentTrailer()?(currentTrailer().custom_name||currentTrailer().marca+' '+currentTrailer().modello):'Semirimorchio'} · calcolo statico dei pesi.`;
@@ -1542,6 +1826,7 @@ function applyVehicleToForm(){
   $('#vTareTridem').value=VEHICLE.tareTridem;
   $('#vMaxGross').value=VEHICLE.maxGross;
   $('#vMaxDrive').value=VEHICLE.maxDriveAxle;
+  $('#vMaxTridem').value=VEHICLE.maxTridem;
   $('#vMaxSteer').value=VEHICLE.maxSteerAxle;
   $('#vMaxTractor').value=VEHICLE.maxTractorTotal;
   $('#vMinShare').value='25.0';
@@ -1568,6 +1853,7 @@ function readVehicleFromForm(){
     tareTridem:num('#vTareTridem',d.tareTridem),
     maxGross:num('#vMaxGross',d.maxGross),
     maxDriveAxle:num('#vMaxDrive',d.maxDriveAxle),
+    maxTridem:num('#vMaxTridem',d.maxTridem),
     maxSteerAxle:num('#vMaxSteer',d.maxSteerAxle),
     maxTractorTotal:Math.max(0,safeNum($('#vMaxTractor').value)),
     minDriveShare:0.25,
@@ -1597,7 +1883,8 @@ $('#openProjectFile').addEventListener('change',async e=>{const f=e.target.files
 $('#copyTruckBtn').addEventListener('click',saveCustomTruck);
 $('#copyTrailerBtn').addEventListener('click',saveCustomTrailer);
 $('#trailerSelect').addEventListener('change',()=>{
-  const t=getTrailerById($('#trailerSelect').value);if(t)applyTrailerFromDatabase(t,true)
+  const t=getTrailerById($('#trailerSelect').value);if(t)applyTrailerFromDatabase(t,true);
+  const ct=currentTruck();if(ct&&truckHasAxleData(ct)&&!ct.custom&&!isNum(ct.tara_agganciata_asse1_kg))applyTruckFromDatabase(ct,true);
 });
 $('#pdfReportBtn').addEventListener('click',createPdfReport);
 const orientMedia=matchMedia('(orientation: landscape) and (max-height: 700px)');
