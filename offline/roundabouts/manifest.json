@@ -1,23 +1,23 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-21T09:48:26.195728+00:00",
+  "generatedAt": "2026-10-28T12:08:37.247707+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "roundabouts": 82068,
-      "topologyReady": 78728,
+      "roundabouts": 82252,
+      "topologyReady": 78907,
       "tiles": 207
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "roundabouts": 143559,
-      "topologyReady": 139439,
+      "roundabouts": 143516,
+      "topologyReady": 139397,
       "tiles": 315
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "roundabouts": 36949,
-      "topologyReady": 35868,
+      "roundabouts": 37016,
+      "topologyReady": 35932,
       "tiles": 221
     },
     "CH": {
@@ -28,14 +28,14 @@
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "roundabouts": 7174,
-      "topologyReady": 6984,
+      "roundabouts": 7182,
+      "topologyReady": 6993,
       "tiles": 56
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "roundabouts": 15660,
-      "topologyReady": 15139,
+      "roundabouts": 15665,
+      "topologyReady": 15144,
       "tiles": 24
     },
     "LU": {
@@ -45,8 +45,8 @@
       "tiles": 7
     }
   },
-  "totalRoundabouts": 291920,
-  "topologyReady": 282437,
+  "totalRoundabouts": 292141,
+  "topologyReady": 282652,
   "tileDegrees": 0.5,
   "authority": "ORS maneuver; OSM offline topology enrichment"
 }
