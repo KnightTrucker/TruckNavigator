@@ -1,52 +1,52 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-22T09:23:40.734188+00:00",
+  "generatedAt": "2026-10-29T11:02:36.451200+00:00",
   "countries": {
     "IT": {
       "manifest": "IT/manifest.json",
-      "uniqueWays": 658314,
-      "tileEntries": 662334,
+      "uniqueWays": 659742,
+      "tileEntries": 663763,
       "tiles": 218
     },
     "FR": {
       "manifest": "FR/manifest.json",
-      "uniqueWays": 832078,
-      "tileEntries": 837625,
+      "uniqueWays": 833542,
+      "tileEntries": 839095,
       "tiles": 325
     },
     "DE": {
       "manifest": "DE/manifest.json",
-      "uniqueWays": 1496357,
-      "tileEntries": 1503695,
+      "uniqueWays": 1497681,
+      "tileEntries": 1505026,
       "tiles": 229
     },
     "CH": {
       "manifest": "CH/manifest.json",
-      "uniqueWays": 127511,
-      "tileEntries": 128055,
+      "uniqueWays": 127686,
+      "tileEntries": 128231,
       "tiles": 36
     },
     "AT": {
       "manifest": "AT/manifest.json",
-      "uniqueWays": 164709,
-      "tileEntries": 165505,
+      "uniqueWays": 164895,
+      "tileEntries": 165691,
       "tiles": 66
     },
     "BE": {
       "manifest": "BE/manifest.json",
-      "uniqueWays": 137913,
-      "tileEntries": 138640,
+      "uniqueWays": 138026,
+      "tileEntries": 138754,
       "tiles": 25
     },
     "LU": {
       "manifest": "LU/manifest.json",
-      "uniqueWays": 29317,
-      "tileEntries": 29534,
+      "uniqueWays": 29359,
+      "tileEntries": 29576,
       "tiles": 7
     }
   },
-  "totalUniqueWays": 3446199,
-  "totalTileEntries": 3465388,
+  "totalUniqueWays": 3450931,
+  "totalTileEntries": 3470136,
   "tileDegrees": 0.5,
   "authority": "ORS canonical maneuver; offline OSM lane enrichment only",
   "fallback": "existing live OSM/Overpass lane enrichment"
