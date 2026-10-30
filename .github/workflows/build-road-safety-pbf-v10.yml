@@ -91,7 +91,7 @@ jobs:
             nwr/highway=speed_camera nwr/enforcement=maxspeed \
             nwr/overtaking:hgv nwr/overtaking:hgv:forward nwr/overtaking:hgv:backward nwr/overtaking:hgv:conditional \
             nwr/hgv:overtaking nwr/hgv:overtaking:conditional nwr/hgv nwr/hgv:conditional \
-            nwr/overtaking nwr/overtaking:forward nwr/overtaking:backward nwr/overtaking:conditional \
+            nwr/overtaking=no nwr/overtaking:forward=no nwr/overtaking:backward=no nwr/overtaking:conditional \
             nwr/overtaking:forward:conditional nwr/overtaking:backward:conditional \
             nwr/maxheight nwr/maxheight:conditional nwr/maxweight nwr/maxweight:conditional \
             nwr/maxwidth nwr/maxwidth:conditional nwr/maxlength nwr/maxlength:conditional \
