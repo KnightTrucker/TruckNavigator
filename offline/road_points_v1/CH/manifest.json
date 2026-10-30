@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "country": "CH",
-  "generatedAt": "2026-10-24T06:11:23.232937+00:00",
-  "records": 17363,
+  "generatedAt": "2026-10-30T10:41:45.616932+00:00",
+  "records": 17365,
   "counts": {
-    "signals": 9362,
+    "signals": 9364,
     "level_crossings": 6971,
     "junctions": 986,
     "tolls": 44
@@ -28,7 +28,7 @@
     "94_16": {
       "file": "CH/94_16.json",
       "count": 2589,
-      "sha256": "fdc31ce553ad01d0ca40334c2b2103d520346478386048ba5815ff1534a09174"
+      "sha256": "f2f6a4026e5223b7ea0ff6e3d5d2620f80a992c9520c4af0b7c3554e7f106584"
     },
     "94_17": {
       "file": "CH/94_17.json",
@@ -37,8 +37,8 @@
     },
     "92_12": {
       "file": "CH/92_12.json",
-      "count": 2038,
-      "sha256": "b348658b487d2270ae0556134d50de5aac095e7e2fc591653701e7e6dc6277bf"
+      "count": 2040,
+      "sha256": "88bf0102227d638228bbf1eb58795bae2077e75a43a2121aad17752a73cbc5e5"
     },
     "94_15": {
       "file": "CH/94_15.json",
@@ -73,7 +73,7 @@
     "92_17": {
       "file": "CH/92_17.json",
       "count": 262,
-      "sha256": "830f7b027182ef832df94d2ac7149e0fe028a7ea1489e3b98a7196f0df2c1d70"
+      "sha256": "f1cc1c5f09145c5372ef80b134430a17b03ce8471439cde3a980a18791d5e25a"
     },
     "92_18": {
       "file": "CH/92_18.json",
