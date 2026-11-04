@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14171a">
+<title>ToraCB</title>
+<!--
+  ToraCB — CB dei camionisti via internet. by Andrea Zollet. Versione C-0.0.1
+  ============================================================================
+  CONFIGURAZIONE: incolla qui sotto i dati del tuo progetto Firebase
+  (Console Firebase > Impostazioni progetto > Le tue app > App web > Configurazione).
+
+  REGOLE da incollare in Firebase > Realtime Database > Regole:
+  {
+    "rules": {
+      "canali": { "$c": { "tx": {
+        ".read": "auth != null",
+        ".indexOn": ["t"],
+        "$m": {
+          ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('uid').val() === auth.uid || data.child('t').val() < now - 3600000)))",
+          ".validate": "!newData.exists() || (newData.child('a').isString() && newData.child('a').val().length < 200000)"
+        }
+      } } },
+      "presenza": { ".read": "auth != null", "$u": { ".write": "auth != null && auth.uid === $u" } }
+    }
+  }
+-->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "INCOLLA_QUI",
+  authDomain: "INCOLLA_QUI.firebaseapp.com",
+  databaseURL: "https://INCOLLA_QUI-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "INCOLLA_QUI",
+  appId: "INCOLLA_QUI"
+};
+const VERSIONE = "C-0.0.1";
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14171a; --plate:#22272b; --plate-edge:#0c0e10; --ink:#e7e9e4; --soft:#959b97;
+  --lcd:#1d1904; --lcd-glow:#0f0c02; --amber:#ffb21a; --dim:#4f4413;
+  --key:#353b40; --key-edge:#1a1e21; --tx:#d23a2a; --rx:#2f9a4c; --focus:#4b9bff;
+  --font:"Rajdhani","Arial Narrow",Arial,sans-serif; --mono:"Share Tech Mono","Courier New",monospace; --disp:"Orbitron",Arial,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:18px;line-height:1.35;-webkit-tap-highlight-color:transparent}
+body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:480px;margin:0 auto;padding:12px 14px 24px}
+header{display:flex;align-items:center;gap:10px;margin:2px 2px 12px}
+.z{width:38px;height:38px;border-radius:7px;border:2px solid var(--amber);display:grid;place-items:center;font-family:var(--disp);font-weight:800;color:var(--amber);font-size:20px}
+header h1{margin:0;font-family:var(--disp);font-size:22px;letter-spacing:.06em}
+header .ver{margin-left:auto;text-align:right;color:var(--soft);font-size:14px;line-height:1.15}
+.radio{background:var(--plate);border:1px solid var(--plate-edge);border-radius:14px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 0 var(--plate-edge)}
+button{font-family:var(--font);color:var(--ink);cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.lcd{background:radial-gradient(ellipse at 30% 20%,var(--lcd),var(--lcd-glow));border-radius:8px;padding:12px 14px;color:var(--amber);font-family:var(--mono);border:2px solid #000;min-height:170px}
+.lcd.off{color:var(--dim)}
+.lcd-top{display:flex;justify-content:space-between;font-size:15px;opacity:.85}
+.chrow{display:flex;align-items:flex-end;gap:10px;margin:4px 0 2px}
+.chlab{font-size:20px;padding-bottom:14px}
+.chnum{font-size:96px;line-height:.9;text-shadow:0 0 12px rgba(255,178,26,.35)}
+.lcd.off .chnum{text-shadow:none}
+.state{margin-left:auto;font-size:22px;padding-bottom:10px}
+.state b{padding:1px 7px;border:1.5px solid currentColor;border-radius:3px;font-weight:400}
+.who{font-size:18px;min-height:1.4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter{display:flex;gap:3px;margin-top:8px;height:14px}
+.meter i{flex:1;background:var(--dim);opacity:.4;border-radius:1px}
+.meter i.lit{background:var(--amber);opacity:1}
+.tuner{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:12px}
+.tuner button{background:var(--key);border:1px solid var(--key-edge);border-bottom-width:4px;border-radius:7px;font-size:24px;font-weight:700;padding:7px 0;position:relative}
+.tuner button[aria-pressed="true"]{border-bottom-width:1px;transform:translateY(3px);background:var(--amber);color:#2a2000;border-color:#9b6a00}
+.tuner .n{position:absolute;top:1px;right:5px;font-size:13px;font-weight:600;color:var(--rx)}
+.tuner button[aria-pressed="true"] .n{color:#2a2000}
+.ptt-zone{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.ptt{width:min(70vw,250px);aspect-ratio:1;border-radius:50%;border:none;font-family:var(--disp);font-size:30px;font-weight:800;letter-spacing:.06em;
+  background:radial-gradient(circle at 35% 30%,#e9544a,#a62316 70%);color:#fff;box-shadow:0 8px 0 #6e140b,0 12px 22px rgba(0,0,0,.4);
+  touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .06s,box-shadow .06s}
+.ptt small{display:block;font-family:var(--font);font-size:17px;font-weight:600;letter-spacing:0;opacity:.9}
+.ptt.live{transform:translateY(6px);box-shadow:0 2px 0 #6e140b,0 0 0 8px rgba(210,58,42,.4)}
+.ptt:disabled{filter:grayscale(1);opacity:.5}
+.mode{display:flex;border:1px solid var(--key-edge);border-radius:8px;overflow:hidden}
+.mode button{background:var(--key);border:none;padding:6px 14px;font-size:17px;font-weight:600}
+.mode button[aria-pressed="true"]{background:var(--ink);color:var(--plate)}
+.handle{display:flex;gap:8px;align-items:center;margin-top:14px}
+.handle label{font-size:17px;color:var(--soft)}
+.handle input{flex:1;min-width:0;font-family:var(--mono);font-size:18px;padding:8px 10px;border-radius:7px;border:1px solid var(--key-edge);background:var(--key);color:var(--ink);text-transform:uppercase}
+.power{width:100%;margin-top:12px;padding:14px;font-size:22px;font-weight:700;border-radius:10px;background:var(--rx);color:#fff;border:none;border-bottom:4px solid #1d6a32}
+.power.on{background:var(--key);border:1px solid var(--key-edge);border-bottom-width:4px;font-size:19px}
+.note{font-size:16px;color:var(--soft);margin:10px 2px 0;min-height:1.2em}
+.note.err{color:#ff6b5b}
+.log{margin-top:22px}
+.log h2{font-size:20px;margin:0 2px 8px;font-weight:600}
+.log ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--key)}
+.log li{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--key)}
+.log .nick{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log .meta{color:var(--soft);font-family:var(--mono);font-size:15px}
+.log button{background:var(--key);border:1px solid var(--key-edge);border-radius:6px;padding:4px 10px;font-size:16px;font-weight:600}
+.log .empty{color:var(--soft);padding:12px 2px}
+footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
+@media (prefers-reduced-motion:reduce){.ptt{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="z" aria-hidden="true">Z</div>
+    <h1>ToraCB</h1>
+    <div class="ver"><span id="net">non collegato</span><br><span id="ver"></span></div>
+  </header>
+
+  <div class="radio">
+    <div class="lcd off" id="lcd" aria-live="polite">
+      <div class="lcd-top"><span id="peers">—</span><span id="clock">--:--</span></div>
+      <div class="chrow">
+        <span class="chlab">CH</span><span class="chnum" id="chnum">01</span>
+        <span class="state"><b id="state">OFF</b></span>
+      </div>
+      <div class="who" id="who">Accendi la radio per entrare in canale</div>
+      <div class="meter" id="meter"></div>
+    </div>
+
+    <div class="tuner" id="tuner" role="group" aria-label="Canali"></div>
+
+    <div class="ptt-zone">
+      <button class="ptt" id="ptt" disabled aria-label="Premi per parlare">PTT<small id="pttHint">tieni premuto</small></button>
+      <div class="mode" role="group" aria-label="Modo pulsante">
+        <button id="mHold" aria-pressed="true">Tieni premuto</button>
+        <button id="mToggle" aria-pressed="false">Tocca e ritocca</button>
+      </div>
+    </div>
+
+    <div class="handle">
+      <label for="nick">Nominativo</label>
+      <input id="nick" maxlength="20" autocomplete="off" placeholder="LUPO DEL BRENNERO">
+    </div>
+    <button class="power" id="power">Accendi la radio</button>
+    <p class="note" id="note"></p>
+  </div>
+
+  <section class="log">
+    <h2 id="logTitle">Ultime chiamate sul canale 1</h2>
+    <ul id="log"><li class="empty">Nessuna chiamata recente.</li></ul>
+  </section>
+  <footer>by Andrea Zollet</footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const MAX_SEC = 30, KEEP_MIN = 30;
+  const LS = {
+    get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+    set(k, v){ try { localStorage.setItem(k, v); } catch {} }
+  };
+  $("ver").textContent = VERSIONE;
+
+  let ch = Math.min(10, Math.max(1, parseInt(LS.get("cb.ch", "1"), 10) || 1));
+  let mode = LS.get("cb.mode", "hold");
+  let on = false, fb = null, dbr = null, myId = null, presRef = null;
+  let chanRef = null, chanQuery = null, firstLoad = true, logItems = [], peers = {};
+  let ctx = null, stream = null, rec = null, chunks = [], recStart = 0, recTimer = null;
+  let queue = [], playing = false, analyser = null, micAn = null, wake = null;
+  const played = new Set();
+
+  const nickEl = $("nick");
+  nickEl.value = LS.get("cb.nick", "");
+  nickEl.addEventListener("input", () => { const p = nickEl.selectionStart; nickEl.value = nickEl.value.toUpperCase(); nickEl.setSelectionRange(p, p); });
+  nickEl.addEventListener("change", () => { LS.set("cb.nick", nick()); pushPresence(false); });
+  const nick = () => (nickEl.value.trim().toUpperCase() || "SENZA NOME").slice(0, 20);
+
+  for (let i = 1; i <= 10; i++) {
+    const b = document.createElement("button");
+    b.dataset.ch = i; b.setAttribute("aria-label", "Canale " + i);
+    b.innerHTML = `${i}<span class="n"></span>`;
+    b.onclick = () => tune(i);
+    $("tuner").appendChild(b);
+  }
+  for (let i = 0; i < 14; i++) $("meter").appendChild(document.createElement("i"));
+  const segs = [...$("meter").children];
+
+  function paintChannel(){
+    $("chnum").textContent = String(ch).padStart(2, "0");
+    $("logTitle").textContent = `Ultime chiamate sul canale ${ch}`;
+    [...$("tuner").children].forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.ch === ch)));
+  }
+  function setMode(m){
+    mode = m; LS.set("cb.mode", m);
+    $("mHold").setAttribute("aria-pressed", String(m === "hold"));
+    $("mToggle").setAttribute("aria-pressed", String(m === "toggle"));
+    $("pttHint").textContent = m === "hold" ? "tieni premuto" : "tocca per parlare";
+  }
+  $("mHold").onclick = () => setMode("hold");
+  $("mToggle").onclick = () => setMode("toggle");
+  setMode(mode); paintChannel();
+  setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("it-IT", {hour:"2-digit", minute:"2-digit"}); }, 1000);
+
+  const note = (t, err) => { $("note").textContent = t || ""; $("note").className = "note" + (err ? " err" : ""); };
+  const setState = (s, who) => { $("state").textContent = s; if (who !== undefined) $("who").textContent = who; };
+
+  // ---------- Firebase ----------
+  async function connect(){
+    if (dbr) return true;
+    if (!window.firebase || FIREBASE_CONFIG.apiKey === "INCOLLA_QUI") {
+      note("Manca la configurazione Firebase in cima al file.", true); return false;
+    }
+    try {
+      fb = firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+      const cred = await fb.auth().signInAnonymously();
+      myId = cred.user.uid;
+      dbr = fb.database();
+      dbr.ref(".info/connected").on("value", s => { $("net").textContent = s.val() ? "in rete" : "senza rete"; });
+      dbr.ref("presenza").on("value", s => { peers = s.val() || {}; paintPeers(); });
+      return true;
+    } catch (e) {
+      note("Collegamento a Firebase non riuscito: controlla configurazione e accesso anonimo.", true);
+      return false;
+    }
+  }
+  function pushPresence(tx){
+    if (!dbr || !on) return;
+    presRef = dbr.ref("presenza/" + myId);
+    presRef.onDisconnect().remove();
+    presRef.set({ ch, nick: nick(), tx: !!tx, t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+  }
+  function paintPeers(){
+    const counts = Array(11).fill(0); let talker = null;
+    for (const [uid, p] of Object.entries(peers)) {
+      const c = +p.ch; if (c >= 1 && c <= 10) counts[c]++;
+      if (c === ch && p.tx && uid !== myId) talker = String(p.nick || "QUALCUNO").slice(0, 20);
+    }
+    [...$("tuner").children].forEach(b => { const n = counts[+b.dataset.ch]; b.querySelector(".n").textContent = n || ""; });
+    $("peers").textContent = on ? `${counts[ch]} in canale` : "—";
+    if (on && talker && !playing && !rec) setState("OCC", `${talker} sta parlando…`);
+    else if (on && !playing && !rec && $("state").textContent === "OCC") setState("RX", "Canale libero");
+  }
+
+  function tune(n){
+    if (rec) return;
+    ch = n; LS.set("cb.ch", String(n)); paintChannel();
+    if (on) { subscribe(); pushPresence(false); beep(880, .05); }
+    paintPeers();
+  }
+  function subscribe(){
+    if (chanQuery) chanQuery.off();
+    queue = []; firstLoad = true; logItems = []; renderLog();
+    chanRef = dbr.ref(`canali/c${ch}/tx`);
+    chanQuery = chanRef.orderByChild("t").limitToLast(15);
+    chanQuery.once("value", s => {
+      s.forEach(c => { played.add(c.key); });
+      firstLoad = false;
+    });
+    chanQuery.on("value", s => {
+      const items = []; s.forEach(c => { items.push({ id: c.key, ...c.val() }); });
+      logItems = items.reverse(); renderLog();
+    }, () => note("Collegamento al canale interrotto. Spegni e riaccendi la radio.", true));
+    chanQuery.on("child_added", c => {
+      if (firstLoad || played.has(c.key)) { played.add(c.key); return; }
+      played.add(c.key);
+      const d = c.val(); if (d.uid === myId) return;
+      queue.push({ id: c.key, ...d }); pump();
+    });
+  }
+  function renderLog(){
+    const ul = $("log"); ul.textContent = "";
+    if (!logItems.length) { ul.innerHTML = '<li class="empty">Nessuna chiamata recente.</li>'; return; }
+    for (const m of logItems) {
+      const li = document.createElement("li");
+      const n = document.createElement("span"); n.className = "nick";
+      n.textContent = m.uid === myId ? "TU" : String(m.nick || "QUALCUNO").slice(0, 20);
+      const meta = document.createElement("span"); meta.className = "meta";
+      meta.textContent = `${new Date(m.t).toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})} ${Math.max(1, Math.round(m.dur || 0))}s`;
+      const b = document.createElement("button"); b.textContent = "Riascolta";
+      b.onclick = () => { if (on) { queue.push(m); pump(); } else note("Accendi la radio per riascoltare."); };
+      li.append(n, meta, b); ul.appendChild(li);
+    }
+  }
+
+  // ---------- Audio ----------
+  function beep(f, d, gain = .12){
+    if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = f; o.type = "square"; g.gain.value = gain;
+    o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime + d);
+  }
+  function roger(){ beep(1200, .07); setTimeout(() => beep(900, .09), 80); }
+  function squelch(ms = 120){
+    if (!ctx) return;
+    const len = Math.floor(ctx.sampleRate * ms / 1000), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * .25;
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter();
+    f.type = "bandpass"; f.frequency.value = 2200; s.buffer = buf; s.connect(f).connect(ctx.destination); s.start();
+  }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  function b64ToBuf(b64){ const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
+
+  async function pump(){
+    if (playing || !queue.length || !on || rec) return;
+    playing = true;
+    const m = queue.shift();
+    try {
+      const audio = await ctx.decodeAudioData(b64ToBuf(m.a));
+      squelch(); await wait(140);
+      setState("RX", m.uid === myId ? "TU" : String(m.nick || "QUALCUNO").slice(0, 20));
+      const src = ctx.createBufferSource(); src.buffer = audio;
+      const g = ctx.createGain(); g.gain.value = 1.4;
+      analyser = ctx.createAnalyser(); analyser.fftSize = 512;
+      src.connect(g).connect(analyser).connect(ctx.destination);
+      await new Promise(r => { src.onended = r; src.start(); });
+      roger(); await wait(200);
+    } catch { note("Una chiamata non si è potuta riprodurre su questo dispositivo.", true); }
+    analyser = null; playing = false;
+    setState("RX", "Canale libero"); paintPeers(); pump();
+  }
+  function meterLoop(){
+    let level = 0; const a = analyser || micAn;
+    if (a && (playing || rec)) {
+      const data = new Uint8Array(a.fftSize); a.getByteTimeDomainData(data);
+      let s = 0; for (const v of data) { const x = (v - 128) / 128; s += x * x; }
+      level = Math.min(1, Math.sqrt(s / data.length) * 4);
+    }
+    const lit = Math.round(level * segs.length);
+    segs.forEach((el, i) => el.classList.toggle("lit", i < lit));
+    requestAnimationFrame(meterLoop);
+  }
+  requestAnimationFrame(meterLoop);
+
+  // ---------- Trasmissione ----------
+  function pickMime(){
+    for (const m of ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4", "audio/webm"])
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+    return "";
+  }
+  async function startTx(){
+    if (!on || rec) return;
+    if (playing) { note("Aspetta la fine della chiamata in arrivo."); return; }
+    try {
+      if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch { note("Microfono non disponibile: consenti l’accesso al microfono.", true); return; }
+    const mime = pickMime();
+    try { rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 20000 } : undefined); }
+    catch { note("Questo browser non registra audio.", true); return; }
+    chunks = []; rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    rec.onstop = sendTx;
+    micAn = ctx.createAnalyser(); micAn.fftSize = 512; ctx.createMediaStreamSource(stream).connect(micAn);
+    beep(1000, .05); rec.start(); recStart = performance.now();
+    $("ptt").classList.add("live"); setState("TX", "Stai trasmettendo…"); pushPresence(true);
+    recTimer = setTimeout(stopTx, MAX_SEC * 1000); note("");
+  }
+  function stopTx(){
+    if (!rec || rec.state !== "recording") return;
+    clearTimeout(recTimer); rec.stop();
+    $("ptt").classList.remove("live"); pushPresence(false);
+  }
+  async function sendTx(){
+    const r = rec; rec = null; micAn = null;
+    const dur = (performance.now() - recStart) / 1000;
+    setState("RX", "Canale libero");
+    if (dur < 0.6) { note("Trasmissione troppo breve: tieni premuto mentre parli."); return; }
+    const blob = new Blob(chunks, { type: r.mimeType || "audio/webm" });
+    const a = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.readAsDataURL(blob); });
+    if (a.length >= 200000) { note("Trasmissione troppo lunga per essere inviata.", true); return; }
+    roger();
+    try {
+      const ref = chanRef.push(); played.add(ref.key);
+      await ref.set({ uid: myId, nick: nick(), t: firebase.database.ServerValue.TIMESTAMP, dur: Math.round(dur * 10) / 10, mime: blob.type, a });
+      prune();
+    } catch { note("Chiamata non inviata. Controlla la connessione.", true); }
+    pump();
+  }
+  async function prune(){
+    const cut = Date.now() - KEEP_MIN * 60000;
+    for (const m of logItems.filter(x => (x.uid === myId && x.t < cut) || x.t < Date.now() - 3700000)) {
+      try { await chanRef.child(m.id).remove(); } catch { /* non mio e non abbastanza vecchio */ }
+    }
+  }
+
+  const ptt = $("ptt");
+  ptt.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (mode === "hold") { ptt.setPointerCapture(e.pointerId); startTx(); }
+    else rec ? stopTx() : startTx();
+  });
+  ["pointerup", "pointercancel"].forEach(ev => ptt.addEventListener(ev, () => { if (mode === "hold") stopTx(); }));
+  ptt.addEventListener("contextmenu", e => e.preventDefault());
+  ptt.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); mode === "hold" ? startTx() : (rec ? stopTx() : startTx()); } });
+  ptt.addEventListener("keyup", e => { if ((e.key === " " || e.key === "Enter") && mode === "hold") stopTx(); });
+
+  // ---------- Accensione ----------
+  $("power").onclick = async () => {
+    if (!on) {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      await ctx.resume().catch(() => {});
+      note("Collegamento in corso…");
+      if (!(await connect())) return;
+      note("");
+      on = true; LS.set("cb.nick", nick());
+      $("lcd").classList.remove("off"); ptt.disabled = false;
+      $("power").textContent = "Spegni la radio"; $("power").classList.add("on");
+      setState("RX", "Canale libero"); subscribe(); pushPresence(false); squelch(250);
+      try { wake = await navigator.wakeLock?.request("screen"); } catch {}
+    } else {
+      stopTx(); on = false;
+      if (chanQuery) { chanQuery.off(); chanQuery = null; }
+      if (presRef) presRef.remove().catch(() => {});
+      queue = []; ptt.disabled = true;
+      $("lcd").classList.add("off"); setState("OFF", "Radio spenta");
+      $("power").textContent = "Accendi la radio"; $("power").classList.remove("on");
+      try { wake && wake.release(); } catch {} wake = null;
+    }
+    paintPeers();
+  };
+  document.addEventListener("visibilitychange", async () => {
+    if (on && document.visibilityState === "visible") {
+      ctx && ctx.resume().catch(() => {});
+      try { wake = await navigator.wakeLock?.request("screen"); } catch {}
+    }
+  });
+})();
+</script>
+</body>
+</html>
