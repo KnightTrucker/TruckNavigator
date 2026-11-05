@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#14171a">
 <title>ToraCB</title>
 <!--
-  ToraCB — CB dei camionisti via internet. by Andrea Zollet. Versione C-0.0.2
+  ToraCB — CB dei camionisti via internet. by Andrea Zollet. Versione C-0.0.3
   ============================================================================
   CONFIGURAZIONE: incolla qui sotto i dati del tuo progetto Firebase
   (Console Firebase > Impostazioni progetto > Le tue app > App web > Configurazione).
@@ -36,7 +36,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "560026118796",
   appId: "1:560026118796:web:cd9410c3e30a553eb7e9a9"
 };
-const VERSIONE = "C-0.0.2";
+const VERSIONE = "C-0.0.3";
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -105,6 +105,19 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-
 .log .meta{color:var(--soft);font-family:var(--mono);font-size:15px}
 .log button{background:var(--key);border:1px solid var(--key-edge);border-radius:6px;padding:4px 10px;font-size:16px;font-weight:600}
 .log .empty{color:var(--soft);padding:12px 2px}
+.online{margin-top:22px}
+.online h2{font-size:20px;margin:0 2px 8px;font-weight:600;display:flex;justify-content:space-between}
+.online h2 span{color:var(--soft);font-weight:500}
+.online ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--key)}
+.online li{border-bottom:1px solid var(--key)}
+.online li button{width:100%;display:flex;align-items:center;gap:10px;padding:9px 2px;background:none;border:none;text-align:left;font-size:18px}
+.online .dot{width:10px;height:10px;border-radius:50%;background:var(--rx);flex:none}
+.online .dot.tx{background:var(--tx);box-shadow:0 0 0 4px rgba(210,58,42,.3)}
+.online .nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.online .nm em{font-style:normal;font-weight:500;color:var(--soft)}
+.online .cc{font-family:var(--mono);font-size:16px;padding:2px 8px;border-radius:4px;background:var(--key)}
+.online li.same .cc{background:var(--amber);color:#2a2000}
+.online .empty{color:var(--soft);padding:12px 2px}
 footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
 @media (prefers-reduced-motion:reduce){.ptt{transition:none}}
 </style>
@@ -146,6 +159,11 @@ footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
     <p class="note" id="note"></p>
   </div>
 
+  <section class="online">
+    <h2>In rete <span id="onCount"></span></h2>
+    <ul id="online"><li class="empty">Accendi la radio per vedere chi è collegato.</li></ul>
+  </section>
+
   <section class="log">
     <h2 id="logTitle">Ultime chiamate sul canale 1</h2>
     <ul id="log"><li class="empty">Nessuna chiamata recente.</li></ul>
@@ -168,7 +186,7 @@ footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
   let on = false, fb = null, dbr = null, myId = null, presRef = null;
   let chanRef = null, chanQuery = null, firstLoad = true, logItems = [], peers = {};
   let ctx = null, stream = null, rec = null, chunks = [], recStart = 0, recTimer = null;
-  let queue = [], playing = false, analyser = null, micAn = null, wake = null;
+  let queue = [], playing = false, analyser = null, micAn = null, wake = null, wantTx = false;
   const played = new Set();
 
   const nickEl = $("nick");
@@ -239,8 +257,33 @@ footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
     }
     [...$("tuner").children].forEach(b => { const n = counts[+b.dataset.ch]; b.querySelector(".n").textContent = n || ""; });
     $("peers").textContent = on ? `${counts[ch]} in canale` : "—";
+    renderOnline();
     if (on && talker && !playing && !rec) setState("OCC", `${talker} sta parlando…`);
     else if (on && !playing && !rec && $("state").textContent === "OCC") setState("RX", "Canale libero");
+  }
+
+  function renderOnline(){
+    const ul = $("online"); ul.textContent = "";
+    if (!on) { $("onCount").textContent = ""; ul.innerHTML = '<li class="empty">Accendi la radio per vedere chi è collegato.</li>'; return; }
+    const list = Object.entries(peers)
+      .map(([uid, p]) => ({ uid, ch: +p.ch, nick: String(p.nick || "SENZA NOME").slice(0, 20), tx: !!p.tx }))
+      .filter(p => p.ch >= 1 && p.ch <= 10)
+      .sort((a, b) => (a.uid === myId ? -1 : b.uid === myId ? 1 : 0) || a.ch - b.ch || a.nick.localeCompare(b.nick));
+    $("onCount").textContent = list.length ? `${list.length} collegat${list.length === 1 ? "o" : "i"}` : "";
+    if (!list.length) { ul.innerHTML = '<li class="empty">Nessuno collegato.</li>'; return; }
+    for (const p of list) {
+      const li = document.createElement("li"); if (p.ch === ch) li.className = "same";
+      const b = document.createElement("button");
+      b.setAttribute("aria-label", `${p.nick}, canale ${p.ch}${p.uid === myId ? "" : ", tocca per sintonizzarti"}`);
+      const dot = document.createElement("span"); dot.className = "dot" + (p.tx ? " tx" : "");
+      const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = p.nick;
+      if (p.uid === myId) { const e = document.createElement("em"); e.textContent = " (tu)"; nm.appendChild(e); }
+      if (p.tx) { const e = document.createElement("em"); e.textContent = " parla…"; nm.appendChild(e); }
+      const cc = document.createElement("span"); cc.className = "cc"; cc.textContent = "CH " + String(p.ch).padStart(2, "0");
+      b.append(dot, nm, cc);
+      if (p.uid !== myId) b.onclick = () => tune(p.ch);
+      li.appendChild(b); ul.appendChild(li);
+    }
   }
 
   function tune(n){
@@ -345,6 +388,8 @@ footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
     try {
       if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch { note("Microfono non disponibile: consenti l’accesso al microfono.", true); return; }
+    if (mode === "hold" && !wantTx) { note("Microfono pronto: ora tieni premuto e parla."); return; }
+    if (rec) return;
     const mime = pickMime();
     try { rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 20000 } : undefined); }
     catch { note("Questo browser non registra audio.", true); return; }
@@ -386,13 +431,13 @@ footer{text-align:center;color:var(--soft);font-size:15px;margin-top:22px}
   const ptt = $("ptt");
   ptt.addEventListener("pointerdown", e => {
     e.preventDefault();
-    if (mode === "hold") { ptt.setPointerCapture(e.pointerId); startTx(); }
+    if (mode === "hold") { wantTx = true; ptt.setPointerCapture(e.pointerId); startTx(); }
     else rec ? stopTx() : startTx();
   });
-  ["pointerup", "pointercancel"].forEach(ev => ptt.addEventListener(ev, () => { if (mode === "hold") stopTx(); }));
+  ["pointerup", "pointercancel"].forEach(ev => ptt.addEventListener(ev, () => { if (mode === "hold") { wantTx = false; stopTx(); } }));
   ptt.addEventListener("contextmenu", e => e.preventDefault());
-  ptt.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); mode === "hold" ? startTx() : (rec ? stopTx() : startTx()); } });
-  ptt.addEventListener("keyup", e => { if ((e.key === " " || e.key === "Enter") && mode === "hold") stopTx(); });
+  ptt.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); if (mode === "hold") wantTx = true; mode === "hold" ? startTx() : (rec ? stopTx() : startTx()); } });
+  ptt.addEventListener("keyup", e => { if ((e.key === " " || e.key === "Enter") && mode === "hold") { wantTx = false; stopTx(); } });
 
   // ---------- Accensione ----------
   $("power").onclick = async () => {
