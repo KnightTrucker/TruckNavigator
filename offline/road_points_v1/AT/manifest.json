@@ -1,24 +1,24 @@
 {
   "schemaVersion": 1,
   "country": "AT",
-  "generatedAt": "2026-10-30T10:51:22.025725+00:00",
-  "records": 20793,
+  "generatedAt": "2026-11-06T11:13:36.396456+00:00",
+  "records": 20795,
   "counts": {
-    "signals": 10941,
-    "level_crossings": 8308,
+    "signals": 10945,
+    "level_crossings": 8306,
     "junctions": 1326,
     "tolls": 218
   },
   "tiles": {
     "96_32": {
       "file": "AT/96_32.json",
-      "count": 6527,
-      "sha256": "6ea4a6cde5aee51b754fbebd9b73cd9e552c92d0a71051e793be989f4b9cabe5"
+      "count": 6528,
+      "sha256": "c44bb72c669625754c69818d7d9a8752df63461f73a54bda0c40cc41f5a533a9"
     },
     "96_31": {
       "file": "AT/96_31.json",
-      "count": 721,
-      "sha256": "297d833aa7ee2a5c87e54e946c050f2ed2d934967842ffb577bd98bffeb0e398"
+      "count": 720,
+      "sha256": "ed0e617f1803859da7e377ca375caeae801f3c970d69a58058ec30eadf6f0858"
     },
     "96_30": {
       "file": "AT/96_30.json",
@@ -33,7 +33,7 @@
     "96_28": {
       "file": "AT/96_28.json",
       "count": 2098,
-      "sha256": "2f4d2091703febc6b9cd143b53b248dcb9e46573d43088702495c5a43d50ee60"
+      "sha256": "a5fed8906e0b61292cdd82b9ffe09fb59ee6c4a9e7b578272f2aae3af3c84fd3"
     },
     "96_27": {
       "file": "AT/96_27.json",
@@ -97,8 +97,8 @@
     },
     "94_30": {
       "file": "AT/94_30.json",
-      "count": 1428,
-      "sha256": "d85923f8de1a31ef7fa6d563901d917470c730573eaaa660354b99894f6ecb22"
+      "count": 1431,
+      "sha256": "e8ba28317cbbe127a58f69b29830d7baa08e5da858c747e865afdb5049cda835"
     },
     "94_23": {
       "file": "AT/94_23.json",
@@ -128,7 +128,7 @@
     "94_27": {
       "file": "AT/94_27.json",
       "count": 169,
-      "sha256": "abfaf446fb0ba986edfc5060bd9019baa1d2ca3d36f0495e97dbcc443c6cc405"
+      "sha256": "12037270ec2ea3477a714488ded7d722bc7f78cfde1b0ad81f51daad9c042cbe"
     },
     "93_26": {
       "file": "AT/93_26.json",
@@ -197,8 +197,8 @@
     },
     "95_24": {
       "file": "AT/95_24.json",
-      "count": 66,
-      "sha256": "f2bb316f51e52481487c1cd1a1f71002379dc61510bc46428c87055cc19ca833"
+      "count": 65,
+      "sha256": "7eac56a7402f5185fb92cd05ef6ba374f127005f581e162dfe22b3610ada2182"
     },
     "94_25": {
       "file": "AT/94_25.json",
