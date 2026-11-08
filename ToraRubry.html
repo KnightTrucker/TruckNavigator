@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12141C">
+<title>ToraRubry</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#12141C;--s1:#1B1E2B;--s2:#242839;--bd:#30354F;--acc:#E84042;--txt:#E2E4EC;--mut:#8892AA;--grn:#22c55e;--ylw:#f59e0b;--blu:#4F9EF8;--ff:'Inter',system-ui,sans-serif;--fd:'Rajdhani',sans-serif;--fm:'IBM Plex Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font:13.5px/1.45 var(--ff)}
+.app{display:flex;flex-direction:column;height:100%}
+header{flex:none;display:flex;align-items:center;gap:10px;background:var(--s1);border-bottom:1px solid var(--bd);padding:6px 12px;padding-top:max(6px,env(safe-area-inset-top))}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.brand svg{width:38px;height:38px;flex:none;filter:drop-shadow(0 2px 6px #000a)}
+.brand b{display:block;font:700 22px/1 var(--fd);letter-spacing:.5px}
+.brand small{display:block;font-size:10px;color:var(--mut);margin-top:2px}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 11px;cursor:pointer;font-weight:700;font-size:12px;white-space:nowrap}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}.btn.ok{border-color:var(--grn);color:#86efac}.btn.d{border-color:#7f1d1d;color:#fca5a5}
+.main{flex:1;min-height:0;display:flex;flex-direction:column}
+#map{flex:1 1 45%;min-height:0;background:#050b12}
+.panel{flex:1 1 55%;min-height:0;display:flex;flex-direction:column;background:var(--bg);border-top:1px solid var(--bd)}
+@media(min-width:900px){.main{flex-direction:row}.panel{order:-1;flex:none;width:410px;border-top:0;border-right:1px solid var(--bd)}#map{flex:1}}
+.tools{flex:none;padding:8px;display:grid;gap:7px;background:var(--s1);border-bottom:1px solid var(--bd)}
+.row{display:flex;gap:6px;align-items:center}
+input[type=search],input[type=text],select,textarea{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px 10px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+textarea{min-height:64px;resize:vertical}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg);cursor:pointer;user-select:none;font-weight:700;font-size:12px}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip.off{opacity:.38}
+#fx{display:none;grid-template-columns:1fr 1fr;gap:6px}#fx.on{display:grid}
+.cnt{font:11px var(--fm);color:var(--mut)}
+#list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.it{display:grid;grid-template-columns:14px 1fr auto auto;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--s2);cursor:pointer}
+.it.sel{background:var(--s2)}
+.dot{width:12px;height:12px;border-radius:50%}
+.nm b{display:block;font-size:14px}.nm small{color:var(--mut);font-size:11px}
+.km{font:11px var(--fm);color:#86efac}
+.bd{display:inline-block;margin:3px 4px 0 0;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:700;background:var(--s2);border:1px solid var(--bd)}
+.bd.g{background:#14532d;border-color:#22c55e}.bd.y{background:#78350f;border-color:#f59e0b}.bd.r{background:#7f1d1d;border-color:#ef4444}
+.ic{background:none;border:0;font-size:17px;padding:6px;cursor:pointer}
+.empty{padding:26px;text-align:center;color:var(--mut)}
+.ban{flex:none;background:#78350f;color:#fde68a;padding:6px 10px;font-size:12px;display:none}.ban.on{display:block}
+.ov{position:fixed;inset:0;z-index:2000;background:#000b;display:none;align-items:flex-end;justify-content:center}.ov.on{display:flex}.ov.hid{display:none}
+@media(min-width:700px){.ov{align-items:center}}
+.card{width:min(560px,100%);max-height:94dvh;overflow-y:auto;background:var(--s1);border:1px solid var(--bd);border-radius:16px 16px 0 0;padding:14px;display:grid;gap:9px}
+@media(min-width:700px){.card{border-radius:16px}}
+.card h2{font:700 20px var(--fd)}
+label.l{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:700;display:block;margin-bottom:3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sw{display:flex;gap:6px}.sw button{width:34px;height:30px;border-radius:7px;border:2px solid var(--bd);cursor:pointer}.sw button.on{border-color:#fff}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:3000;background:#000e;border:1px solid var(--bd);padding:9px 14px;border-radius:10px;display:none;max-width:90vw;font-size:12.5px}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--s1);color:var(--txt)}
+.pn{font:700 16px var(--fd)}.pa{display:flex;gap:6px;margin-top:8px}.pa a,.pa button{flex:1;text-align:center;text-decoration:none;color:#fff;background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 64 72"><path d="M32 3 59 12v24c0 17-12 28-27 33C17 64 5 53 5 36V12z" fill="#1B1E2B" stroke="#E84042" stroke-width="3"/><path d="M19 22h26L23 50h22" fill="none" stroke="#E2E4EC" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <div><b>ToraRubry</b><small>by Andrea Zollet</small></div>
+  </div>
+  <button class="btn" id="bDrive">☁ Collega Drive</button>
+  <button class="btn p" id="bNew">＋ CLIENTE</button>
+</header>
+<div class="ban" id="ban"></div>
+<div class="main">
+  <div id="map"></div>
+  <div class="panel">
+    <div class="tools">
+      <div class="row"><input type="search" id="q" placeholder="Cerca cliente, città, note…"><button class="btn" id="bFx">⚙ Filtri</button></div>
+      <div class="chips" id="chT"></div>
+      <div id="fx">
+        <select id="fN"></select><select id="fR"></select>
+        <select id="fO"><option value="">Operazione: tutte</option><option>CARICO</option><option>SCARICO</option><option>ENTRAMBI</option></select>
+        <select id="fM"><option value="">Merce: tutti i colori</option><option value="verde">🟢 Leggera</option><option value="giallo">🟡 Media</option><option value="rosso">🔴 Pesante</option></select>
+        <select id="fP"><option value="">Parcheggio: tutti</option><option value="PARK">PARK</option><option value="NO PARK">NO PARK</option></select>
+        <select id="fK"><option value="0">Distanza: ovunque</option><option>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select>
+        <button class="btn" id="bRst">Azzera filtri</button><button class="btn" id="bFit">🗺 Mostra filtrati</button>
+      </div>
+      <div class="row" style="justify-content:space-between"><span class="cnt" id="cnt"></span><span class="row"><button class="btn" id="bMe">🎯 Io</button><button class="btn" id="bBk">⬇ Backup</button></span></div>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+</div>
+
+<div class="ov" id="ov"><div class="card">
+  <h2 id="mt">Cliente</h2>
+  <div><label class="l">Cliente *</label><input type="text" id="fc"></div>
+  <div><label class="l">Tipo</label><div class="chips" id="chE"></div></div>
+  <div class="g2"><div><label class="l">Città</label><input type="text" id="fcit" style="text-transform:uppercase"></div>
+  <div><label class="l">Nazione</label><select id="fn"></select></div></div>
+  <div id="rg"><label class="l" id="rgl">Dipartimento / Provincia / Cantone</label><input type="text" id="fr" style="text-transform:uppercase"></div>
+  <div><label class="l">Posizione GPS (lat, lng)</label><input type="text" id="fg" placeholder="45.123456, 9.123456">
+    <div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn" id="gMe">📡 Mia posizione</button><button class="btn" id="gPick">📍 Scegli sulla mappa</button></div>
+    <div class="row" style="margin-top:6px"><input type="text" id="fa" placeholder="Cerca indirizzo o azienda…"><button class="btn" id="gAd">CERCA</button></div></div>
+  <div id="ex" style="display:none;gap:9px">
+    <div><label class="l">Operazione</label><div class="chips" id="chO"></div></div>
+    <div><label class="l">Metodo</label><div class="chips" id="chMe"></div></div>
+    <div><label class="l">Merce</label><div class="row"><input type="text" id="fm"><div class="sw" id="swC"></div></div></div>
+    <div><label class="l">Parcheggio</label><div class="chips" id="chP"></div></div>
+  </div>
+  <div><label class="l">Note</label><textarea id="fno"></textarea></div>
+  <div class="row"><button class="btn" id="mX" style="flex:1">Annulla</button><button class="btn p" id="mS" style="flex:2">💾 Salva</button></div>
+</div></div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),LSK='distributori_v1';
+const COL={verde:'#22c55e',blu:'#4F9EF8',giallo:'#f59e0b'},NM={verde:'Azienda',blu:'Distributore',giallo:'Altro'};
+const MC={verde:'g',giallo:'y',rosso:'r'},NAZ='AT BE BG CH CZ DE DK ES FI FR GB GR HR HU IT LT LU LV NL NO PL PT RO RS SE SI SK TR UA'.split(' ');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tp=d=>d.tipo==='verde'||d.tipo==='giallo'?d.tipo:'blu';
+const reg=d=>d.nazione==='FR'?d.dipartimento:d.nazione==='IT'?d.provincia:d.nazione==='CH'?d.cantone:'';
+function ll(d){const n=String(d.gps||'').match(/-?\d+(?:[.,]\d+)?/g);if(!n||n.length<2)return null;const a=+n[0].replace(',','.'),b=+n[1].replace(',','.');return isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180?{lat:a,lng:b}:null}
+function dist(a,b){const R=6371000,r=Math.PI/180,x=Math.sin((b.lat-a.lat)*r/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin((b.lng-a.lng)*r/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+const kmT=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km';
+let _t;function toast(m){const e=$('toast');e.textContent=m;e.style.display='block';clearTimeout(_t);_t=setTimeout(()=>e.style.display='none',3200)}
+
+let DB=[];try{DB=JSON.parse(localStorage.getItem(LSK)||'[]')||[]}catch(e){}
+let me=null,acc=0,map,markers={},meMk,meCr,sel=null,editId=null,pick=false,live=false;
+const F={q:'',tipi:{verde:1,blu:1,giallo:1},naz:'',reg:'',op:'',mc:'',pk:'',km:0};
+
+/* ── Google Drive: stesso file e stesso client di ToraNavy ───────────── */
+const G={cid:'239044648260-dpn2l35dhjk1md1okn8nc7fob7fqnvrq.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/drive.file',name:'Torakike_Navy.json',
+ tok:null,tc:null,fid:localStorage.getItem('torakike_drive_file_id'),
+ auth(prompt){return new Promise((res,rej)=>{if(!window.google||!google.accounts)return rej(new Error('Google non pronto, riprova tra un attimo'));
+  this.tc=this.tc||google.accounts.oauth2.initTokenClient({client_id:this.cid,scope:this.scope,callback:r=>{r&&r.access_token?(this.tok=r.access_token,res()):rej(new Error('Accesso negato'))},error_callback:e=>rej(new Error('Accesso Google annullato'))});
+  this.tc.requestAccessToken({prompt:prompt})})},
+ async f(url,o){o=o||{};o.headers=Object.assign({Authorization:'Bearer '+this.tok},o.headers||{});let r=await fetch(url,o);
+  if(r.status===401){await this.auth('');o.headers.Authorization='Bearer '+this.tok;r=await fetch(url,o)}
+  if(!r.ok)throw new Error('Drive '+r.status);return r},
+ async find(){const A='https://www.googleapis.com/drive/v3/files';
+  if(this.fid){try{const j=await(await this.f(A+'/'+this.fid+'?fields=id,trashed')).json();if(!j.trashed)return}catch(e){}}
+  const q=encodeURIComponent("name='"+this.name+"' and trashed=false");
+  const j=await(await this.f(A+'?q='+q+'&spaces=drive&fields=files(id)&orderBy=modifiedTime%20desc&pageSize=5')).json();
+  if(!j.files||!j.files.length)throw new Error('Archivio ToraNavy non trovato su Drive: apri prima ToraNavy e collega Drive');
+  this.fid=j.files[0].id;localStorage.setItem('torakike_drive_file_id',this.fid)},
+ async read(){const t=await(await this.f('https://www.googleapis.com/drive/v3/files/'+this.fid+'?alt=media')).text();let j=t?JSON.parse(t):{};if(Array.isArray(j))j={db:j};if(!j||typeof j!=='object')j={};return j},
+ /* rilegge il file, cambia SOLO "db" e lascia intatto tutto il resto (viaggi, veicoli, report) */
+ async mutate(fn){const j=await this.read(),old=Array.isArray(j.db)?j.db:[];bk(old);j.db=fn(old.slice());j.savedAt=new Date().toISOString();
+  await this.f('https://www.googleapis.com/upload/drive/v3/files/'+this.fid+'?uploadType=media',{method:'PATCH',headers:{'Content-Type':'application/json; charset=UTF-8'},body:JSON.stringify(j,null,2)});return j.db},
+ async load(){const j=await this.read();DB=Array.isArray(j.db)?j.db:[];cache();}
+};
+function cache(){try{localStorage.setItem(LSK,JSON.stringify(DB))}catch(e){}}
+function bk(db){try{const a=JSON.parse(localStorage.getItem('torarubry_bk')||'[]');a.unshift({t:Date.now(),db});localStorage.setItem('torarubry_bk',JSON.stringify(a.slice(0,3)))}catch(e){}}
+function ui(){const c=!!G.tok;$('bDrive').textContent=c?'☁ Drive ✓':'☁ Collega Drive';$('bDrive').className='btn'+(c?' ok':'');
+ const b=$('ban');b.textContent='Drive non collegato: puoi vedere i clienti salvati, ma per modificarli collega Drive.';b.className='ban'+(c?'':' on');setTimeout(()=>map&&map.invalidateSize(),50)}
+async function connect(){try{toast('Collego Google Drive…');await G.auth('');await G.find();await G.load();localStorage.setItem('rubry_drive','1');ui();render(true);toast('Sincronizzati '+DB.length+' clienti.')}catch(e){G.tok=null;ui();toast(e.message||'Errore Drive')}}
+async function op(fn,ok){if(!G.tok){toast('Collega prima Drive.');return false}
+ try{await G.find();DB=await G.mutate(fn);cache();render();toast(ok);return true}catch(e){toast('Salvataggio non riuscito: '+(e.message||e));return false}}
+
+/* ── Filtri ──────────────────────────────────────────────────────────── */
+function flt(d){const x=F;if(!x.tipi[tp(d)])return false;if(x.naz&&d.nazione!==x.naz)return false;if(x.reg&&reg(d)!==x.reg)return false;
+ if(x.op&&d.operazione!==x.op)return false;if(x.mc&&d.merceColore!==x.mc)return false;if(x.pk&&d.parcheggio!==x.pk)return false;
+ if(x.q&&![d.cliente,d.citta,d.nazione,reg(d),d.merce,d.note,d.indirizzo].join(' ').toLowerCase().includes(x.q))return false;
+ if(x.km&&me){const p=ll(d);if(!p||dist(me,p)>x.km*1000)return false}return true}
+function fillSel(){const ns=[...new Set(DB.map(d=>d.nazione).filter(Boolean))].sort();
+ $('fN').innerHTML='<option value="">Nazione: tutte</option>'+ns.map(n=>'<option'+(n===F.naz?' selected':'')+'>'+esc(n)+'</option>').join('');
+ const rs=[...new Set(DB.filter(d=>!F.naz||d.nazione===F.naz).map(reg).filter(Boolean))].sort();
+ $('fR').innerHTML='<option value="">Regione: tutte</option>'+rs.map(n=>'<option'+(n===F.reg?' selected':'')+'>'+esc(n)+'</option>').join('')}
+
+/* ── Mappa ───────────────────────────────────────────────────────────── */
+function icon(c){return L.divIcon({className:'',html:'<div style="width:28px;height:28px;background:#1B1E2B;border:2.5px solid '+c+';border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;color:'+c+';box-shadow:0 0 8px '+c+'66">&#9679;</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-14]})}
+function initMap(){map=L.map('map',{zoomControl:true}).setView([45.8,8.6],6);
+ const sat=L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'}),
+  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}),
+  L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]).addTo(map);
+ const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+ L.control.layers({'Satellite + nomi':sat,'Stradale':osm},{},{collapsed:true}).addTo(map);
+ map.on('click',e=>{if(pick){pick=false;$('ov').classList.remove('hid');setGps(e.latlng.lat,e.latlng.lng)}})}
+function popup(d){const p=ll(d),r=reg(d);return '<div class="pn">'+esc(d.cliente||'--')+'</div><div style="color:#8892AA;font-size:11px">'+esc(String(d.citta||'').toUpperCase())+(d.nazione?' · '+esc(d.nazione)+(r?'-'+esc(r):''):'')+'</div>'+badges(d)+(d.note?'<div style="margin-top:5px;font-size:11.5px">'+esc(d.note)+'</div>':'')+
+ '<div class="pa"><button onclick="edt(\''+esc(d.id)+'\')">✏️ Modifica</button><a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'">➤ Naviga</a></div>'}
+function badges(d){if(tp(d)!=='verde')return '';let b='';if(d.operazione)b+='<span class="bd">'+(d.operazione==='CARICO'?'↑':d.operazione==='SCARICO'?'↓':'↕')+' '+esc(d.operazione)+'</span>';
+ (d.metodo||[]).forEach(m=>b+='<span class="bd">'+esc(m)+'</span>');if(d.merce)b+='<span class="bd '+(MC[d.merceColore]||'')+'">'+esc(d.merce)+'</span>';
+ if(d.parcheggio)b+='<span class="bd '+(d.parcheggio==='PARK'?'g':'r')+'">P '+esc(d.parcheggio)+'</span>';return b?'<div>'+b+'</div>':''}
+
+/* ── Render ──────────────────────────────────────────────────────────── */
+function render(fit){fillSel();
+ let L2=DB.filter(flt).map(d=>({d,p:ll(d)}));L2.forEach(o=>o.m=me&&o.p?dist(me,o.p):NaN);
+ L2.sort((a,b)=>me&&(isFinite(a.m)||isFinite(b.m))?(isFinite(a.m)?a.m:1e12)-(isFinite(b.m)?b.m:1e12):String(a.d.cliente||'').localeCompare(String(b.d.cliente||''),'it'));
+ $('cnt').textContent=L2.length+' di '+DB.length+' clienti';
+ $('list').innerHTML=L2.length?L2.slice(0,400).map(o=>{const d=o.d,r=reg(d),c=COL[tp(d)];return '<div class="it'+(sel===d.id?' sel':'')+'" data-id="'+esc(d.id)+'"><span class="dot" style="background:'+c+';box-shadow:0 0 6px '+c+'88"></span><div class="nm"><b>'+esc(d.cliente||'(senza nome)')+'</b><small>'+esc(String(d.citta||'').toUpperCase())+(d.nazione?' · '+esc(d.nazione)+(r?'-'+esc(r):''):'')+(o.p?'':' · senza GPS')+'</small>'+badges(d)+'</div><span class="km">'+(isFinite(o.m)?kmT(o.m):'')+'</span><span><button class="ic" data-a="e">✏️</button><button class="ic" data-a="x">🗑</button></span></div>'}).join(''):'<div class="empty">Nessun cliente con questi filtri.</div>';
+ const keep={},bounds=[];
+ L2.forEach(o=>{if(!o.p)return;const id=String(o.d.id);keep[id]=1;bounds.push([o.p.lat,o.p.lng]);const c=COL[tp(o.d)];
+  if(!markers[id]){markers[id]=L.marker([o.p.lat,o.p.lng],{icon:icon(c)}).addTo(map);markers[id].on('click',()=>{sel=id;markers[id].setPopupContent(popup(o.d));render()})}
+  else{markers[id].setLatLng([o.p.lat,o.p.lng]).setIcon(icon(c))}
+  markers[id].bindPopup(popup(o.d))});
+ Object.keys(markers).forEach(id=>{if(!keep[id]){map.removeLayer(markers[id]);delete markers[id]}});
+ if((fit||F._fit)&&bounds.length){F._fit=0;if(me&&!fit)bounds.push([me.lat,me.lng]);try{map.fitBounds(bounds,{padding:[40,40],maxZoom:13})}catch(e){}}}
+
+/* ── Posizione ───────────────────────────────────────────────────────── */
+function locate(){if(!navigator.geolocation||live)return;live=true;
+ navigator.geolocation.watchPosition(p=>{const first=!me;me={lat:p.coords.latitude,lng:p.coords.longitude};acc=p.coords.accuracy;
+  if(!meMk){meMk=L.circleMarker([me.lat,me.lng],{radius:9,color:'#fff',weight:3,fillColor:'#38bdf8',fillOpacity:1,interactive:false}).addTo(map);meCr=L.circle([me.lat,me.lng],{radius:acc,color:'#38bdf8',weight:1,fillOpacity:.1,interactive:false}).addTo(map)}
+  else{meMk.setLatLng([me.lat,me.lng]);meCr.setLatLng([me.lat,me.lng]).setRadius(acc)}
+  if(first)F._fit=1;if(first||!locate.t||Date.now()-locate.t>15000){locate.t=Date.now();render()}},
+ ()=>toast('GPS non disponibile'),{enableHighAccuracy:true,maximumAge:10000,timeout:30000})}
+
+/* ── Scheda cliente ──────────────────────────────────────────────────── */
+let eTipo='blu',eOp='',eMet=[],eMC='none',ePk='';
+function chipSet(id,items,get,set,multi){$(id).innerHTML=items.map(([v,l,c])=>'<span class="chip'+((multi?get().includes(v):get()===v)?'':' off')+'" data-v="'+esc(v)+'">'+(c?'<i style="background:'+c+'"></i>':'')+esc(l)+'</span>').join('');
+ $(id).onclick=e=>{const s=e.target.closest('.chip');if(!s)return;const v=s.dataset.v;if(multi){const a=get();set(a.includes(v)?a.filter(x=>x!==v):a.concat(v))}else set(get()===v&&id!=='chE'?'':v);paint()}}
+function paint(){chipSet('chE',[['verde','Azienda',COL.verde],['blu','Distributore',COL.blu],['giallo','Altro',COL.giallo]],()=>eTipo,v=>eTipo=v);
+ chipSet('chO',[['CARICO','↑ CARICO'],['SCARICO','↓ SCARICO'],['ENTRAMBI','↕ ENTRAMBI']],()=>eOp,v=>eOp=v);
+ chipSet('chMe',[['LATO','LATO'],['RIBALTA','RIBALTA'],['PORTE','PORTE'],['CARROPONTE','CARROPONTE']],()=>eMet,v=>eMet=v,true);
+ chipSet('chP',[['PARK','P PARK',COL.verde],['NO PARK','P NO PARK','#ef4444']],()=>ePk,v=>ePk=v);
+ $('swC').innerHTML=[['none','#242839'],['verde','#22c55e'],['giallo','#f59e0b'],['rosso','#ef4444']].map(([v,c])=>'<button data-v="'+v+'" class="'+(eMC===v?'on':'')+'" style="background:'+c+'"></button>').join('');
+ $('swC').onclick=e=>{const b=e.target.closest('button');if(b){eMC=b.dataset.v;paint()}};
+ $('ex').style.display=eTipo==='verde'?'grid':'none';
+ const n=$('fn').value;$('rgl').textContent=n==='FR'?'Dipartimento (es. 69)':n==='IT'?'Provincia (es. MI)':n==='CH'?'Cantone (es. TI)':'Regione (solo FR, IT, CH)';$('rg').style.display=['FR','IT','CH'].includes(n)?'block':'none'}
+function setGps(a,b){$('fg').value=(+a).toFixed(6)+', '+(+b).toFixed(6)}
+function openForm(d){editId=d?d.id:null;d=d||{};$('mt').textContent=editId?'Modifica cliente':'Nuovo cliente';
+ $('fn').innerHTML='<option value="">--</option>'+NAZ.map(n=>'<option>'+n+'</option>').join('');
+ $('fc').value=d.cliente||'';$('fcit').value=String(d.citta||'').toUpperCase();$('fn').value=d.nazione||'';$('fr').value=reg(d)||'';$('fg').value=d.gps||'';$('fa').value='';$('fno').value=d.note||'';$('fm').value=d.merce||'';
+ eTipo=editId?tp(d):'blu';eOp=d.operazione||'';eMet=(d.metodo||[]).slice();eMC=d.merceColore||'none';ePk=d.parcheggio||'';paint();$('ov').classList.add('on');$('ov').classList.remove('hid')}
+window.edt=id=>{const d=DB.find(x=>String(x.id)===String(id));if(d){map.closePopup();openForm(d)}};
+async function save(){const nome=$('fc').value.trim();if(!nome){$('fc').style.borderColor='#ef4444';return toast('Il nome del cliente è obbligatorio.')}
+ const g=$('fg').value.trim(),n=$('fn').value,r=$('fr').value.trim().toUpperCase();
+ if(g&&!ll({gps:g}))return toast('Coordinate non valide: usa "lat, lng".');
+ const nd={cliente:nome,tipo:eTipo,citta:$('fcit').value.trim().toUpperCase(),nazione:n,dipartimento:n==='FR'?r:'',provincia:n==='IT'?r:'',cantone:n==='CH'?r:'',gps:g,note:$('fno').value.trim()};
+ if(eTipo==='verde')Object.assign(nd,{operazione:eOp,metodo:eMet.slice(),merce:$('fm').value.trim(),merceColore:eMC,parcheggio:ePk});
+ const id=editId||(Date.now().toString(36)+Math.random().toString(36).slice(2,7)),isNew=!editId;
+ const ok=await op(db=>{const i=db.findIndex(x=>String(x.id)===String(id));if(i<0)db.push(Object.assign({id},nd));else db[i]=Object.assign({},db[i],nd);return db},isNew?'Cliente aggiunto.':'Cliente aggiornato.');
+ if(ok){$('ov').classList.remove('on');sel=id;const p=ll(nd);if(p){F._fit=0;map.setView([p.lat,p.lng],15)}}}
+async function del(id){const d=DB.find(x=>String(x.id)===String(id));if(!d||!confirm('Eliminare "'+(d.cliente||'')+'"?\nL’operazione non è reversibile.'))return;
+ await op(db=>db.filter(x=>String(x.id)!==String(id)),'Cliente eliminato.')}
+async function addr(){const q=$('fa').value.trim();if(q.length<3)return;toast('Cerco…');
+ try{const j=await(await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&accept-language=it&q='+encodeURIComponent(q))).json();if(!j.length)return toast('Nessun risultato.');
+  const x=j[0],a=x.address||{};setGps(x.lat,x.lon);const c=(a.city||a.town||a.village||a.municipality||'').toUpperCase(),cc=String(a.country_code||'').toUpperCase();
+  if(c&&!$('fcit').value)$('fcit').value=c;if(NAZ.includes(cc)&&!$('fn').value)$('fn').value=cc;if(!$('fc').value)$('fc').value=String(x.name||'');paint();toast('Posizione trovata.')}catch(e){toast('Ricerca non disponibile (offline?).')}}
+
+/* ── Eventi ──────────────────────────────────────────────────────────── */
+function bind(){
+ $('bDrive').onclick=connect;$('bNew').onclick=()=>openForm(null);$('mX').onclick=()=>$('ov').classList.remove('on');$('mS').onclick=save;
+ $('ov').onclick=e=>{if(e.target===$('ov'))$('ov').classList.remove('on')};
+ $('fn').onchange=paint;$('fcit').oninput=e=>{e.target.value=e.target.value.toUpperCase()};$('gAd').onclick=addr;$('fa').onkeydown=e=>{if(e.key==='Enter')addr()};
+ $('gMe').onclick=()=>me?(setGps(me.lat,me.lng),toast('Posizione attuale inserita.')):toast('GPS non ancora disponibile.');
+ $('gPick').onclick=()=>{pick=true;$('ov').classList.add('hid');toast('Tocca sulla mappa il punto del cliente.')};
+ $('q').oninput=e=>{F.q=e.target.value.toLowerCase().trim();render()};$('bFx').onclick=()=>$('fx').classList.toggle('on');
+ chipSet('chT',[['verde','Azienda',COL.verde],['blu','Distributore',COL.blu],['giallo','Altro',COL.giallo]],()=>Object.keys(F.tipi).filter(k=>F.tipi[k]),v=>{F.tipi[v]=F.tipi[v]?0:1},true);
+ $('chT').onclick=e=>{const s=e.target.closest('.chip');if(!s)return;F.tipi[s.dataset.v]=F.tipi[s.dataset.v]?0:1;s.classList.toggle('off',!F.tipi[s.dataset.v]);F._fit=1;render()};
+ [['fN','naz'],['fR','reg'],['fO','op'],['fM','mc'],['fP','pk']].forEach(([i,k])=>$(i).onchange=e=>{F[k]=e.target.value;if(k==='naz')F.reg='';F._fit=1;render()});
+ $('fK').onchange=e=>{F.km=+e.target.value;if(F.km&&!me)toast('Attendo il GPS per filtrare per distanza.');F._fit=1;render()};
+ $('bRst').onclick=()=>{Object.assign(F,{q:'',tipi:{verde:1,blu:1,giallo:1},naz:'',reg:'',op:'',mc:'',pk:'',km:0});$('q').value='';['fO','fM','fP','fK'].forEach(i=>$(i).selectedIndex=0);document.querySelectorAll('#chT .chip').forEach(c=>c.classList.remove('off'));render(true)};
+ $('bFit').onclick=()=>{F._fit=1;render()};
+ $('bMe').onclick=()=>{if(me)map.setView([me.lat,me.lng],14);else{toast('Cerco la posizione…');locate()}};
+ $('bBk').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}));a.download='ToraRubry_clienti_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+ $('list').onclick=e=>{const r=e.target.closest('.it');if(!r)return;const id=r.dataset.id,b=e.target.closest('button');
+  if(b){return b.dataset.a==='e'?window.edt(id):del(id)}
+  sel=id;const d=DB.find(x=>String(x.id)===id),p=d&&ll(d);if(p){map.setView([p.lat,p.lng],15);if(markers[id])markers[id].openPopup()}else toast('Cliente senza coordinate GPS.');render()};
+ window.addEventListener('resize',()=>map.invalidateSize())}
+
+initMap();bind();paint();ui();render(true);locate();
+if(localStorage.getItem('rubry_drive')==='1')setTimeout(()=>{if(window.google&&google.accounts&&!G.tok)G.auth('').then(()=>G.find()).then(()=>G.load()).then(()=>{ui();render(true)}).catch(()=>{})},1800);
+</script>
+</body>
+</html>
