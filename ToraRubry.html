@@ -221,12 +221,25 @@ function paint(){chipSet('chE',[['verde','Azienda',COL.verde],['blu','Distributo
  $('ex').style.display=eTipo==='verde'?'grid':'none';
  const n=$('fn').value;$('rgl').textContent=n==='FR'?'Dipartimento (es. 69)':n==='IT'?'Provincia (es. MI)':n==='CH'?'Cantone (es. TI)':'Regione (solo FR, IT, CH)';$('rg').style.display=['FR','IT','CH'].includes(n)?'block':'none'}
 function setGps(a,b){$('fg').value=(+a).toFixed(6)+', '+(+b).toFixed(6)}
-function parseAddr(a){a=a||{};const cc=String(a.country_code||'').toUpperCase(),road=a.road||a.pedestrian||a.footway||a.path||a.industrial||a.retail||'',num=a.house_number||'',
- street=road?((cc==='FR'||cc==='GB')?[num,road]:[road,num]).filter(Boolean).join(' '):'',
+function mkStreet(cc,road,num){return road?((cc==='FR'||cc==='GB')?[num,road]:[road,num]).filter(Boolean).join(' '):''}
+function parseAddr(a){a=a||{};const cc=String(a.country_code||'').toUpperCase(),
+ road=a.road||a.pedestrian||a.footway||a.path||a.cycleway||a.living_street||a.service||a.track||a.bridleway||'',num=a.house_number||'',
  city=a.city||a.town||a.village||a.municipality||a.hamlet||a.suburb||a.county||'',iso=k=>String(a[k]||'').split('-').slice(1).join('-'),
  r=cc==='IT'||cc==='FR'?iso('ISO3166-2-lvl6'):cc==='CH'?iso('ISO3166-2-lvl4'):'';
- return {street,city,cc,r,postcode:a.postcode||''}}
-async function rev(lat,lng){const j=await(await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=it&lat='+lat+'&lon='+lng)).json();return parseAddr(j.address)}
+ return {road,num,street:mkStreet(cc,road,num),city,cc,r,postcode:a.postcode||''}}
+async function nj(u){const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);try{return await(await fetch(u,{signal:c.signal})).json()}finally{clearTimeout(t)}}
+/* numero civico piu' vicino (stessa via, entro 60 m) dai dati OpenStreetMap */
+async function nearNum(lat,lng,road){
+ const j=await nj('https://overpass-api.de/api/interpreter?data='+encodeURIComponent('[out:json][timeout:8];nwr(around:60,'+lat+','+lng+')["addr:housenumber"];out tags center 40;'));
+ let best=null;for(const e of j.elements||[]){const t=e.tags||{},c=e.center||e,la=c.lat,lo=c.lon;if(la==null||lo==null)continue;
+  if(String(t['addr:street']||'').trim().toLowerCase()!==String(road).trim().toLowerCase())continue;
+  const d=dist({lat,lng},{lat:la,lng:lo});if(!best||d<best.d)best={d,n:t['addr:housenumber']}}
+ return best?best.n:''}
+async function rev(lat,lng){const base='https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=it&lat='+lat+'&lon='+lng+'&zoom=';
+ const o=parseAddr((await nj(base+'18')).address);
+ if(!o.road){try{const o2=parseAddr((await nj(base+'16')).address);if(o2.road)Object.assign(o,{road:o2.road,num:'',street:o2.street,postcode:o.postcode||o2.postcode})}catch(e){}}
+ if(o.road&&!o.num){try{const n=await nearNum(lat,lng,o.road);if(n){o.num=n;o.street=mkStreet(o.cc,o.road,n)}}catch(e){}}
+ return o}
 async function fillRev(lat,lng){toast('Cerco l’indirizzo…');
  try{const o=await rev(lat,lng);if(o.street)$('fi').value=o.street;
   if(o.city&&!$('fcit').value)$('fcit').value=o.city.toUpperCase();
