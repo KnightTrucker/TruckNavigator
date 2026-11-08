@@ -79,7 +79,7 @@ label.l{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--
         <select id="fK"><option value="0">Distanza: ovunque</option><option>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select>
         <button class="btn" id="bRst">Azzera filtri</button><button class="btn" id="bFit">🗺 Mostra filtrati</button>
       </div>
-      <div class="row" style="justify-content:space-between"><span class="cnt" id="cnt"></span><span class="row"><button class="btn" id="bMe">🎯 Io</button><button class="btn" id="bBk">⬇ Backup</button></span></div>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap"><span class="cnt" id="cnt"></span><span class="row" style="flex-wrap:wrap"><button class="btn" id="bMe">🎯 Io</button><select id="bSort" class="btn" style="width:auto;padding:8px 4px" aria-label="Ordina clienti"><option value="dist">⇅ Distanza</option><option value="az">⇅ Nome A→Z</option><option value="za">⇅ Nome Z→A</option><option value="citta">⇅ Città A→Z</option><option value="naz">⇅ Nazione / zona</option></select><button class="btn" id="bBk">⬇ Backup</button></span></div>
     </div>
     <div id="list"></div>
   </div>
@@ -94,6 +94,7 @@ label.l{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--
   <div class="g2"><div><label class="l">Città</label><input type="text" id="fcit" style="text-transform:uppercase"></div>
   <div><label class="l">Nazione</label><select id="fn"></select></div></div>
   <div id="rg"><label class="l" id="rgl">Dipartimento / Provincia / Cantone</label><input type="text" id="fr" style="text-transform:uppercase"></div>
+  <div><label class="l">Indirizzo (via, viale, avenue, rue…)</label><input type="text" id="fi" placeholder="Es. Via Roma 12 / 12 Rue de la Paix"><div class="row" style="margin-top:6px"><button class="btn" id="gRev">🏠 Trova indirizzo dalle coordinate</button></div></div>
   <div><label class="l">Posizione GPS (lat, lng)</label><input type="text" id="fg" placeholder="45.123456, 9.123456">
     <div class="row" style="margin-top:6px;flex-wrap:wrap"><button class="btn" id="gMe">📡 Mia posizione</button><button class="btn" id="gPick">📍 Scegli sulla mappa</button></div>
     <div class="row" style="margin-top:6px"><input type="text" id="fa" placeholder="Cerca indirizzo o azienda…"><button class="btn" id="gAd">CERCA</button></div></div>
@@ -124,6 +125,7 @@ const kmT=m=>m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km';
 let _t;function toast(m){const e=$('toast');e.textContent=m;e.style.display='block';clearTimeout(_t);_t=setTimeout(()=>e.style.display='none',3200)}
 
 let DB=[];try{DB=JSON.parse(localStorage.getItem(LSK)||'[]')||[]}catch(e){}
+let SORT=localStorage.getItem('rubry_sort')||'dist';
 let me=null,acc=0,map,markers={},meMk,meCr,sel=null,editId=null,pick=false,live=false;
 const F={q:'',tipi:{verde:1,blu:1,giallo:1},naz:'',reg:'',op:'',mc:'',pk:'',km:0};
 
@@ -174,7 +176,7 @@ function initMap(){map=L.map('map',{zoomControl:true}).setView([45.8,8.6],6);
   L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]).addTo(map);
  const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
  L.control.layers({'Satellite + nomi':sat,'Stradale':osm},{},{collapsed:true,position:'topleft'}).addTo(map);
- map.on('click',e=>{if(pick){pick=false;$('mapov').classList.remove('on');$('ov').classList.remove('hid');setGps(e.latlng.lat,e.latlng.lng)}})}
+ map.on('click',e=>{if(pick){pick=false;$('mapov').classList.remove('on');$('ov').classList.remove('hid');setGps(e.latlng.lat,e.latlng.lng);fillRev(e.latlng.lat,e.latlng.lng)}})}
 function popup(d){const p=ll(d),r=reg(d);return '<div class="pn">'+esc(d.cliente||'--')+'</div><div style="color:#8892AA;font-size:11px">'+esc(String(d.citta||'').toUpperCase())+(d.nazione?' · '+esc(d.nazione)+(r?'-'+esc(r):''):'')+'</div><div style="margin-top:4px;font:12.5px ui-monospace,monospace;color:#E2E4EC" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'\');toast(\'Coordinate copiate\')">📍 '+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'</div>'+badges(d)+(d.note?'<div style="margin-top:5px;font-size:11.5px">'+esc(d.note)+'</div>':'')+
  '<div class="pa"><button onclick="edt(\''+esc(d.id)+'\')">✏️ Modifica</button><a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'">➤ Naviga</a></div>'}
 function badges(d){if(tp(d)!=='verde')return '';let b='';if(d.operazione)b+='<span class="bd">'+(d.operazione==='CARICO'?'↑':d.operazione==='SCARICO'?'↓':'↕')+' '+esc(d.operazione)+'</span>';
@@ -184,7 +186,10 @@ function badges(d){if(tp(d)!=='verde')return '';let b='';if(d.operazione)b+='<sp
 /* ── Render ──────────────────────────────────────────────────────────── */
 function render(fit){fillSel();
  let L2=DB.filter(flt).map(d=>({d,p:ll(d)}));L2.forEach(o=>o.m=me&&o.p?dist(me,o.p):NaN);
- L2.sort((a,b)=>me&&(isFinite(a.m)||isFinite(b.m))?(isFinite(a.m)?a.m:1e12)-(isFinite(b.m)?b.m:1e12):String(a.d.cliente||'').localeCompare(String(b.d.cliente||''),'it'));
+ const cs=(a,b)=>String(a||'').localeCompare(String(b||''),'it'),dm=o=>isFinite(o.m)?o.m:1e12;
+ const SORTS={dist:(a,b)=>me&&(isFinite(a.m)||isFinite(b.m))?dm(a)-dm(b):cs(a.d.cliente,b.d.cliente),az:(a,b)=>cs(a.d.cliente,b.d.cliente),za:(a,b)=>cs(b.d.cliente,a.d.cliente),
+  citta:(a,b)=>cs(a.d.citta,b.d.citta)||cs(a.d.cliente,b.d.cliente),naz:(a,b)=>cs(a.d.nazione,b.d.nazione)||cs(reg(a.d),reg(b.d))||cs(a.d.citta,b.d.citta)||cs(a.d.cliente,b.d.cliente)};
+ L2.sort(SORTS[SORT]||SORTS.dist);
  $('cnt').textContent=L2.length+' di '+DB.length+' clienti';
  $('list').innerHTML=L2.length?L2.slice(0,400).map(o=>{const d=o.d,r=reg(d),c=COL[tp(d)];return '<div class="it'+(sel===d.id?' sel':'')+'" data-id="'+esc(d.id)+'"><span class="dot" style="background:'+c+';box-shadow:0 0 6px '+c+'88"></span><div class="nm"><b>'+esc(d.cliente||'(senza nome)')+'</b><small>'+esc(String(d.citta||'').toUpperCase())+(d.nazione?' · '+esc(d.nazione)+(r?'-'+esc(r):''):'')+(o.p?'':' · senza GPS')+'</small>'+badges(d)+'</div><span class="km">'+(isFinite(o.m)?kmT(o.m):'')+'</span><span><button class="ic" data-a="e">✏️</button><button class="ic" data-a="x">🗑</button></span></div>'}).join(''):'<div class="empty">Nessun cliente con questi filtri.</div>';
  const keep={},bounds=[];
@@ -216,15 +221,28 @@ function paint(){chipSet('chE',[['verde','Azienda',COL.verde],['blu','Distributo
  $('ex').style.display=eTipo==='verde'?'grid':'none';
  const n=$('fn').value;$('rgl').textContent=n==='FR'?'Dipartimento (es. 69)':n==='IT'?'Provincia (es. MI)':n==='CH'?'Cantone (es. TI)':'Regione (solo FR, IT, CH)';$('rg').style.display=['FR','IT','CH'].includes(n)?'block':'none'}
 function setGps(a,b){$('fg').value=(+a).toFixed(6)+', '+(+b).toFixed(6)}
+function parseAddr(a){a=a||{};const cc=String(a.country_code||'').toUpperCase(),road=a.road||a.pedestrian||a.footway||a.path||a.industrial||a.retail||'',num=a.house_number||'',
+ street=road?((cc==='FR'||cc==='GB')?[num,road]:[road,num]).filter(Boolean).join(' '):'',
+ city=a.city||a.town||a.village||a.municipality||a.hamlet||a.suburb||a.county||'',iso=k=>String(a[k]||'').split('-').slice(1).join('-'),
+ r=cc==='IT'||cc==='FR'?iso('ISO3166-2-lvl6'):cc==='CH'?iso('ISO3166-2-lvl4'):'';
+ return {street,city,cc,r,postcode:a.postcode||''}}
+async function rev(lat,lng){const j=await(await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=it&lat='+lat+'&lon='+lng)).json();return parseAddr(j.address)}
+async function fillRev(lat,lng){toast('Cerco l’indirizzo…');
+ try{const o=await rev(lat,lng);if(o.street)$('fi').value=o.street;
+  if(o.city&&!$('fcit').value)$('fcit').value=o.city.toUpperCase();
+  if(NAZ.includes(o.cc)&&!$('fn').value)$('fn').value=o.cc;
+  if(o.r&&!$('fr').value)$('fr').value=o.r;paint();
+  toast(o.street?'Indirizzo trovato: '+o.street:'Indirizzo non trovato: scrivilo a mano.',4000)}
+ catch(e){toast('Ricerca indirizzo non disponibile (offline?): scrivilo a mano.',4000)}}
 function openForm(d){editId=d?d.id:null;d=d||{};$('mt').textContent=editId?'Modifica cliente':'Nuovo cliente';
  $('fn').innerHTML='<option value="">--</option>'+NAZ.map(n=>'<option>'+n+'</option>').join('');
- $('fc').value=d.cliente||'';$('fcit').value=String(d.citta||'').toUpperCase();$('fn').value=d.nazione||'';$('fr').value=reg(d)||'';$('fg').value=d.gps||'';$('fa').value='';$('fno').value=d.note||'';$('fm').value=d.merce||'';
+ $('fc').value=d.cliente||'';$('fcit').value=String(d.citta||'').toUpperCase();$('fn').value=d.nazione||'';$('fr').value=reg(d)||'';$('fg').value=d.gps||'';$('fi').value=d.indirizzo||'';$('fa').value='';$('fno').value=d.note||'';$('fm').value=d.merce||'';
  eTipo=editId?tp(d):'blu';eOp=d.operazione||'';eMet=(d.metodo||[]).slice();eMC=d.merceColore||'none';ePk=d.parcheggio||'';paint();$('ov').classList.add('on');$('ov').classList.remove('hid')}
 window.edt=id=>{const d=DB.find(x=>String(x.id)===String(id));if(d){map.closePopup();$('mapov').classList.remove('on');openForm(d)}};
 async function save(){const nome=$('fc').value.trim();if(!nome){$('fc').style.borderColor='#ef4444';return toast('Il nome del cliente è obbligatorio.')}
  const g=$('fg').value.trim(),n=$('fn').value,r=$('fr').value.trim().toUpperCase();
  if(g&&!ll({gps:g}))return toast('Coordinate non valide: usa "lat, lng".');
- const nd={cliente:nome,tipo:eTipo,citta:$('fcit').value.trim().toUpperCase(),nazione:n,dipartimento:n==='FR'?r:'',provincia:n==='IT'?r:'',cantone:n==='CH'?r:'',gps:g,note:$('fno').value.trim()};
+ const nd={cliente:nome,tipo:eTipo,citta:$('fcit').value.trim().toUpperCase(),nazione:n,dipartimento:n==='FR'?r:'',provincia:n==='IT'?r:'',cantone:n==='CH'?r:'',gps:g,indirizzo:$('fi').value.trim(),note:$('fno').value.trim()};
  if(eTipo==='verde')Object.assign(nd,{operazione:eOp,metodo:eMet.slice(),merce:$('fm').value.trim(),merceColore:eMC,parcheggio:ePk});
  const id=editId||(Date.now().toString(36)+Math.random().toString(36).slice(2,7)),isNew=!editId;
  const ok=await op(db=>{const i=db.findIndex(x=>String(x.id)===String(id));if(i<0)db.push(Object.assign({id},nd));else db[i]=Object.assign({},db[i],nd);return db},isNew?'Cliente aggiunto.':'Cliente aggiornato.');
@@ -233,7 +251,7 @@ async function del(id){const d=DB.find(x=>String(x.id)===String(id));if(!d||!con
  await op(db=>db.filter(x=>String(x.id)!==String(id)),'Cliente eliminato.')}
 async function addr(){const q=$('fa').value.trim();if(q.length<3)return;toast('Cerco…');
  try{const j=await(await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&accept-language=it&q='+encodeURIComponent(q))).json();if(!j.length)return toast('Nessun risultato.');
-  const x=j[0],a=x.address||{};setGps(x.lat,x.lon);const c=(a.city||a.town||a.village||a.municipality||'').toUpperCase(),cc=String(a.country_code||'').toUpperCase();
+  const x=j[0],a=x.address||{};setGps(x.lat,x.lon);const pa=parseAddr(a);if(pa.street)$('fi').value=pa.street;const c=(a.city||a.town||a.village||a.municipality||'').toUpperCase(),cc=String(a.country_code||'').toUpperCase();
   if(c&&!$('fcit').value)$('fcit').value=c;if(NAZ.includes(cc)&&!$('fn').value)$('fn').value=cc;if(!$('fc').value)$('fc').value=String(x.name||'');paint();toast('Posizione trovata.')}catch(e){toast('Ricerca non disponibile (offline?).')}}
 
 /* ── Mappa a schermo intero (solo su richiesta) ─────────────────────── */
@@ -247,25 +265,21 @@ async function saveHere(){
  if(!me)return toast('GPS non ancora disponibile: attendi qualche secondo.');
  const lat=me.lat,lng=me.lng,now=new Date(),
   dt=now.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}),hm=now.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
- toast('Leggo l’indirizzo…');let a={};
- try{const j=await(await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=it&lat='+lat+'&lon='+lng)).json();a=j.address||{}}catch(e){toast('Indirizzo non disponibile (offline?): salvo solo le coordinate.')}
- const cityRaw=a.city||a.town||a.village||a.municipality||a.hamlet||a.suburb||a.county||'',city=String(cityRaw).toUpperCase(),cc=String(a.country_code||'').toUpperCase();
- const iso=k=>String(a[k]||'').split('-').slice(1).join('-');
- const r=cc==='IT'||cc==='FR'?iso('ISO3166-2-lvl6'):cc==='CH'?iso('ISO3166-2-lvl4'):'';
- const ind=[[a.road,a.house_number].filter(Boolean).join(' '),[a.postcode,cityRaw].filter(Boolean).join(' ')].filter(Boolean).join(', ');
- const nome=(city||'POSIZIONE')+' '+dt;
+ toast('Leggo l’indirizzo…');let o={street:'',city:'',cc:'',r:'',postcode:''};
+ try{o=await rev(lat,lng)}catch(e){toast('Indirizzo non disponibile (offline?): salvo solo le coordinate.')}
+ const city=String(o.city).toUpperCase(),cc=o.cc,r=o.r,nome=(city||'POSIZIONE')+' '+dt;
  const nd={id:Date.now().toString(36)+Math.random().toString(36).slice(2,7),cliente:nome,tipo:'giallo',citta:city,nazione:cc,
-  dipartimento:cc==='FR'?r:'',provincia:cc==='IT'?r:'',cantone:cc==='CH'?r:'',indirizzo:ind,gps:lat.toFixed(6)+', '+lng.toFixed(6),
-  note:'Posizione salvata il '+dt+' alle '+hm+(acc?' (precisione ±'+Math.round(acc)+' m)':'')};
- await op(db=>{db.push(nd);return db},'Salvato: '+nome);
+  dipartimento:cc==='FR'?r:'',provincia:cc==='IT'?r:'',cantone:cc==='CH'?r:'',indirizzo:o.street,gps:lat.toFixed(6)+', '+lng.toFixed(6),
+  note:'Posizione salvata il '+dt+' alle '+hm+(o.postcode?' · CAP '+o.postcode:'')+(acc?' (precisione ±'+Math.round(acc)+' m)':'')};
+ await op(db=>{db.push(nd);return db},'Salvato: '+nome+(o.street?' · '+o.street:' · via non trovata, completala a mano'));
 }
 
 /* ── Eventi ──────────────────────────────────────────────────────────── */
 function bind(){
- $('bDrive').onclick=connect;$('bSave').onclick=saveHere;$('mapX').onclick=hideMap;document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapOn())hideMap()});$('bNew').onclick=()=>openForm(null);$('mX').onclick=()=>$('ov').classList.remove('on');$('mS').onclick=save;
+ $('bDrive').onclick=connect;$('bSort').value=SORT;$('bSort').onchange=e=>{SORT=e.target.value;localStorage.setItem('rubry_sort',SORT);render()};$('bSave').onclick=saveHere;$('mapX').onclick=hideMap;document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapOn())hideMap()});$('bNew').onclick=()=>openForm(null);$('mX').onclick=()=>$('ov').classList.remove('on');$('mS').onclick=save;
  $('ov').onclick=e=>{if(e.target===$('ov'))$('ov').classList.remove('on')};
  $('fn').onchange=paint;$('fcit').oninput=e=>{e.target.value=e.target.value.toUpperCase()};$('gAd').onclick=addr;$('fa').onkeydown=e=>{if(e.key==='Enter')addr()};
- $('gMe').onclick=()=>me?(setGps(me.lat,me.lng),toast('Posizione attuale inserita.')):toast('GPS non ancora disponibile.');
+ $('gMe').onclick=()=>me?(setGps(me.lat,me.lng),fillRev(me.lat,me.lng)):toast('GPS non ancora disponibile.');$('gRev').onclick=()=>{const p=ll({gps:$('fg').value});p?fillRev(p.lat,p.lng):toast('Inserisci prima le coordinate GPS.')};
  $('gPick').onclick=()=>{pick=true;$('ov').classList.add('hid');showMap();toast('Tocca sulla mappa il punto del cliente.')};
  $('q').oninput=e=>{F.q=e.target.value.toLowerCase().trim();render()};$('bFx').onclick=()=>$('fx').classList.toggle('on');
  chipSet('chT',[['verde','Azienda',COL.verde],['blu','Distributore',COL.blu],['giallo','Altro',COL.giallo]],()=>Object.keys(F.tipi).filter(k=>F.tipi[k]),v=>{F.tipi[v]=F.tipi[v]?0:1},true);
