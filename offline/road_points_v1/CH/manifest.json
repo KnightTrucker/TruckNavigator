@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "country": "CH",
-  "generatedAt": "2026-11-06T11:02:25.484278+00:00",
+  "generatedAt": "2026-11-13T10:48:56.485665+00:00",
   "records": 17362,
   "counts": {
-    "signals": 9363,
-    "level_crossings": 6969,
+    "signals": 9364,
+    "level_crossings": 6968,
     "junctions": 986,
     "tolls": 44
   },
   "tiles": {
     "93_13": {
       "file": "CH/93_13.json",
-      "count": 1142,
-      "sha256": "2e64b502844f4b84780117d9e93d3c130fbadc3d9f5d0ab9eaefb6af8992047a"
+      "count": 1141,
+      "sha256": "6d2ef49f3c504a3b391479e6b2d6ef5693012e16146e9a99d6490e9b5f8ffef7"
     },
     "95_15": {
       "file": "CH/95_15.json",
@@ -28,7 +28,7 @@
     "94_16": {
       "file": "CH/94_16.json",
       "count": 2589,
-      "sha256": "19f24ef8fcdc097ca4bd4559da232d2016418eae5e0328112c535b692081c612"
+      "sha256": "4cdd2f477613b5b1d64251fff79e8e0a622e7454290359109c55a1f9d4895d15"
     },
     "94_17": {
       "file": "CH/94_17.json",
@@ -37,13 +37,13 @@
     },
     "92_12": {
       "file": "CH/92_12.json",
-      "count": 2038,
-      "sha256": "538f73aceba4ed938fa7dfb5143c1a1acf3990f0fc766a1116e0354d0855b621"
+      "count": 2039,
+      "sha256": "8e04f4e0b422344612aa22b8252ff807c9cf771b4bd6a65841a05a5daa723cfb"
     },
     "94_15": {
       "file": "CH/94_15.json",
       "count": 1117,
-      "sha256": "1af2c4836827f2b1b0e473efe54c2c89442a8f9582d3f03a5d7ca87efe48c126"
+      "sha256": "26c17b973e9ee60cb3ca37fe9ec15a686106c507bdf6f0400c50fcf66564b25d"
     },
     "93_14": {
       "file": "CH/93_14.json",
@@ -62,13 +62,13 @@
     },
     "94_18": {
       "file": "CH/94_18.json",
-      "count": 1029,
-      "sha256": "b66395d4a034e82e4ede405d719ec8db39710dee7ad6ab81fd8dd3d54ce11d2c"
+      "count": 1030,
+      "sha256": "74aee593831bd87723b4751a4af6c4de51d6d728f31d96a78ea6394b4c587eae"
     },
     "94_14": {
       "file": "CH/94_14.json",
       "count": 645,
-      "sha256": "d0b191df88b31820f315b77be97c7f219902323fb2da5220ff8593da3baa8051"
+      "sha256": "226d24541f1a096e8ce019a9a8439f30486fbc399aa9e2d5d8a2b94a0b0ba17b"
     },
     "92_17": {
       "file": "CH/92_17.json",
@@ -78,7 +78,7 @@
     "92_18": {
       "file": "CH/92_18.json",
       "count": 112,
-      "sha256": "83cb7050410096acd547e014453d7db67aed720d7fd5115033ed51a257bdf808"
+      "sha256": "f28d5d681fc866e3d47e1720fcd9e9dd1fe6c1d4190e0b274fd5a0dd363b955b"
     },
     "93_17": {
       "file": "CH/93_17.json",
@@ -162,8 +162,8 @@
     },
     "94_13": {
       "file": "CH/94_13.json",
-      "count": 231,
-      "sha256": "681a737930660a12c861b4910897b1b45993b2732a563b46e1ef7820e74cc51a"
+      "count": 230,
+      "sha256": "8d78fa5d604c4ae21dd5b53ac04109425efc5703efd4ff55397665e64216e2b9"
     },
     "92_20": {
       "file": "CH/92_20.json",
