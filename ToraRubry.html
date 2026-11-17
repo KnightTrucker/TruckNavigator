@@ -21,6 +21,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 .btn{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 11px;cursor:pointer;font-weight:700;font-size:12px;white-space:nowrap}
 .btn.p{background:var(--acc);border-color:var(--acc);color:#fff}.btn.ok{border-color:var(--grn);color:#86efac}.btn.d{border-color:#7f1d1d;color:#fca5a5}
 .main{flex:1;min-height:0;display:flex;flex-direction:column}
+#chs{position:fixed;inset:0;z-index:1800;display:none;background:#000a;align-items:flex-end;justify-content:center}#chs.on{display:flex}#chs .sh{background:var(--s1);border:1px solid var(--bd);border-radius:16px 16px 0 0;width:100%;max-width:520px;padding:14px;padding-bottom:max(14px,env(safe-area-inset-bottom));display:grid;gap:8px}#chs h3{margin:0 0 4px;font:700 18px var(--fd)}#chs .btn{width:100%;min-height:50px;text-align:left;font-size:16px}
 #mapov{position:fixed;inset:0;z-index:1500;display:none;background:#050b12}#mapov.on{display:block}#map{position:absolute;inset:0}#mapX{position:absolute;z-index:1600;top:max(10px,env(safe-area-inset-top));right:10px;width:48px;height:48px;border-radius:50%;border:1px solid var(--bd);background:#000d;color:#fff;font-size:22px;font-weight:700;cursor:pointer}
 .panel{flex:1 1 55%;min-height:0;display:flex;flex-direction:column;background:var(--bg);border-top:1px solid var(--bd)}
 @media(min-width:900px){.panel{max-width:760px;width:100%;margin:0 auto;border-left:1px solid var(--bd);border-right:1px solid var(--bd)}}
@@ -86,6 +87,7 @@ label.l{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--
 </div>
 </div>
 
+<div id="chs"><div class="sh"><h3 id="chT"></h3><div id="chB" style="display:grid;gap:8px"></div><button class="btn" id="chX">Annulla</button></div></div>
 <div id="mapov"><div id="map"></div><button id="mapX" aria-label="Chiudi mappa">✕</button></div>
 <div class="ov" id="ov"><div class="card">
   <h2 id="mt">Cliente</h2>
@@ -177,8 +179,8 @@ function initMap(){map=L.map('map',{zoomControl:true}).setView([45.8,8.6],6);
  const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
  L.control.layers({'Satellite + nomi':sat,'Stradale':osm},{},{collapsed:true,position:'topleft'}).addTo(map);
  map.on('click',e=>{if(pick){pick=false;$('mapov').classList.remove('on');$('ov').classList.remove('hid');setGps(e.latlng.lat,e.latlng.lng);fillRev(e.latlng.lat,e.latlng.lng)}})}
-function popup(d){const p=ll(d),r=reg(d);return '<div class="pn">'+esc(d.cliente||'--')+'</div><div style="color:#8892AA;font-size:11px">'+esc(String(d.citta||'').toUpperCase())+(d.nazione?' · '+esc(d.nazione)+(r?'-'+esc(r):''):'')+'</div><div style="margin-top:4px;font:12.5px ui-monospace,monospace;color:#E2E4EC" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'\');toast(\'Coordinate copiate\')">📍 '+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'</div>'+badges(d)+(d.note?'<div style="margin-top:5px;font-size:11.5px">'+esc(d.note)+'</div>':'')+
- '<div class="pa"><button onclick="edt(\''+esc(d.id)+'\')">✏️ Modifica</button><a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+'">➤ Naviga</a></div>'}
+function popup(d){const p=ll(d),r=reg(d);return '<div class="pn">'+esc(d.cliente||'--')+'</div><div style="color:#8892AA;font-size:11px">'+esc(String(d.citta||'').toUpperCase())+(d.nazione?' · '+esc(d.nazione)+(r?'-'+esc(r):''):'')+'</div><div style="margin-top:4px;font:700 19px ui-monospace,monospace;color:#fff;letter-spacing:.3px" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'\');toast(\'Coordinate copiate\')">📍 '+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'</div>'+badges(d)+(d.note?'<div style="margin-top:5px;font-size:11.5px">'+esc(d.note)+'</div>':'')+
+ '<div class="pa"><button onclick="shr(\''+esc(d.id)+'\')">📤 Condividi</button><button onclick="nav(\''+esc(d.id)+'\')">➤ Naviga</button></div>'}
 function badges(d){if(tp(d)!=='verde')return '';let b='';if(d.operazione)b+='<span class="bd">'+(d.operazione==='CARICO'?'↑':d.operazione==='SCARICO'?'↓':'↕')+' '+esc(d.operazione)+'</span>';
  (d.metodo||[]).forEach(m=>b+='<span class="bd">'+esc(m)+'</span>');if(d.merce)b+='<span class="bd '+(MC[d.merceColore]||'')+'">'+esc(d.merce)+'</span>';
  if(d.parcheggio)b+='<span class="bd '+(d.parcheggio==='PARK'?'g':'r')+'">P '+esc(d.parcheggio)+'</span>';return b?'<div>'+b+'</div>':''}
@@ -287,9 +289,41 @@ async function saveHere(){
  await op(db=>{db.push(nd);return db},'Salvato: '+nome+(o.street?' · '+o.street:' · via non trovata, completala a mano'));
 }
 
+/* ── Scelta (condividi / naviga) ────────────────────────────────────── */
+const TORANAVY_URL='https://knighttrucker.github.io/TruckNavigator/';
+function choose(title,items){$('chT').textContent=title;const b=$('chB');b.innerHTML='';
+ items.forEach(([label,fn])=>{const x=document.createElement('button');x.className='btn';x.textContent=label;x.onclick=()=>{$('chs').classList.remove('on');fn()};b.appendChild(x)});
+ $('chs').classList.add('on')}
+function copyT(t,m){return navigator.clipboard?navigator.clipboard.writeText(t).then(()=>toast(m||'Testo copiato')).catch(()=>toast('Copia non riuscita')):toast('Copia non disponibile')}
+function shareText(d){const p=ll(d),r=reg(d),L=['📍 '+(d.cliente||'--'),'Tipo: '+(NM[tp(d)]||'')];
+ if(d.indirizzo)L.push('Indirizzo: '+d.indirizzo);
+ const loc=[String(d.citta||'').toUpperCase(),d.nazione?d.nazione+(r?'-'+r:''):''].filter(Boolean).join(' · ');if(loc)L.push(loc);
+ if(p)L.push('GPS: '+p.lat.toFixed(5)+', '+p.lng.toFixed(5));
+ if(d.operazione)L.push('Operazione: '+d.operazione);
+ if(d.metodo&&d.metodo.length)L.push('Metodo: '+[].concat(d.metodo).join(', '));
+ if(d.merce)L.push('Merce: '+d.merce);
+ if(d.merceColore&&d.merceColore!=='none')L.push('Colore merce: '+d.merceColore);
+ if(d.parcheggio)L.push('Parcheggio: '+d.parcheggio);
+ if(d.note)L.push('Note: '+d.note);
+ if(p)L.push('https://www.google.com/maps?q='+p.lat+','+p.lng);
+ return L.join('\n')}
+function shr(id){const d=DB.find(x=>String(x.id)===String(id));if(!d)return;const t=shareText(d);
+ choose('Condividi: '+(d.cliente||''),[
+  ['💬 WhatsApp',()=>window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')],
+  ['📤 Altre app (Telegram, SMS, Drive…)',()=>navigator.share?navigator.share({title:d.cliente||'Cliente',text:t}).catch(()=>{}):copyT(t)],
+  ['✉️ E-mail',()=>{location.href='mailto:?subject='+encodeURIComponent(d.cliente||'Cliente')+'&body='+encodeURIComponent(t)}],
+  ['📋 Copia il testo',()=>copyT(t)]])}
+function nav(id){const d=DB.find(x=>String(x.id)===String(id)),p=d&&ll(d);if(!p)return;
+ choose('Naviga verso: '+(d.cliente||''),[
+  ['🗺️ Google Maps',()=>window.open('https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng,'_blank')],
+  ['🧭 ToraNavy',()=>{const r=reg(d),loc=[d.indirizzo,[String(d.citta||'').toUpperCase(),d.nazione?d.nazione+(r?'-'+r:''):''].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+   /* ToraNavy (C-0.0.96+) apre come destinazione cio' che arriva in ?title=&text=&url= (stesso canale del "Condividi") */
+   const q=new URLSearchParams({title:d.cliente||'Cliente',text:loc,url:'https://www.google.com/maps?q='+p.lat.toFixed(6)+','+p.lng.toFixed(6)});
+   window.open(TORANAVY_URL+'?'+q.toString(),'_blank')}]])}
+
 /* ── Eventi ──────────────────────────────────────────────────────────── */
 function bind(){
- $('bDrive').onclick=connect;$('bSort').value=SORT;$('bSort').onchange=e=>{SORT=e.target.value;localStorage.setItem('rubry_sort',SORT);render()};$('bSave').onclick=saveHere;$('mapX').onclick=hideMap;document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapOn())hideMap()});$('bNew').onclick=()=>openForm(null);$('mX').onclick=()=>$('ov').classList.remove('on');$('mS').onclick=save;
+ $('bDrive').onclick=connect;$('chX').onclick=()=>$('chs').classList.remove('on');$('chs').onclick=e=>{if(e.target.id==='chs')$('chs').classList.remove('on')};$('bSort').value=SORT;$('bSort').onchange=e=>{SORT=e.target.value;localStorage.setItem('rubry_sort',SORT);render()};$('bSave').onclick=saveHere;$('mapX').onclick=hideMap;document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mapOn())hideMap()});$('bNew').onclick=()=>openForm(null);$('mX').onclick=()=>$('ov').classList.remove('on');$('mS').onclick=save;
  $('ov').onclick=e=>{if(e.target===$('ov'))$('ov').classList.remove('on')};
  $('fn').onchange=paint;$('fcit').oninput=e=>{e.target.value=e.target.value.toUpperCase()};$('gAd').onclick=addr;$('fa').onkeydown=e=>{if(e.key==='Enter')addr()};
  $('gMe').onclick=()=>me?(setGps(me.lat,me.lng),fillRev(me.lat,me.lng)):toast('GPS non ancora disponibile.');$('gRev').onclick=()=>{const p=ll({gps:$('fg').value});p?fillRev(p.lat,p.lng):toast('Inserisci prima le coordinate GPS.')};
