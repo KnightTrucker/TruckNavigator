@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-17T12:06:25.261015+00:00",
+  "generatedAt": "2026-11-17T12:12:30.935338+00:00",
   "networks": {
     "dkv": {
       "count": 77692,
@@ -9,6 +9,11 @@
     "as24": {
       "count": 4135,
       "source": "https://network.as24.com/stationfinder/en/stations"
+    },
+    "shell": {
+      "count": 3393,
+      "source": "https://shellretaillocator.geoapp.me/api/v2/locations/within_bounds",
+      "coverage": "official-public-shell-network"
     }
   }
 }
